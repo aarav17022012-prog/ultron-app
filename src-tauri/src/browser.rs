@@ -47,6 +47,7 @@ pub fn show(app: &AppHandle, x: f64, y: f64, w: f64, h: f64, url: Option<String>
         .focused(false)
         .visible(false)
         .incognito(true) // private: nothing about your browsing is kept
+        .additional_browser_args(crate::BROWSER_ARGS) // (the same as every other ULTRON window, or the engine refuses it)
         .background_color(tauri::window::Color(12, 12, 14, 255))
         .owner(&main)
         .map_err(|e| e.to_string())?

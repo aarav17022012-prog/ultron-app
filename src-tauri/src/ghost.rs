@@ -48,6 +48,7 @@ fn window(app: &AppHandle) -> Option<WebviewWindow> {
         .always_on_top(true)
         .focused(false)
         .visible(false)
+        .additional_browser_args(crate::BROWSER_ARGS) // (the same as every other ULTRON window, or the engine refuses it)
         .build()
         .ok()?;
     if let Some(h) = crate::hit::hwnd_of(&w) {

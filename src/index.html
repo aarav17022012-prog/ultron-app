@@ -586,7 +586,23 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 .fl-x:hover{background:rgba(255,255,255,.25)}
 .flyr:hover .fl-x{opacity:1; transform:none}
 .flyr:hover .fl-meta{opacity:1; transform:none}
-.flyr:hover .fl-txt{margin-right:26px}
+.flyr:hover .fl-txt{margin-right:152px; overflow:hidden; -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent)}
+/* its own controls: previous, play / pause, next. They spring in from the right, one after the other, when the pointer
+   is over the bar; the middle one turns between its two signs; each dips when pressed. */
+.fl-ctl{position:absolute; right:46px; top:50%; z-index:2; display:flex; align-items:center; gap:7px; transform:translateY(-50%); pointer-events:none}
+.fl-b{position:relative; width:32px; height:32px; flex:none; border:0; border-radius:50%; padding:0; background:rgba(255,255,255,.13); display:grid; place-items:center; cursor:pointer;
+  opacity:0; transform:translateX(16px) scale(.6); transition:opacity .2s, transform .45s var(--spring), background .2s; transition-delay:calc(var(--i) * 40ms), calc(var(--i) * 40ms), 0s}
+.fl-b svg{grid-area:1 / 1; width:15px; height:15px; fill:#fff; transition:transform .36s var(--spring), opacity .16s}
+.fl-b:hover{background:rgba(255,255,255,.27)}
+.fl-b:active{transform:scale(.86) !important; transition-duration:.08s; transition-delay:0s}
+.fl-pp{width:38px; height:38px; background:#fff} .fl-pp:hover{background:#fff} .fl-pp svg{width:17px; height:17px; fill:#0c0c0e}
+.flyr.playing .fl-pp .pl, .flyr:not(.playing) .fl-pp .pz{opacity:0; transform:scale(.3) rotate(-70deg)}
+.flyr:hover .fl-ctl, .flyr.drag .fl-ctl{pointer-events:auto}
+.flyr:hover .fl-b{opacity:1; transform:none}
+.fl-b.tap svg{animation:flTap .42s var(--spring)}
+.fl-b.tap[data-fl="next"] svg{animation-name:flNext} .fl-b.tap[data-fl="prev"] svg{animation-name:flPrev}
+@keyframes flTap{35%{transform:scale(.62)}}
+@keyframes flNext{40%{transform:translateX(5px)}} @keyframes flPrev{40%{transform:translateX(-5px)}}
 
 /* ---------- Email ---------- */
 .st.mlb{position:relative}
@@ -1489,7 +1505,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 <div class="dd glass panel-glass" id="dd" role="menu"></div>
 <div class="cal glass panel-glass" id="cal" role="dialog" aria-label="Calendar"><i class="gw"></i><div class="ca-in" id="calIn"></div></div>
 <div class="wifi glass panel-glass" id="wifi" role="dialog" aria-label="Wi-Fi"><i class="gw"></i><div class="wf-in" id="wfIn"></div></div>
-<div class="flyr glass" id="flyr" aria-label="Floating lyrics"><i class="gw"></i><div class="fl-art"><svg viewBox="0 0 24 24"><path d="M9 17.5a2.5 2.5 0 1 1-2-2.45V6l11-2v11.5a2.5 2.5 0 1 1-2-2.45V7.3L9 8.6z"/></svg><img id="flArt" alt=""><div class="fl-eq"><i></i><i></i><i></i></div></div><div class="fl-txt" id="flTxt"></div><div class="fl-meta" id="flMeta"></div><button class="fl-x" id="flX" title="Turn off floating lyrics">✕</button></div>
+<div class="flyr glass" id="flyr" aria-label="Floating lyrics"><i class="gw"></i><div class="fl-art"><svg viewBox="0 0 24 24"><path d="M9 17.5a2.5 2.5 0 1 1-2-2.45V6l11-2v11.5a2.5 2.5 0 1 1-2-2.45V7.3L9 8.6z"/></svg><img id="flArt" alt=""><div class="fl-eq"><i></i><i></i><i></i></div></div><div class="fl-txt" id="flTxt"></div><div class="fl-meta" id="flMeta"></div><div class="fl-ctl" id="flCtl"><button class="fl-b" data-fl="prev" style="--i:2" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 6.5v11a1 1 0 0 1-1.5.86L10 13a1.15 1.15 0 0 1 0-2l8.5-5.36A1 1 0 0 1 20 6.5z"/></svg></button><button class="fl-b fl-pp" data-fl="play" style="--i:1" aria-label="Play or pause"><svg class="pz" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><svg class="pl" viewBox="0 0 24 24"><path d="M8 5.6v12.8a1 1 0 0 0 1.53.85l10.2-6.4a1 1 0 0 0 0-1.7L9.53 4.75A1 1 0 0 0 8 5.6z"/></svg></button><button class="fl-b" data-fl="next" style="--i:0" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 6.5v11a1 1 0 0 0 1.5.86L14 13a1.15 1.15 0 0 0 0-2L5.5 5.64A1 1 0 0 0 4 6.5z"/></svg></button></div><button class="fl-x" id="flX" title="Turn off floating lyrics">✕</button></div>
 <div class="aiw glass panel-glass" id="aiw" role="dialog" aria-label="AI Tools"><i class="gw"></i><div class="ai-in" id="aiIn"></div></div>
 <div class="mlw glass panel-glass" id="mailw" role="dialog" aria-label="Email"><i class="gw"></i><div class="ml-in" id="mlIn"></div></div>
 <div class="mlw glass panel-glass" id="recw" role="dialog" aria-label="Recording"><i class="gw"></i><div class="ml-in"><button class="ml-sum rc-b" id="rcGo" style="--i:0"><i class="rc-ic"></i><span>Record</span><span class="rc-k" data-k="R"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>R</kbd></span></button><button class="ml-sum rc-b" id="rcStop" style="--i:1"><i class="rc-ic sq"></i><span>Stop</span><span class="rc-k" data-k="S"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>S</kbd></span></button><div class="ai-ft"><span><i></i><span id="rcNote">Documents › ULTRON Files › Recordings</span></span><button class="ml-link" type="button" id="rcOpen">Open folder</button></div></div></div>
@@ -2306,6 +2322,19 @@ async function loadLyrics(s, key){
   if (id !== lyrLoad || key !== trackKey) return;
   skel.classList.remove('show');
   if (res) setMsg('');
+  // a video in a browser with no song lyrics to be found: its own captions, when YouTube has them
+  if (!res && s.kind === 'browser'){
+    if (!(lyr && lyr.live)) setMsg('Looking for captions…', 'No song lyrics for this one, so ULTRON is checking the video’s own captions.');
+    const cap = await invoke('yt_captions', {title:s.title, artist:(s.artist || '').replace(/\s*-\s*Topic$/i, ''), duration:(s.duration || 0) / 1000});
+    if (id !== lyrLoad || key !== trackKey) return;
+    if (cap && cap.length){
+      listenMode = 'off'; listenLines = []; songReq();
+      setMsg(''); lyr = {synced:cap}; lyrOffset = 0; paintNudge();
+      renderLines(cap.map(x => x[1])); $('nudge').classList.add('show');
+      $('srcnoteText').textContent = 'Captions from YouTube';
+      return;
+    }
+  }
   if (!res){
     if (lyr && lyr.live){ if (!lyr.synced.length) setMsg('Listening to the song…', 'No lyrics online, so ULTRON is writing down the words it hears.'); return; }
     if (S.hearSongs !== false){
@@ -2402,6 +2431,10 @@ listen('media', m => { applyMedia(m); musicSync(); });
 listen('media-art', () => setTimeout(musicSync, 80));
 /* ---- sync nudge ---- */
 let lyrOffset = 0, lyrQuiet = false;
+// Lines are put in place by measuring them. Measured while the notch was still unfolding (the words wrapped into a
+// sliver), a line's place came out thousands of pixels off: after a song had changed with the notch closed, the
+// lyrics were "gone" until the next line, or a click. Whenever the lyrics area changes size, the place is worked out again.
+new ResizeObserver(() => { lastLine = -9; lyrQuiet = true; }).observe(lyrEl);
 function paintNudge(){ $('nudgeV').textContent = lyrOffset ? (lyrOffset > 0 ? '+' : '') + lyrOffset.toFixed(1) + 's' : 'sync'; }
 $('nudge').addEventListener('click', e => {
   e.stopPropagation();
@@ -2566,10 +2599,19 @@ function renderFloat(m){
   while (fs > 14 && cur1.scrollWidth > flTxt.clientWidth){ fs--; cur1.style.setProperty('--fs', fs + 'px'); }
   if (m.next){ const n = document.createElement('div'); n.className = 'fl-l next nin'; n.textContent = m.next; flTxt.appendChild(n); }
 }
+// its own controls press the notch's (so the two always agree), and show it at once
+$('flCtl').addEventListener('click', e => {
+  const b = e.target.closest('[data-fl]'); if (!b) return;
+  e.stopPropagation();
+  b.classList.remove('tap'); void b.offsetWidth; b.classList.add('tap');
+  if (b.dataset.fl === 'play' && cur) flyr.classList.toggle('playing', !cur.playing);
+  $(b.dataset.fl).click();
+});
+$('flCtl').addEventListener('pointerdown', e => e.stopPropagation());
 // drag it anywhere on screen
 let flDrag = null;
 flyr.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || e.target.closest('.fl-x')) return;
+  if (e.button !== 0 || e.target.closest('.fl-x, .fl-ctl')) return;
   e.stopPropagation(); flyr.setPointerCapture(e.pointerId);
   flDrag = {dx:e.clientX - flyr.offsetLeft, dy:e.clientY - flyr.offsetTop}; flyr.classList.add('drag');
 });

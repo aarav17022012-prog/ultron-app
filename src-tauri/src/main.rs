@@ -570,6 +570,12 @@ async fn get_lyrics(title: String, artist: String, album: String, duration: f64)
     tauri::async_runtime::spawn_blocking(move || lyrics::fetch(&title, &artist, &album, duration)).await.ok().flatten()
 }
 
+/// A YouTube video's own captions, for the lyrics area (web.rs).
+#[tauri::command]
+async fn yt_captions(title: String, artist: String, duration: f64) -> Option<Vec<(f64, String)>> {
+    tauri::async_runtime::spawn_blocking(move || web::yt_captions(&title, &artist, duration)).await.ok().flatten()
+}
+
 /* ---------------- glass, Wi-Fi, Start menu ---------------- */
 
 #[tauri::command]
@@ -769,7 +775,9 @@ async fn menu_action(app: AppHandle, action: String) {
     .await;
 }
 
-/// Every ULTRON window shares one WebView2 browser, so they must all start it the same way.
+/// Every ULTRON window shares one WebView2 browser, so they must all start it the same way: this is what
+/// tauri.conf.json gives the main window, and every window made in code (browser.rs, ghost.rs) must be given
+/// it too. A window started differently is refused outright ("not in the correct state").
 pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required --auto-select-desktop-capture-source=creen";
 
 /// How often the live glass refreshes (0 = paused), from what's on screen.
@@ -821,7 +829,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

@@ -201,3 +201,114 @@ mod tests {
         println!("{:?}", wiki("junko case").map(|w| w.chars().take(80).collect::<String>()));
     }
 }
+
+/// The words of a YouTube video, from its own captions (the ones its maker typed in when there are any, else
+/// the automatic ones), as timed lines. Windows only says what a browser is playing by title and channel, so
+/// the video is looked up by those: it has to match the title exactly and, when the length is known, be the
+/// same length to within a few seconds. Nothing is returned rather than the captions of some other video.
+pub fn yt_captions(title: &str, channel: &str, duration: f64) -> Option<Vec<(f64, String)>> {
+    use serde_json::Value;
+    if title.trim().is_empty() {
+        return None;
+    }
+    let ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+    let agent = crate::net::agent(Duration::from_secs(8));
+    let page = agent
+        .get(&format!("https://www.youtube.com/results?search_query={}", enc(format!("{title} {channel}").trim())))
+        .set("User-Agent", ua)
+        .set("Accept-Language", "en-US,en;q=0.8")
+        .set("Cookie", "SOCS=CAI")
+        .call()
+        .ok()?
+        .into_string()
+        .ok()?;
+    // the search page carries its results as one JSON object
+    let from = page.find("var ytInitialData = ")? + "var ytInitialData = ".len();
+    let to = from + page[from..].find(";</script>")?;
+    let data: Value = serde_json::from_str(&page[from..to]).ok()?;
+    fn videos<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
+        if out.len() >= 14 {
+            return;
+        }
+        match v {
+            Value::Object(o) => {
+                for (k, x) in o {
+                    if k == "videoRenderer" {
+                        out.push(x);
+                    } else {
+                        videos(x, out);
+                    }
+                }
+            }
+            Value::Array(a) => a.iter().for_each(|x| videos(x, out)),
+            _ => {}
+        }
+    }
+    let mut found = Vec::new();
+    videos(&data, &mut found);
+    let plain = |s: &str| s.to_lowercase().chars().filter(|c| c.is_alphanumeric()).collect::<String>();
+    let length = |v: &Value| v.pointer("/lengthText/simpleText").and_then(|t| t.as_str()).map(|t| t.split(':').fold(0.0, |a, p| a * 60.0 + p.trim().parse::<f64>().unwrap_or(0.0)));
+    let want = plain(title);
+    let id = found
+        .iter()
+        .find(|v| {
+            let t = v.pointer("/title/runs/0/text").and_then(|t| t.as_str()).unwrap_or("");
+            plain(t) == want && (duration < 1.0 || length(v).map_or(true, |s| (s - duration).abs() <= 3.0))
+        })
+        .and_then(|v| v.get("videoId")?.as_str())?
+        .to_string();
+    // which captions it has (asked the way the phone app asks: those links can be read as they are)
+    let key = page.find("\"INNERTUBE_API_KEY\":\"").map(|i| page[i + 21..].split('"').next().unwrap_or("").to_string()).unwrap_or_default();
+    let url = if key.is_empty() { "https://www.youtube.com/youtubei/v1/player?prettyPrint=false".to_string() } else { format!("https://www.youtube.com/youtubei/v1/player?key={key}&prettyPrint=false") };
+    let body = serde_json::json!({ "context": { "client": { "clientName": "ANDROID", "clientVersion": "20.10.38", "androidSdkVersion": 30, "hl": "en" } }, "videoId": id });
+    let player: Value = agent
+        .post(&url)
+        .set("User-Agent", "com.google.android.youtube/20.10.38 (Linux; U; Android 11) gzip")
+        .set("Content-Type", "application/json")
+        .send_string(&body.to_string())
+        .ok()?
+        .into_json()
+        .ok()?;
+    let tracks = player.pointer("/captions/playerCaptionsTracklistRenderer/captionTracks")?.as_array()?;
+    // typed-in captions in the language spoken, else typed-in English, else any typed-in, else the automatic ones
+    let lang = |t: &Value| t.get("languageCode").and_then(|l| l.as_str()).unwrap_or("").to_string();
+    let auto = |t: &Value| t.get("kind").and_then(|k| k.as_str()) == Some("asr");
+    let spoken = tracks.iter().find(|t| auto(t)).map(|t| lang(t)).unwrap_or_default();
+    let track = tracks
+        .iter()
+        .find(|t| !auto(t) && !spoken.is_empty() && lang(t) == spoken)
+        .or_else(|| tracks.iter().find(|t| !auto(t) && lang(t).starts_with("en")))
+        .or_else(|| tracks.iter().find(|t| !auto(t)))
+        .or_else(|| tracks.first())?;
+    let xml = agent.get(&track.get("baseUrl")?.as_str()?.replace("&fmt=srv3", "")).set("User-Agent", ua).call().ok()?.into_string().ok()?;
+    let clean = |s: &str| -> String {
+        // (tags out first, then the escapes, which captions carry twice over: "&amp;#39;")
+        let mut t = s.to_string();
+        while let Some(a) = t.find('<') {
+            match t[a..].find('>') {
+                Some(b) => t.replace_range(a..=a + b, ""),
+                None => break,
+            }
+        }
+        let t = t.replace("&amp;", "&").replace("&#39;", "'").replace("&quot;", "\"").replace("&#34;", "\"").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ");
+        t.split_whitespace().collect::<Vec<_>>().join(" ")
+    };
+    // two forms of the file: <text start="12.3">words</text> (seconds), or <p t="12300">words</p> (thousandths)
+    let (open, at, close, scale) = if xml.contains("<text ") { ("<text ", "start=\"", "</text>", 1.0) } else { ("<p ", "t=\"", "</p>", 0.001) };
+    let mut lines: Vec<(f64, String)> = Vec::new();
+    for part in xml.split(open).skip(1).take(4000) {
+        let Some(gt) = part.find('>') else { continue };
+        let (head, rest) = part.split_at(gt);
+        let Some(i) = head.find(at) else { continue };
+        let Ok(t) = head[i + at.len()..].split('"').next().unwrap_or("").parse::<f64>() else { continue };
+        let words = clean(&rest[1..rest.find(close).unwrap_or(rest.len())]);
+        if words.is_empty() || lines.last().is_some_and(|l| l.1 == words) {
+            continue;
+        }
+        let low = words.to_lowercase();
+        let only_marks = low.chars().all(|c| "[]()♪♫ ".contains(c)) || low == "[music]" || low == "[applause]";
+        lines.push((t * scale, if only_marks { "♪".to_string() } else { words }));
+    }
+    crate::log_line(&format!("captions: {} lines for the video playing ({}{})", lines.len(), lang(track), if auto(track) { ", automatic" } else { "" }));
+    (lines.len() >= 3).then_some(lines)
+}
