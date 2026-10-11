@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the ULTRON window",
+  "windows": [
+    "main",
+    "intro"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

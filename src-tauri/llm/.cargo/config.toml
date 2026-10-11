@@ -1,0 +1,5 @@
+[env]
+# whisper.cpp builds with the CMake that ships with VS Build Tools; bindgen uses
+# libclang from the PyPI "libclang" package (pip install --user libclang).
+CMAKE = 'C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe'
+LIBCLANG_PATH = 'C:/Users/LENOVO/AppData/Roaming/Python/Python314/site-packages/clang/native'

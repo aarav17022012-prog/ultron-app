@@ -1,0 +1,413 @@
+//! System bits for the menu bar: the wallpaper (for the glass), Wi-Fi, the
+//! Start menu's app list and icons, and power actions.
+
+use std::collections::HashMap;
+use std::io::Cursor;
+use std::os::windows::process::CommandExt;
+use std::process::Command;
+use std::sync::Mutex;
+use std::time::{Duration, SystemTime};
+
+use base64::Engine;
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
+use windows::core::HSTRING;
+use windows::Win32::Foundation::SIZE;
+use windows::Win32::Graphics::Gdi::{
+    DeleteObject, GetDC, GetDIBits, GetObjectW, ReleaseDC, BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+};
+use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+use windows::Win32::UI::Shell::{IShellItemImageFactory, SHCreateItemFromParsingName, SIIGBF_BIGGERSIZEOK, SIIGBF_ICONONLY};
+use windows::Win32::UI::WindowsAndMessaging::{SystemParametersInfoW, SPI_GETDESKWALLPAPER, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS};
+
+const NO_WINDOW: u32 = 0x0800_0000;
+
+fn b64(bytes: &[u8]) -> String {
+    base64::engine::general_purpose::STANDARD.encode(bytes)
+}
+
+/* ---------------- wallpaper (pre-blurred, small) ---------------- */
+
+fn wallpaper_path() -> Option<std::path::PathBuf> {
+    let transcoded = std::env::var("APPDATA").ok().map(|a| std::path::PathBuf::from(a).join(r"Microsoft\Windows\Themes\TranscodedWallpaper"));
+    if let Some(p) = transcoded.filter(|p| p.exists()) {
+        return Some(p);
+    }
+    let mut buf = [0u16; 520];
+    unsafe {
+        SystemParametersInfoW(SPI_GETDESKWALLPAPER, buf.len() as u32, Some(buf.as_mut_ptr() as _), SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0)).ok()?;
+    }
+    let s = String::from_utf16_lossy(&buf).trim_end_matches('\0').to_string();
+    (!s.is_empty()).then(|| s.into()).filter(|p: &std::path::PathBuf| p.exists())
+}
+
+/// The glass's colour toning (what CSS `saturate(s) brightness(b)` does), applied to RGB bytes here,
+/// once, so the page doesn't run a filter over a screen-sized layer every time the glass changes.
+pub fn tone(px: &mut [u8], sat: f32, bright: f32) {
+    let (r0, g0, b0) = (0.213f32, 0.715f32, 0.072f32);
+    let m = [
+        [r0 + (1.0 - r0) * sat, g0 - g0 * sat, b0 - b0 * sat],
+        [r0 - r0 * sat, g0 + (1.0 - g0) * sat, b0 - b0 * sat],
+        [r0 - r0 * sat, g0 - g0 * sat, b0 + (1.0 - b0) * sat],
+    ];
+    for p in px.chunks_exact_mut(3) {
+        let (r, g, b) = (p[0] as f32, p[1] as f32, p[2] as f32);
+        for (i, row) in m.iter().enumerate() {
+            let v = (row[0] * r + row[1] * g + row[2] * b).clamp(0.0, 255.0) * bright;
+            p[i] = v.round().clamp(0.0, 255.0) as u8;
+        }
+    }
+}
+
+/// The wallpaper, shrunk and blurred once here so the page never blurs live (that's what keeps it smooth).
+fn wallpaper_glass() -> Option<(String, String)> {
+    let path = wallpaper_path()?;
+    let stamp = std::fs::metadata(&path).and_then(|m| m.modified()).ok()
+        .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0);
+    let key = format!("{}|{stamp}", path.display());
+    let bytes = std::fs::read(&path).ok()?;
+    let img = image::load_from_memory(&bytes).ok()?;
+    let small = img.thumbnail(640, 640).blur(7.0);
+    let mut out = Vec::new();
+    let mut rgb = small.to_rgb8();
+    tone(&mut rgb, 1.6, 0.82);
+    rgb.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Jpeg).ok()?;
+    Some((key, format!("data:image/jpeg;base64,{}", b64(&out))))
+}
+
+static WALL: Mutex<Option<(String, String)>> = Mutex::new(None);
+
+pub fn wallpaper_now() -> Option<String> {
+    if let Some((_, url)) = WALL.lock().unwrap().as_ref() {
+        return Some(url.clone());
+    }
+    let w = wallpaper_glass()?;
+    let url = w.1.clone();
+    *WALL.lock().unwrap() = Some(w);
+    Some(url)
+}
+
+/// Re-sends the glass whenever the wallpaper changes.
+pub fn watch_wallpaper(app: AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(15));
+        let Some(path) = wallpaper_path() else { continue };
+        let stamp = std::fs::metadata(&path).and_then(|m| m.modified()).ok()
+            .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok()).map(|d| d.as_secs()).unwrap_or(0);
+        let key = format!("{}|{stamp}", path.display());
+        let same = WALL.lock().unwrap().as_ref().map(|w| w.0 == key).unwrap_or(false);
+        if !same {
+            if let Some(w) = wallpaper_glass() {
+                let _ = app.emit_to("main", "wallpaper", &w.1);
+                *WALL.lock().unwrap() = Some(w);
+            }
+        }
+    });
+}
+
+/* ---------------- Wi-Fi ---------------- */
+
+#[derive(Serialize, Clone, Default)]
+pub struct Network {
+    pub ssid: String,
+    pub signal: u32,
+    pub secure: bool,
+    pub known: bool,
+    pub current: bool,
+}
+
+#[derive(Serialize, Clone, Default)]
+pub struct Wifi {
+    pub available: bool,
+    pub radio: bool,
+    pub connected: bool,
+    pub ssid: String,
+    pub signal: u32,
+    pub networks: Vec<Network>,
+}
+
+fn netsh(args: &[&str]) -> String {
+    Command::new("netsh")
+        .args(args)
+        .creation_flags(NO_WINDOW)
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default()
+}
+
+fn kv(line: &str) -> Option<(String, String)> {
+    let (k, v) = line.split_once(':')?;
+    Some((k.trim().to_string(), v.trim().to_string()))
+}
+
+pub fn wifi_status(with_list: bool) -> Wifi {
+    let iface = netsh(&["wlan", "show", "interfaces"]);
+    let mut w = Wifi::default();
+    if !iface.contains("Name") {
+        return w; // no wireless adapter or the WLAN service is off
+    }
+    w.available = true;
+    for line in iface.lines() {
+        let Some((k, v)) = kv(line) else {
+            if line.trim().eq_ignore_ascii_case("Software Off") {
+                w.radio = false;
+            }
+            continue;
+        };
+        match k.as_str() {
+            "State" => w.connected = v.eq_ignore_ascii_case("connected"),
+            "SSID" => w.ssid = v,
+            "Signal" => w.signal = v.trim_end_matches('%').parse().unwrap_or(0),
+            "Radio status" => w.radio = !v.contains("Off"),
+            _ => {}
+        }
+    }
+    if iface.contains("Software Off") {
+        w.radio = false;
+    }
+    if !with_list {
+        return w;
+    }
+    let known: Vec<String> = netsh(&["wlan", "show", "profiles"])
+        .lines()
+        .filter_map(kv)
+        .filter(|(k, _)| k.contains("User Profile"))
+        .map(|(_, v)| v)
+        .collect();
+    let mut nets: Vec<Network> = Vec::new();
+    for line in netsh(&["wlan", "show", "networks", "mode=bssid"]).lines() {
+        let Some((k, v)) = kv(line) else { continue };
+        if k.starts_with("SSID ") {
+            nets.push(Network { ssid: v, ..Default::default() });
+        } else if let Some(n) = nets.last_mut() {
+            match k.as_str() {
+                "Authentication" => n.secure = !v.eq_ignore_ascii_case("Open"),
+                "Signal" => n.signal = n.signal.max(v.trim_end_matches('%').parse().unwrap_or(0)),
+                _ => {}
+            }
+        }
+    }
+    nets.retain(|n| !n.ssid.is_empty());
+    for n in nets.iter_mut() {
+        n.known = known.iter().any(|k| k == &n.ssid);
+        n.current = w.connected && n.ssid == w.ssid;
+    }
+    nets.sort_by(|a, b| b.current.cmp(&a.current).then(b.known.cmp(&a.known)).then(b.signal.cmp(&a.signal)));
+    w.networks = nets;
+    w
+}
+
+pub fn wifi_connect(ssid: &str) -> bool {
+    let name = format!("name={ssid}");
+    let out = netsh(&["wlan", "connect", &name]);
+    out.to_lowercase().contains("successfully")
+}
+
+pub fn wifi_disconnect() {
+    netsh(&["wlan", "disconnect"]);
+}
+
+/* ---------------- icons for the Start menu ---------------- */
+
+static ICONS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
+
+fn icon_data_url(source: &str, size: i32) -> Option<String> {
+    unsafe {
+        let factory: IShellItemImageFactory = SHCreateItemFromParsingName(&HSTRING::from(source), None).ok()?;
+        let hbm = factory.GetImage(SIZE { cx: size, cy: size }, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK).ok()?;
+        let mut bm = BITMAP::default();
+        GetObjectW(hbm.into(), std::mem::size_of::<BITMAP>() as i32, Some(&mut bm as *mut _ as _));
+        let (w, h) = (bm.bmWidth, bm.bmHeight);
+        let mut bmi = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut px = vec![0u8; (w.max(0) * h.max(0) * 4) as usize];
+        let dc = GetDC(None);
+        let lines = GetDIBits(dc, hbm, 0, h as u32, Some(px.as_mut_ptr() as _), &mut bmi, DIB_RGB_COLORS);
+        ReleaseDC(None, dc);
+        let _ = DeleteObject(hbm.into());
+        if lines == 0 || w <= 0 {
+            return None;
+        }
+        // BGRA (premultiplied) -> RGBA straight alpha
+        let any_alpha = px.chunks(4).any(|p| p[3] != 0);
+        for p in px.chunks_mut(4) {
+            let (b, g, r, a) = (p[0], p[1], p[2], if any_alpha { p[3] } else { 255 });
+            let un = |c: u8| if a == 0 { 0 } else { ((c as u32 * 255 + a as u32 / 2) / a as u32).min(255) as u8 };
+            p[0] = un(r);
+            p[1] = un(g);
+            p[2] = un(b);
+            p[3] = a;
+        }
+        let img = image::RgbaImage::from_raw(w as u32, h as u32, px)?;
+        let mut out = Vec::new();
+        img.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Png).ok()?;
+        Some(format!("data:image/png;base64,{}", b64(&out)))
+    }
+}
+
+pub fn icons(sources: Vec<String>) -> Vec<String> {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+    }
+    sources
+        .into_iter()
+        .map(|s| {
+            if let Some(u) = ICONS.lock().unwrap().get_or_insert_with(HashMap::new).get(&s) {
+                return u.clone();
+            }
+            let u = icon_data_url(&s, 96).unwrap_or_default();
+            ICONS.lock().unwrap().get_or_insert_with(HashMap::new).insert(s, u.clone());
+            u
+        })
+        .collect()
+}
+
+/* ---------------- power ---------------- */
+
+pub fn power(action: &str) {
+    let run = |args: &[&str]| {
+        let _ = Command::new("shutdown").args(args).creation_flags(NO_WINDOW).spawn();
+    };
+    match action {
+        "lock" => unsafe {
+            let _ = windows::Win32::System::Shutdown::LockWorkStation();
+        },
+        "sleep" => unsafe {
+            let _ = windows::Win32::System::Power::SetSuspendState(false, false, false);
+        },
+        "restart" => run(&["/r", "/t", "0"]),
+        "shutdown" => run(&["/s", "/t", "0"]),
+        _ => {}
+    }
+}
+
+/* ---------------- live system stats ---------------- */
+
+#[derive(Serialize, Clone, Default)]
+pub struct Stats {
+    pub cpu: f64,
+    pub mem_used: f64,
+    pub mem_total: f64,
+    pub disk_free: f64,
+    pub disk_total: f64,
+    pub uptime: f64,
+}
+
+static CPU_LAST: Mutex<(u64, u64)> = Mutex::new((0, 0));
+
+pub fn stats() -> Stats {
+    use windows::Win32::Foundation::FILETIME;
+    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+    use windows::Win32::System::SystemInformation::{GetTickCount64, GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    use windows::Win32::System::Threading::GetSystemTimes;
+    let ft = |f: FILETIME| ((f.dwHighDateTime as u64) << 32) | f.dwLowDateTime as u64;
+    let mut st = Stats::default();
+    unsafe {
+        let (mut idle, mut kernel, mut user) = (FILETIME::default(), FILETIME::default(), FILETIME::default());
+        if GetSystemTimes(Some(&mut idle), Some(&mut kernel), Some(&mut user)).is_ok() {
+            let (i, t) = (ft(idle), ft(kernel) + ft(user)); // kernel time includes idle
+            let mut last = CPU_LAST.lock().unwrap();
+            let (di, dt) = (i.saturating_sub(last.0), t.saturating_sub(last.1));
+            if last.1 != 0 && dt > 0 {
+                st.cpu = (1.0 - di as f64 / dt as f64).clamp(0.0, 1.0);
+            }
+            *last = (i, t);
+        }
+        let mut m = MEMORYSTATUSEX { dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32, ..Default::default() };
+        if GlobalMemoryStatusEx(&mut m).is_ok() {
+            st.mem_total = m.ullTotalPhys as f64;
+            st.mem_used = (m.ullTotalPhys - m.ullAvailPhys) as f64;
+        }
+        let (mut free, mut total) = (0u64, 0u64);
+        if GetDiskFreeSpaceExW(&HSTRING::from("C:\\"), Some(&mut free), Some(&mut total), None).is_ok() {
+            st.disk_free = free as f64;
+            st.disk_total = total as f64;
+        }
+        st.uptime = GetTickCount64() as f64 / 1000.0;
+    }
+    st
+}
+
+/* ---------------- news headlines ---------------- */
+
+#[derive(Serialize, Clone)]
+pub struct NewsItem {
+    pub title: String,
+    pub source: String,
+    pub link: String,
+    pub published: String,
+}
+
+fn between<'a>(s: &'a str, a: &str, b: &str) -> Option<&'a str> {
+    let i = s.find(a)? + a.len();
+    let j = s[i..].find(b)? + i;
+    Some(&s[i..j])
+}
+
+fn unescape(s: &str) -> String {
+    s.replace("<![CDATA[", "").replace("]]>", "").replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'")
+        .replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ").trim().to_string()
+}
+
+pub fn news(country: &str) -> Vec<NewsItem> {
+    let url = if country == "GLOBAL" {
+        "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en".to_string()
+    } else {
+        let (hl, lang) = match country {
+            "US" => ("en-US", "en"), "GB" => ("en-GB", "en"), "CA" => ("en-CA", "en"), "AU" => ("en-AU", "en"),
+            "NZ" => ("en-NZ", "en"), "IE" => ("en-IE", "en"), "SG" => ("en-SG", "en"), "ZA" => ("en-ZA", "en"),
+            "NG" => ("en-NG", "en"), "PH" => ("en-PH", "en"), "PK" => ("en-PK", "en"), "AE" => ("en-AE", "en"),
+            "MY" => ("en-MY", "en"), "DE" => ("de", "de"), "FR" => ("fr", "fr"), "JP" => ("ja", "ja"),
+            "BR" => ("pt-BR", "pt-419"), "ES" => ("es", "es"), "IT" => ("it", "it"), "KR" => ("ko", "ko"),
+            _ => ("en-IN", "en"),
+        };
+        let gl = if country.len() == 2 { country } else { "IN" };
+        format!("https://news.google.com/rss?hl={hl}&gl={gl}&ceid={gl}:{lang}")
+    };
+    rss(&url)
+}
+
+/// Headlines about a topic (for questions like "what happened to ...").
+pub fn news_search(q: &str) -> Vec<NewsItem> {
+    let q: String = q.bytes().map(|b| match b { b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' => (b as char).to_string(), b' ' => "+".into(), _ => format!("%{b:02X}") }).collect();
+    rss(&format!("https://news.google.com/rss/search?q={q}&hl=en-IN&gl=IN&ceid=IN:en"))
+}
+
+fn rss(url: &str) -> Vec<NewsItem> {
+    let Ok(resp) = crate::net::agent(Duration::from_secs(10)).get(url).call() else {
+        return Vec::new();
+    };
+    let Ok(body) = resp.into_string() else { return Vec::new() };
+    body.split("<item>")
+        .skip(1)
+        .filter_map(|it| {
+            let source = between(it, ">", "</source>").and_then(|_| {
+                let i = it.find("<source")?;
+                between(&it[i..], ">", "</source>")
+            }).map(unescape).unwrap_or_default();
+            let mut title = unescape(between(it, "<title>", "</title>")?);
+            if !source.is_empty() {
+                if let Some(t) = title.strip_suffix(&format!(" - {source}")) {
+                    title = t.to_string();
+                }
+            }
+            Some(NewsItem {
+                title,
+                source,
+                link: unescape(between(it, "<link>", "</link>")?),
+                published: between(it, "<pubDate>", "</pubDate>").map(unescape).unwrap_or_default(),
+            })
+        })
+        .take(12)
+        .collect()
+}

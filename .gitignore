@@ -1,0 +1,13 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/llm/target/
+
+# built or fetched, and too big for git: see "What's not in this repository" in the README
+src-tauri/binaries/
+src-tauri/resources/llama/
+src-tauri/resources/models/
+src-tauri/resources/piper/
+src-tauri/resources/voices/
+src-tauri/resources/screen/
+*.pdb

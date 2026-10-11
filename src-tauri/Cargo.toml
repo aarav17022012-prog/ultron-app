@@ -1,0 +1,84 @@
+[package]
+name = "ultron"
+version = "0.1.0"
+description = "ULTRON notch assistant"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+whisper-rs = "0.16.0"
+cpal = "0.18.2"
+ureq = { version = "2", features = ["json"] }
+png = "0.17"
+base64 = "0.22"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "bmp"] }
+nnnoiseless = { version = "0.5", default-features = false }
+ort = { version = "=2.0.0-rc.13", features = ["download-binaries"] }
+realfft = "3"
+# email inside ULTRON: talking to the mail server, and reading messages
+imap = "2.4"
+native-tls = "0.2"
+mailparse = "0.15"
+
+[dependencies.windows]
+version = "0.61"
+features = [
+  "Foundation",
+  "Foundation_Collections",
+  "Globalization",
+  "Graphics_Imaging",
+  "Media_Ocr",
+  "Media_Control",
+  "Storage_Streams",
+  "UI_Notifications",
+  "UI_Notifications_Management",
+  "ApplicationModel",
+  "Win32_Foundation",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Dwm",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Graphics_Gdi",
+  "Win32_Media_Audio",
+  "Win32_Media_Audio_Endpoints",
+  "Win32_Security",
+  "Win32_Security_Credentials",
+  "Win32_Storage_EnhancedStorage",
+  "Win32_Storage_FileSystem",
+  "Win32_Storage_Packaging_Appx",
+  "Win32_System_Com",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_System_DataExchange",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Power",
+  "Win32_System_Shutdown",
+  "Win32_System_SystemInformation",
+  "Win32_System_Threading",
+  "Win32_System_Variant",
+  "Win32_UI_Accessibility",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_Shell_PropertiesSystem",
+  "Win32_UI_WindowsAndMessaging",
+]
+
+[profile.release]
+codegen-units = 16
+lto = "thin"
+opt-level = 3
+strip = true
+
+# whisper.cpp is unusably slow unoptimized, even in dev builds
+[profile.dev.package.whisper-rs-sys]
+opt-level = 3

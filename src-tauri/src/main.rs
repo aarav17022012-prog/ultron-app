@@ -1,0 +1,892 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod agent;
+mod ai;
+mod appbar;
+mod browser;
+mod clip;
+mod apps;
+mod commands;
+mod ghost;
+mod ppt;
+mod skills;
+mod songs;
+mod hit;
+mod backdrop;
+mod calls;
+mod rec;
+mod icons;
+mod cloud;
+mod pick;
+mod mail;
+mod routines;
+mod chats;
+mod doer;
+mod tools;
+mod memory;
+mod quick;
+mod smooth;
+mod router;
+mod uam;
+mod see;
+mod intro;
+mod lyriceng;
+mod lyrics;
+mod media;
+mod net;
+mod sys;
+mod vision;
+mod voice;
+mod tts;
+mod web;
+
+use std::time::Duration;
+
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, RunEvent, State, WebviewWindow, WindowEvent,
+};
+use windows::core::HSTRING;
+use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
+use windows::Win32::System::Threading::CreateMutexW;
+
+use apps::Apps;
+use hit::{Hits, Rect};
+use media::{Cmd, Media};
+use voice::Voice;
+
+/// CSS px the menu bar keeps free at the top of the screen, and the window height
+/// (taller, so the notch can open downward over other windows).
+const BAR_HEIGHT: f64 = 32.0;
+const WINDOW_HEIGHT: f64 = 700.0;
+
+/* ---------------- shared ---------------- */
+
+#[tauri::command]
+fn set_hit_rects(window: WebviewWindow, hits: State<Hits>, rects: Vec<Rect>) {
+    hits.0.lock().unwrap().insert(window.label().to_string(), rects);
+}
+
+pub fn log_line(msg: &str) {
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("ultron.log")) {
+        let _ = writeln!(f, "{msg}");
+    }
+}
+
+/// Is this a developer run (started with ULTRON_DEV_INBOX=1)?
+#[tauri::command]
+fn dev_mode() -> bool {
+    std::env::var("ULTRON_DEV_INBOX").is_ok()
+}
+
+#[tauri::command]
+fn page_log(msg: String) {
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("ultron.log")) {
+        let _ = writeln!(f, "[page] {msg}");
+    }
+}
+
+#[tauri::command]
+fn quit_app(app: AppHandle) {
+    quit(&app);
+}
+
+/// The introduction speaks with ULTRON's real voice, which lives in the main window.
+#[tauri::command]
+fn intro_say(app: AppHandle, text: String) {
+    let _ = app.emit_to("main", "intro-say", text);
+}
+
+/// What you said while the introduction asked your name.
+/// What this PC has, and the brains it runs.
+#[tauri::command]
+fn ai_specs() -> serde_json::Value {
+    let s = router::specs();
+    serde_json::json!({ "specs": s, "tier": format!("{:?}", router::tier()), "text": router::text_model().name, "vision": router::vision_model().name,
+        "quick": quick::device(), "saving": quick::power_saving(), "cap": if quick::device() == Some(false) { quick::card_cap().map(|(a, b)| [a, b]) } else { None } })
+}
+
+#[tauri::command]
+fn intro_heard(app: AppHandle, text: String) {
+    let _ = app.emit_to("intro", "intro-heard", text);
+}
+
+#[tauri::command]
+async fn intro_finish(app: AppHandle, name: Option<String>) {
+    intro::finish(&app, name);
+}
+
+#[tauri::command]
+async fn intro_play(app: AppHandle) {
+    intro::play(&app);
+}
+
+/// The ringing call: answer it, decline it, or decline with a message.
+#[tauri::command]
+async fn call_answer(app: AppHandle) -> bool {
+    tauri::async_runtime::spawn_blocking(move || calls::answer(&app)).await.unwrap_or(false)
+}
+
+#[tauri::command]
+async fn call_decline(app: AppHandle) -> bool {
+    tauri::async_runtime::spawn_blocking(move || calls::decline(&app)).await.unwrap_or(false)
+}
+
+#[tauri::command]
+async fn call_reply(app: AppHandle, text: String) -> String {
+    tauri::async_runtime::spawn_blocking(move || calls::reply(&app, &text)).await.unwrap_or_default()
+}
+
+/// Your own key (cloud.rs): what's set, check and keep a key, flip the switch or change the model, throw a key away.
+#[tauri::command]
+fn cloud_status(app: AppHandle) -> serde_json::Value {
+    cloud::status(&app)
+}
+
+#[tauri::command]
+async fn cloud_connect(app: AppHandle, provider: String, key: Option<String>, base: Option<String>, model: Option<String>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || cloud::connect(&app, &provider, &key.unwrap_or_default(), &base.unwrap_or_default(), &model.unwrap_or_default()))
+        .await
+        .unwrap_or_else(|_| Err("Something went wrong.".into()))
+}
+
+#[tauri::command]
+fn cloud_set(app: AppHandle, on: Option<bool>, model: Option<String>) {
+    cloud::set(&app, on, model);
+}
+
+#[tauri::command]
+fn cloud_forget(app: AppHandle, provider: String) {
+    cloud::forget(&app, &provider);
+}
+
+/// Picking text for a tool: watch what's being selected (see pick.rs), or stop watching.
+#[tauri::command]
+fn pick_start(app: AppHandle) {
+    pick::start(app);
+}
+
+#[tauri::command]
+fn pick_stop() {
+    pick::stop();
+}
+
+/// Email: is an account connected, and how many of the latest messages are unread.
+#[tauri::command]
+fn mail_status(app: AppHandle) -> serde_json::Value {
+    match mail::account(&app) {
+        Some(a) => serde_json::json!({ "connected": true, "email": a.email, "unread": mail::unread() }),
+        None => serde_json::json!({ "connected": false }),
+    }
+}
+
+#[tauri::command]
+async fn mail_connect(app: AppHandle, email: String, pass: String, host: Option<String>) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || mail::connect(&app, &email, &pass, host)).await.unwrap_or_else(|_| Err("Something went wrong.".into()))
+}
+
+#[tauri::command]
+async fn mail_list(app: AppHandle, refresh: bool) -> Result<Vec<mail::Mail>, String> {
+    tauri::async_runtime::spawn_blocking(move || mail::inbox(&app, refresh)).await.unwrap_or_else(|_| Err("Something went wrong.".into()))
+}
+
+#[tauri::command]
+async fn mail_summary(app: AppHandle, uid: u32) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || mail::summary(&app, uid)).await.ok().flatten()
+}
+
+#[tauri::command]
+async fn mail_digest(app: AppHandle) -> String {
+    tauri::async_runtime::spawn_blocking(move || mail::digest(&app, false)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+fn mail_body(uid: u32) -> Option<String> {
+    mail::body(uid)
+}
+
+/// Screen recording (rec.rs): start a file, add the next second to it, close it; and press ULTRON's own Record button.
+#[tauri::command]
+fn rec_begin(app: AppHandle, ext: String) -> Result<String, String> {
+    rec::begin(&app, &ext)
+}
+
+#[tauri::command]
+fn rec_data(b64: String) -> bool {
+    rec::data(&b64)
+}
+
+#[tauri::command]
+fn rec_end(secs: f64) -> Option<(String, f64)> {
+    rec::end(secs)
+}
+
+#[tauri::command]
+fn rec_sound(app: AppHandle, on: bool) -> u32 {
+    rec::sound(&app, on)
+}
+
+#[tauri::command]
+fn rec_keys() -> Vec<&'static str> {
+    rec::keys()
+}
+
+#[tauri::command]
+async fn rec_click(app: AppHandle, x: f64, y: f64) {
+    let _ = tauri::async_runtime::spawn_blocking(move || rec::click(&app, x, y)).await;
+}
+
+#[tauri::command]
+fn rec_folder(app: AppHandle) -> String {
+    rec::folder(&app).to_string_lossy().to_string()
+}
+
+#[tauri::command]
+fn mail_signout(app: AppHandle) {
+    mail::sign_out(&app);
+}
+
+/// Routines, for Settings › Tasks.
+#[tauri::command]
+fn routines_list(app: AppHandle) -> Vec<serde_json::Value> {
+    routines::list(&app).into_iter().map(|r| serde_json::json!({ "id": r.id.to_string(), "task": r.task, "when": routines::when(&r), "on": r.on })).collect()
+}
+
+#[tauri::command]
+fn routine_set(app: AppHandle, id: String, on: Option<bool>, delete: Option<bool>, run: Option<bool>) {
+    let Ok(id) = id.parse::<u64>() else { return };
+    if delete == Some(true) {
+        routines::delete(&app, id);
+    } else if let Some(on) = on {
+        routines::set_on(&app, id, on);
+    } else if run == Some(true) {
+        if let Some(r) = routines::list(&app).into_iter().find(|r| r.id == id) {
+            routines::fire(app.clone(), r);
+        }
+    }
+}
+
+/// Wake the big brain ahead of need (the Language menu opened).
+#[tauri::command]
+fn ai_wake(app: AppHandle) {
+    ai::wake(&app);
+}
+
+/// First launch on this PC? (The page asks once it has loaded; true only the first time.)
+#[tauri::command]
+fn intro_due(app: AppHandle) -> bool {
+    intro::due(&app)
+}
+
+fn quit(app: &AppHandle) {
+    let _ = app.emit("app-quit", ());
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(560));
+        appbar::remove();
+        app.exit(0);
+    });
+}
+
+/* ---------------- voice + assistant ---------------- */
+
+#[tauri::command]
+fn voice_status(voice: State<Voice>) -> voice::VoiceStatus {
+    voice.status()
+}
+
+#[tauri::command]
+fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>) {
+    if let Some(p) = paused {
+        voice.set_paused(p);
+    }
+    if let Some(s) = sens {
+        voice.set_sens(s);
+    }
+    if let Some(p) = prompt {
+        voice.set_prompt(p);
+    }
+}
+
+#[tauri::command]
+async fn run_command(app: AppHandle, text: String) -> commands::Reply {
+    tauri::async_runtime::spawn_blocking(move || commands::run(&app, &text)).await.unwrap_or_else(|_| commands::Reply {
+        reply: "Something went wrong.".into(),
+        action: String::new(),
+        icon: "chat",
+        ok: false,
+    })
+}
+
+/// Fixed commands first (instant); anything else, or small talk, goes to the local AI.
+#[tauri::command]
+async fn assist(app: AppHandle, text: String) -> commands::Reply {
+    tauri::async_runtime::spawn_blocking(move || handle(app, text))
+        .await
+        .unwrap_or_else(|_| commands::Reply { reply: "Something went wrong.".into(), action: String::new(), icon: "chat", ok: false })
+}
+
+/// Everything ULTRON does with a request, in order.
+pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
+    {
+        let _request = ai::begin_request();
+        // slips of the keyboard and chat shorthand are set right before anything reads the request
+        let text = skills::tidy(&text);
+        // "Danish's chat is open. What should I say?" -> what you say now is the message
+        if let Some((chat_app, to)) = skills::asked_message(&text) {
+            return agent::execute(&app, vec![agent::Step::Message(chat_app, to, text.trim().to_string())]);
+        }
+        // "yes" / "no" to something a task asked before changing the system
+        if let Some(r) = doer::answer_pending(&app, &text) {
+            return r;
+        }
+        // "remember that…", "what do you remember", "forget…"
+        if let Some(said) = memory::command(&app, &text) {
+            // (what ULTRON knows about you is part of what its quick brain keeps ready: refresh that now, quietly)
+            let a = app.clone();
+            std::thread::spawn(move || ai::quick_ready(&a));
+            return commands::Reply { reply: said, action: String::new(), icon: "chat", ok: true };
+        }
+        // "what did we talk about?", "what was my last question?", "forget our chats"
+        if let Some(said) = chats::command(&app, &text) {
+            return commands::Reply { reply: said, action: String::new(), icon: "chat", ok: true };
+        }
+        // "every weekday at 9, open my work apps", "list my routines", "delete the gym routine"
+        if let Some(said) = routines::command(&app, &text) {
+            return commands::Reply { reply: said, action: String::new(), icon: "chat", ok: true };
+        }
+        // "check my email", "sum up my inbox", "read my latest email"
+        if let Some(said) = mail::command(&app, &text) {
+            ai::remember_chat(&app, &text, &said);
+            return commands::Reply { reply: said, action: String::new(), icon: "chat", ok: true };
+        }
+        memory::notice(&app, &text);
+        // bigger jobs (files, Excel, Word, research): the task agent plans them step by step with tools
+        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && cloud::active(&app).is_some()) {
+            if let Some(r) = doer::run(&app, &text) {
+                ai::remember_chat(&app, &text, &r.reply);
+                return r;
+            }
+        }
+        // several steps, or keyboard and mouse work: ULTRON's own cursor does the job
+        if let Some(steps) = agent::plan(&text) {
+            let r = agent::execute(&app, steps);
+            ai::remember_chat(&app, &text, &r.reply);
+            return r;
+        }
+        let r = commands::run(&app, &text);
+        if r.ok && r.icon != "smalltalk" {
+            ai::remember_chat(&app, &text, &r.reply);
+            return r;
+        }
+        // the action model says it's something to do, but the rules couldn't read it:
+        // the brain rewrites it in ULTRON's command language, then the agent does it
+        if let Some((kind, conf)) = uam::classify(&text) {
+            crate::log_line(&format!("action model: {kind} ({conf:.2}) for {text:?}"));
+            // "give me 5 ideas for a gift", "tell me a recipe": an answer for you, not something to type into an app
+            // (it once tried to type the ideas into whatever window was in front)
+            let low = format!(" {} ", text.to_lowercase());
+            let answer_me = ai::wants_steps(&text) && ![" type ", " write ", " draft ", " in notepad", " in word", " into ", " open "].iter().any(|w| low.contains(w));
+            // "Who invented the light bulb?": a question that starts with who/when/why/what/which/where/how and isn't
+            // about this PC is a question. (The action model called that one "system" and it went to the task agent.)
+            let first = low.split_whitespace().next().unwrap_or("").trim_matches(|c: char| !c.is_alphanumeric());
+            let about_pc = [" my ", " this pc", " this computer", " this laptop", " the pc", " the computer", " screen", " window", " file", " folder", " app", " disk", " drive", " battery", " wifi", " wi-fi",
+                " volume", " brightness", " ram ", " memory", " cpu", " gpu", " running", " installed", " download", " clipboard", " desktop", " settings"].iter().any(|w| low.contains(w));
+            let question = ["who", "whom", "whose", "when", "why", "what", "whats", "what's", "which", "where", "how"].contains(&first) && !about_pc;
+            if kind != "chat" && conf >= 0.55 && !answer_me && !question {
+                // files and the system are jobs for the task agent; one clear thing to do (message someone,
+                // open, play, type...) is turned straight into a command, which takes half a second
+                let big = matches!(kind, "files" | "system");
+                if big {
+                    if let Some(r) = doer::run(&app, &text) {
+                        ai::remember_chat(&app, &text, &r.reply);
+                        return r;
+                    }
+                }
+                if let Some(lines) = ai::plan_actions(&app, &text) {
+                    let steps: Vec<agent::Step> = lines.iter().map(|l| agent::parse_step(l)).collect();
+                    let r = agent::execute(&app, steps);
+                    ai::remember_chat(&app, &text, &r.reply);
+                    return r;
+                }
+            }
+        }
+        if let Some(a) = ai::ask(&app, &text) {
+            return a;
+        }
+        let st = app.state::<ai::Ai>().status();
+        if r.ok {
+            return r;
+        }
+        let why = match st.state.as_str() {
+            "downloading" => format!("My local brain is still downloading ({}%). Give me a few minutes.", (st.progress * 100.0).round()),
+            "loading" => "My local brain is still waking up. Ask me again in a few seconds.".to_string(),
+            _ => r.reply.clone(),
+        };
+        commands::Reply { reply: why, ..r }
+    }
+}
+
+/// For testing without touching the screen: started with ULTRON_DEV_INBOX=1, ULTRON takes requests
+/// from %TEMP%\ultron-inbox.txt and logs its replies (Office files are made without opening windows).
+fn dev_inbox(app: AppHandle) {
+    if std::env::var("ULTRON_DEV_INBOX").is_err() {
+        return;
+    }
+    tools::QUIET.store(true, std::sync::atomic::Ordering::SeqCst);
+    std::thread::spawn(move || {
+        let path = std::env::temp_dir().join("ultron-inbox.txt");
+        log_line("dev inbox: listening");
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let Ok(text) = std::fs::read_to_string(&path) else { continue };
+            let _ = std::fs::remove_file(&path);
+            let text = text.trim().to_string();
+            if text.is_empty() {
+                continue;
+            }
+            // "!open", "!ask what's 2+2", "!menu clip": drive the interface itself
+            if let Some(ui) = text.strip_prefix('!') {
+                let _ = app.emit_to("main", "dev-ui", ui.trim());
+                continue;
+            }
+            let t0 = std::time::Instant::now();
+            log_line(&format!("dev inbox: {text:?}"));
+            let r = handle(app.clone(), text);
+            log_line(&format!("dev inbox reply ({} s, ok={}): {} [{}]", t0.elapsed().as_secs(), r.ok, r.reply, r.action));
+        }
+    });
+}
+
+#[tauri::command]
+fn ai_warm(app: AppHandle) {
+    ai::warm(&app);
+    tts::warm(&app);
+}
+
+/// Settings that change how the brain and tasks behave.
+#[tauri::command]
+fn ai_config(app: AppHandle, cfg: ai::Config) {
+    ai::set_config(&app, cfg);
+}
+
+/// Forget the conversation so far.
+#[tauri::command]
+fn ai_forget(app: AppHandle, ai: State<ai::Ai>) {
+    ai.forget();
+    chats::clear(&app);
+}
+
+/// "Send it" / "Cancel" for a message ULTRON drafted.
+#[tauri::command]
+async fn agent_confirm(app: AppHandle, ok: bool) -> String {
+    tauri::async_runtime::spawn_blocking(move || agent::confirm(&app, ok)).await.unwrap_or_default()
+}
+
+const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+
+/// Start ULTRON when you sign in to Windows.
+#[tauri::command]
+fn set_autostart(on: bool) -> bool {
+    use std::os::windows::process::CommandExt;
+    let mut c = std::process::Command::new("reg");
+    if on {
+        let exe = std::env::current_exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+        c.args(["add", RUN_KEY, "/v", "ULTRON", "/t", "REG_SZ", "/d", &format!("\"{exe}\""), "/f"]);
+    } else {
+        c.args(["delete", RUN_KEY, "/v", "ULTRON", "/f"]);
+    }
+    c.creation_flags(0x0800_0000).output().map(|o| o.status.success()).unwrap_or(false)
+}
+
+#[tauri::command]
+fn get_autostart() -> bool {
+    use std::os::windows::process::CommandExt;
+    std::process::Command::new("reg")
+        .args(["query", RUN_KEY, "/v", "ULTRON"])
+        .creation_flags(0x0800_0000)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// Listen to the song: line the lyrics up with the video, or write down the words when there are no lyrics.
+#[tauri::command]
+fn song_listen(app: AppHandle, req: songs::Request) {
+    songs::request(&app, req);
+}
+
+/// The red stop button: stop speaking, thinking and any task in progress.
+#[tauri::command]
+fn ai_stop() {
+    ai::cancel();
+}
+
+/// One sentence in ULTRON's voice, as a WAV (base64).
+#[tauri::command]
+async fn tts(app: AppHandle, text: String) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || tts::speak(&app, &text)).await.ok().flatten()
+}
+
+#[tauri::command]
+fn ai_status(ai: State<ai::Ai>) -> ai::AiStatus {
+    ai.status()
+}
+
+#[tauri::command]
+fn app_names(apps: State<Apps>) -> Vec<String> {
+    let wanted = ["Spotify", "Google Chrome", "Microsoft Edge", "Visual Studio Code", "WhatsApp", "File Explorer", "Terminal", "Settings", "Notepad", "Calculator"];
+    let index = apps.index.read().unwrap();
+    wanted.iter().filter(|w| index.iter().any(|e| e.name.eq_ignore_ascii_case(w))).map(|w| w.to_string()).collect()
+}
+
+/* ---------------- media + lyrics ---------------- */
+
+#[tauri::command]
+fn media_state(media: State<Media>) -> media::MediaState {
+    media.state.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn media_control(media: State<Media>, action: String, value: Option<f64>, id: Option<String>) {
+    let cmd = match action.as_str() {
+        "toggle" => Cmd::Toggle,
+        "play" => Cmd::Play,
+        "pause" => Cmd::Pause,
+        "next" => Cmd::Next,
+        "prev" => Cmd::Prev,
+        "seek" => Cmd::Seek(value.unwrap_or(0.0)),
+        "select" => Cmd::Select(id.unwrap_or_default()),
+        _ => return,
+    };
+    media.send(cmd);
+}
+
+#[tauri::command]
+async fn get_lyrics(title: String, artist: String, album: String, duration: f64) -> Option<lyrics::Lyrics> {
+    tauri::async_runtime::spawn_blocking(move || lyrics::fetch(&title, &artist, &album, duration)).await.ok().flatten()
+}
+
+/* ---------------- glass, Wi-Fi, Start menu ---------------- */
+
+#[tauri::command]
+async fn wallpaper() -> Option<String> {
+    tauri::async_runtime::spawn_blocking(sys::wallpaper_now).await.ok().flatten()
+}
+
+#[tauri::command]
+async fn wifi_status(list: bool) -> sys::Wifi {
+    tauri::async_runtime::spawn_blocking(move || sys::wifi_status(list)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+async fn wifi_connect(ssid: String) -> bool {
+    tauri::async_runtime::spawn_blocking(move || sys::wifi_connect(&ssid)).await.unwrap_or(false)
+}
+
+#[tauri::command]
+async fn wifi_disconnect() {
+    let _ = tauri::async_runtime::spawn_blocking(sys::wifi_disconnect).await;
+}
+
+#[derive(serde::Serialize)]
+struct StartApp {
+    name: String,
+    launch: String,
+}
+
+#[tauri::command]
+fn start_apps(apps: State<Apps>) -> Vec<StartApp> {
+    let skip = ["uninstall", "readme", "release notes", "documentation", "help", "license", "website"];
+    let mut v: Vec<StartApp> = apps
+        .index
+        .read()
+        .unwrap()
+        .iter()
+        .filter(|e| !skip.iter().any(|s| e.name.to_lowercase().contains(s)))
+        .map(|e| StartApp { name: e.name.clone(), launch: e.launch.clone() })
+        .collect();
+    v.sort_by_key(|a| a.name.to_lowercase());
+    v.dedup_by(|a, b| a.name.eq_ignore_ascii_case(&b.name));
+    v
+}
+
+#[tauri::command]
+async fn app_icons(sources: Vec<String>) -> Vec<String> {
+    tauri::async_runtime::spawn_blocking(move || sys::icons(sources)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+async fn launch(target: String) -> bool {
+    tauri::async_runtime::spawn_blocking(move || apps::shell_open(&target)).await.unwrap_or(false)
+}
+
+#[tauri::command]
+fn power(action: String) {
+    sys::power(&action);
+}
+
+#[tauri::command]
+fn user_name() -> String {
+    std::env::var("USERNAME").unwrap_or_else(|_| "You".into())
+}
+
+#[tauri::command]
+async fn news(country: String) -> Vec<sys::NewsItem> {
+    tauri::async_runtime::spawn_blocking(move || sys::news(&country)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+fn media_fast(media: State<Media>, on: bool) {
+    media.set_fast(on);
+}
+
+#[tauri::command]
+async fn translate(app: AppHandle, text: String, from: String, to: String, id: Option<u64>) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || ai::translate(&app, &text, &from, &to, id.unwrap_or(0))).await.ok().flatten()
+}
+
+#[tauri::command]
+fn sys_stats() -> sys::Stats {
+    sys::stats()
+}
+
+#[tauri::command]
+fn clip_list() -> Vec<String> {
+    clip::list()
+}
+
+#[tauri::command]
+fn clip_action(action: String, text: Option<String>, index: Option<usize>) -> bool {
+    match action.as_str() {
+        "copy" => clip::set(&text.unwrap_or_default()),
+        "remove" => {
+            clip::remove(index.unwrap_or(usize::MAX));
+            true
+        }
+        "clear" => {
+            clip::clear();
+            true
+        }
+        _ => false,
+    }
+}
+
+#[tauri::command]
+fn set_window_height(app: AppHandle, h: f64) {
+    // resize through Tauri so the page's input area grows too (a raw SetWindowPos
+    // only stretched the picture, and clicks below the idle height went nowhere)
+    appbar::remember_height(h);
+    if let Some(win) = app.get_webview_window("main") {
+        if let (Ok(size), Ok(s)) = (win.outer_size(), win.scale_factor()) {
+            let _ = win.set_size(tauri::PhysicalSize::new(size.width, (h * s).round() as u32));
+        }
+    }
+}
+
+/// async on purpose: creating a window from a plain (main-thread) command on
+/// Windows deadlocks, which froze all of ULTRON the first time the browser opened
+#[tauri::command]
+async fn browser_show(app: AppHandle, x: f64, y: f64, w: f64, h: f64, url: Option<String>) -> Result<(), String> {
+    browser::show(&app, x, y, w, h, url)
+}
+
+#[tauri::command]
+fn browser_hide(app: AppHandle) {
+    browser::hide(&app);
+}
+
+#[tauri::command]
+fn browser_go(app: AppHandle, action: String, url: Option<String>) {
+    browser::go(&app, &action, url);
+}
+
+/* ---------------- menu bar ---------------- */
+
+/// Menu bar items act on the app you were using: give it focus back, then press its shortcut.
+#[tauri::command]
+async fn menu_action(app: AppHandle, action: String) {
+    use windows::Win32::UI::Input::KeyboardAndMouse::*;
+    let _ = tauri::async_runtime::spawn_blocking(move || {
+        let home = std::env::var("USERPROFILE").unwrap_or_default();
+        let open = |t: &str| {
+            apps::shell_open(t);
+        };
+        let keys: &[VIRTUAL_KEY] = match action.as_str() {
+            "new" => &[VK_CONTROL, VK_N],
+            "new-window" => &[VK_CONTROL, VK_SHIFT, VK_N],
+            "open" => &[VK_CONTROL, VK_O],
+            "save" => &[VK_CONTROL, VK_S],
+            "save-as" => &[VK_CONTROL, VK_SHIFT, VK_S],
+            "print" => &[VK_CONTROL, VK_P],
+            "close" => &[VK_CONTROL, VK_W],
+            "undo" => &[VK_CONTROL, VK_Z],
+            "redo" => &[VK_CONTROL, VK_Y],
+            "cut" => &[VK_CONTROL, VK_X],
+            "copy" => &[VK_CONTROL, VK_C],
+            "paste" => &[VK_CONTROL, VK_V],
+            "select-all" => &[VK_CONTROL, VK_A],
+            "find" => &[VK_CONTROL, VK_F],
+            "zoom-in" => &[VK_CONTROL, VK_OEM_PLUS],
+            "zoom-out" => &[VK_CONTROL, VK_OEM_MINUS],
+            "zoom-reset" => &[VK_CONTROL, VK_0],
+            "fullscreen" => &[VK_F11],
+            "refresh" => &[VK_F5],
+            "minimize" => &[VK_LWIN, VK_DOWN],
+            "maximize" => &[VK_LWIN, VK_UP],
+            "snap-left" => &[VK_LWIN, VK_LEFT],
+            "snap-right" => &[VK_LWIN, VK_RIGHT],
+            "task-view" => &[VK_LWIN, VK_TAB],
+            "quit-app" => &[VK_MENU, VK_F4],
+            "desktop" => &[VK_LWIN, VK_D],
+            "notifications" => &[VK_LWIN, VK_N],
+            "quick-settings" => &[VK_LWIN, VK_A],
+            "search" => &[VK_LWIN, VK_S],
+            "home" => return open(&home),
+            "downloads" => return open(&format!(r"{home}\Downloads")),
+            "documents" => return open(&format!(r"{home}\Documents")),
+            "desktop-folder" => return open(&format!(r"{home}\Desktop")),
+            "computer" => return open("shell:MyComputerFolder"),
+            "apps" => return open("shell:AppsFolder"),
+            "settings" => return open("ms-settings:"),
+            "task-manager" => return open("taskmgr.exe"),
+            "lock" => {
+                unsafe { let _ = windows::Win32::System::Shutdown::LockWorkStation(); }
+                return;
+            }
+            _ => return,
+        };
+        // system-wide shortcuts don't need the app focused first
+        if !matches!(action.as_str(), "desktop" | "notifications" | "quick-settings" | "search" | "task-view") {
+            app.state::<Apps>().refocus();
+            std::thread::sleep(Duration::from_millis(70));
+        }
+        apps::send_keys(keys);
+    })
+    .await;
+}
+
+/// Every ULTRON window shares one WebView2 browser, so they must all start it the same way.
+pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required --auto-select-desktop-capture-source=creen";
+
+/// How often the live glass refreshes (0 = paused), from what's on screen.
+#[tauri::command]
+fn backdrop_rate(ms: u64) {
+    backdrop::set_rate(ms);
+}
+
+/// Everything ULTRON remembers about you (Settings › Memory).
+#[tauri::command]
+fn memory_list(app: AppHandle) -> Vec<String> {
+    memory::all(&app).into_iter().map(|f| f.text).collect()
+}
+
+/// Forget one thing (by its place in the list), or everything.
+#[tauri::command]
+fn memory_forget(app: AppHandle, index: Option<usize>) {
+    memory::remove(&app, index);
+}
+
+/// What you've selected in the app you were using (for Read aloud).
+#[tauri::command]
+async fn read_selection(app: AppHandle) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || agent::selection(&app)).await.ok().flatten()
+}
+
+/* ---------------- setup ---------------- */
+
+fn main() {
+    // one ULTRON at a time (two menu bars would each reserve screen space)
+    unsafe {
+        let _ = CreateMutexW(None, false, &HSTRING::from("Local\\ULTRON-notch-single-instance"));
+        if GetLastError() == ERROR_ALREADY_EXISTS {
+            return;
+        }
+    }
+
+    tauri::Builder::default()
+        .manage(Hits::default())
+        .manage(Apps::default())
+        .manage(Media::default())
+        .manage(Voice::default())
+        .manage(ai::Ai::default())
+        .manage(tts::Tts::default())
+        .manage(songs::Songs::default())
+        .invoke_handler(tauri::generate_handler![
+            set_hit_rects, page_log, dev_mode, quit_app,
+            voice_status, voice_config, run_command, assist, ai_status, ai_warm, app_names,
+            media_state, media_control, get_lyrics,
+            media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
+            menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+        ])
+        .on_window_event(|_win, e| {
+            // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
+            if let WindowEvent::CloseRequested { api, .. } = e {
+                api.prevent_close();
+            }
+        })
+        .setup(|app| {
+            let handle = app.handle().clone();
+
+            let win = app.get_webview_window("main").unwrap();
+            let _ = win.set_ignore_cursor_events(true);
+            if let Some(h) = hit::hwnd_of(&win) {
+                appbar::register(&handle, h, BAR_HEIGHT, WINDOW_HEIGHT);
+            }
+            win.show()?;
+
+            hit::watch(handle.clone(), &["main"]);
+            apps::start(handle.clone());
+            media::start(handle.clone());
+            voice::start(handle.clone());
+            sys::watch_wallpaper(handle.clone());
+            ai::start(handle.clone());
+            ai::seed_history(&handle);
+            tts::watch(handle.clone());
+            see::watch();
+            clip::watch(handle.clone());
+            uam::start();
+            quick::start(handle.clone());
+            backdrop::start(handle.clone());
+            smooth::start();
+            dev_inbox(handle.clone());
+            routines::start(handle.clone());
+            calls::start(handle.clone());
+            mail::watch(handle.clone());
+            rec::hotkeys(handle.clone());
+
+            let quit_item = MenuItem::with_id(app, "quit", "Quit ULTRON", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&quit_item])?;
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("ULTRON")
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, e| {
+                    if e.id.as_ref() == "quit" {
+                        quit(app);
+                    }
+                })
+                .on_tray_icon_event(|tray, e| {
+                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
+                        let _ = tray.app_handle().emit_to("main", "notch-open", ());
+                    }
+                })
+                .build(app)?;
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building ULTRON")
+        .run(|app, event| {
+            if let RunEvent::Exit = event {
+                ai::shutdown(app);
+                see::shutdown();
+                quick::shutdown();
+                appbar::remove(); // always give the screen space back
+            }
+        });
+}
