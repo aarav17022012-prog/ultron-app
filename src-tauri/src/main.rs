@@ -14,6 +14,7 @@ mod songs;
 mod hit;
 mod backdrop;
 mod calls;
+mod kids;
 mod rec;
 mod icons;
 mod cloud;
@@ -464,7 +465,7 @@ fn dev_inbox(app: AppHandle) {
 #[tauri::command]
 fn ai_warm(app: AppHandle) {
     ai::warm(&app);
-    tts::warm(&app);
+    // (the voice engine is no longer started ahead of time: ULTRON answers in writing now, and it held memory for nothing)
 }
 
 /// Settings that change how the brain and tasks behave.
@@ -814,6 +815,10 @@ fn main() {
             return;
         }
     }
+    // the language models' servers must not outlive ULTRON (kids.rs): the ones an earlier ULTRON left
+    // running are stopped now, and the ones this ULTRON starts go when it goes
+    kids::sweep();
+    kids::watch();
 
     tauri::Builder::default()
         .manage(Hits::default())

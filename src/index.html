@@ -2321,7 +2321,10 @@ async function loadLyrics(s, key){
   clearTimeout(slow);
   if (id !== lyrLoad || key !== trackKey) return;
   skel.classList.remove('show');
-  if (res) setMsg('');
+  if (res){
+    setMsg('');
+    if (lyr && lyr.live){ listenMode = 'off'; listenLines = []; songReq(); }   // (the words were found after all: ULTRON stops writing down what it hears)
+  }
   // a video in a browser with no song lyrics to be found: its own captions, when YouTube has them
   if (!res && s.kind === 'browser'){
     if (!(lyr && lyr.live)) setMsg('Looking for captions…', 'No song lyrics for this one, so ULTRON is checking the video’s own captions.');
