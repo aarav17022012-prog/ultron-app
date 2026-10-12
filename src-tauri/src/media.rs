@@ -74,7 +74,11 @@ fn now_ms() -> f64 {
 
 pub fn app_name(aumid: &str) -> (String, &'static str) {
     let a = aumid.to_lowercase();
-    let table: [(&str, &str, &str); 12] = [
+    let table: [(&str, &str, &str); 15] = [
+        // (browsers the list didn't know were treated as apps: no song-and-artist split of video titles, no captions)
+        ("thebrowsercompany.dia", "Dia", "browser"),
+        ("thebrowsercompany.arc", "Arc", "browser"),
+        ("zen", "Zen", "browser"),
         ("spotify", "Spotify", "app"),
         ("chrome", "Chrome", "browser"),
         ("msedge", "Edge", "browser"),
@@ -290,4 +294,18 @@ pub fn start(app: AppHandle) {
             }
         }
     });
+}
+
+/// The icon of the app a song is playing from (Spotify's own, the browser's own), as a picture for the page.
+/// Windows names the app either by an id it knows (Store apps, and programs that register one) or just by
+/// its file name; in that case the icon comes from the program that is running under that name.
+pub fn icon(id: &str) -> Option<String> {
+    let app = id.rsplit_once('#').filter(|(_, n)| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())).map(|(a, _)| a).unwrap_or(id);
+    let picture = |source: String| crate::sys::icons(vec![source]).into_iter().next().filter(|u| !u.is_empty());
+    if let Some(u) = picture(format!("shell:AppsFolder\\{app}")) {
+        return Some(u);
+    }
+    let exe = app.rsplit(['\\', '!']).next().unwrap_or(app).to_lowercase();
+    let exe = if exe.ends_with(".exe") { exe } else { format!("{exe}.exe") };
+    picture(crate::kids::path_of_running(&exe)?)
 }

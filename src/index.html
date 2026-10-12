@@ -586,6 +586,10 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 .fl-x:hover{background:rgba(255,255,255,.25)}
 .flyr:hover .fl-x{opacity:1; transform:none}
 .flyr:hover .fl-meta{opacity:1; transform:none}
+/* where the song is playing from: that app's own icon (Spotify's, the browser's) beside its name */
+#srcLogo{display:none; width:16px; height:16px; flex:none; border-radius:4px; object-fit:contain}
+.has-logo > #srcLogo{display:block; animation:slFade .3s ease backwards} .has-logo > #srcIcon{display:none}
+.ico > img{width:18px; height:18px; border-radius:4px; object-fit:contain; display:block}
 .flyr:hover .fl-txt{margin-right:152px; overflow:hidden; -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent)}
 /* its own controls: previous, play / pause, next. They spring in from the right, one after the other, when the pointer
    is over the bar; the middle one turns between its two signs; each dips when pressed. */
@@ -1607,7 +1611,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
           <div class="meta" id="meta">
             <div class="ttl" id="ttl">Nothing playing</div>
             <div class="by" id="by">Play something to see it here</div>
-            <button class="src" id="src" aria-haspopup="menu" aria-expanded="false" aria-label="Choose playing source" disabled><svg id="srcIcon" viewBox="0 0 24 24"></svg><span id="srcName">No source</span><svg class="chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></button>
+            <button class="src" id="src" aria-haspopup="menu" aria-expanded="false" aria-label="Choose playing source" disabled><img id="srcLogo" alt=""><svg id="srcIcon" viewBox="0 0 24 24"></svg><span id="srcName">No source</span><svg class="chev" viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></button>
           </div>
           <div class="ctl">
             <button class="sk" id="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 6.5v11a1 1 0 0 1-1.5.86L10 13a1.15 1.15 0 0 1 0-2l8.5-5.36A1 1 0 0 1 20 6.5z"/></svg></button>
@@ -1875,7 +1879,7 @@ listen('pet-mood', m => { petMood = m; });
 // While a panel is open the pictures come as fast as the screen is drawn. Then only the glass that's on screen is
 // given each one (changing it for the whole page cost a slow frame every time); the rest catches up when the panel closes.
 let glassRate = -1, glassEls = [], glassAt = 0, glassUrl = '';
-const glassFast = () => glassRate > 0 && glassRate <= 60;
+const glassFast = () => glassRate > 0 && glassRate <= 120;
 function glassSet(u){ glassAt = performance.now(); document.documentElement.style.setProperty('--live', u); document.documentElement.classList.add('live'); }
 function glassAim(on){
   const now = on ? [...document.querySelectorAll('.gw')].filter(g => { const p = g.parentElement; return p && p.getClientRects().length && getComputedStyle(p).visibility !== 'hidden'; }) : [];
@@ -1893,7 +1897,10 @@ setInterval(() => {
   const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
   const off = !S.liveGlass || fullscreen || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const ms = off || answering ? 0 : panel ? 33 : 650;      // (33: live, each picture of the screen as it is drawn, 30 a second at most)
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw')].some(el => el && el.classList.contains('open'));
+  // (33: live, each picture of the screen as it is drawn, 30 a second at most. With only the floating lyrics showing,
+  //  which they do for as long as music plays, ten a second is plenty and a third of the work.)
+  const ms = off || answering ? 0 : boxOpen ? 33 : panel ? 100 : 650;
   if (ms !== glassRate){
     const was = glassFast(); glassRate = ms; invoke('backdrop_rate', {ms});
     if (was && !glassFast() && glassUrl) glassSet(glassUrl);                       // (the whole page takes the newest picture as the live feed ends)
@@ -2380,8 +2387,17 @@ function swapIn(fn){
     setTimeout(() => { if (id === swapId) parts.forEach(el => el.classList.remove('in')); }, 520);
   }, 190);
 }
+// The playing app's own icon, asked from Windows once for each app.
+const srcLogos = {};
+function srcLogo(s){
+  const show = () => { const u = cur && srcLogos[cur.id]; srcBtn.classList.toggle('has-logo', !!u); if (u) $('srcLogo').src = u; };
+  if (!s || s.id in srcLogos) return show();
+  srcLogos[s.id] = '';
+  invoke('media_icon', {id:s.id}).then(u => { srcLogos[s.id] = u || ''; show(); if (menu.classList.contains('open')) buildMenu(); });
+}
 function applyMedia(m){
   media = m;
+  m.sessions.forEach(x => { if (!(x.id in srcLogos)) srcLogo(x); });
   const next = m.sessions.find(s => s.id === m.current) || null;
   const key = next ? `${next.id}|${next.title}|${next.artist}` : '';
   const changed = key !== trackKey;
@@ -2410,14 +2426,14 @@ function applyMedia(m){
     lyricsPane.classList.remove('switching'); clearTimeout(switchT);
     if (!cur){
       $('ttl').textContent = 'Nothing playing'; $('by').textContent = 'Play something to see it here';
-      $('srcName').textContent = 'No source'; $('srcIcon').innerHTML = ICON.music;
+      $('srcName').textContent = 'No source'; $('srcIcon').innerHTML = ICON.music; srcLogo(null);
       shownKey = ''; showArt(''); lyr = null; linesEl.innerHTML = ''; skel.classList.remove('show');
       setMsg('Nothing playing', 'Play a song in Spotify, YouTube, or any app and its lyrics show up here.');
       curEl.textContent = '0:00'; durEl.textContent = '0:00'; fillEl.style.transform = 'scaleX(0)';
       return;
     }
     $('ttl').textContent = cur.title; $('by').textContent = cur.artist || cur.album || cur.app;
-    $('srcName').textContent = cur.app; $('srcIcon').innerHTML = ICON[cur.kind] || ICON.music;
+    $('srcName').textContent = cur.app; $('srcIcon').innerHTML = ICON[cur.kind] || ICON.music; srcLogo(cur);
     durEl.textContent = cur.duration ? fmt(cur.duration / 1000) : '–:––';
     shownKey = key; showArt(artUrls[key] || '');   // swapped while the row is out of sight
     loadLyrics(cur, key);
@@ -2686,7 +2702,7 @@ function buildMenu(){
   menuSig = sig;
   menu.innerHTML = '<div class="hd">Playing on</div>' + media.sessions.map(x =>
     `<button class="mi" role="menuitemradio" data-id="${esc(x.id)}" aria-checked="${x.id === media.current}">
-       <span class="ico"><svg viewBox="0 0 24 24">${ICON[x.kind] || ICON.music}</svg></span>
+       <span class="ico">${srcLogos[x.id] ? `<img src="${srcLogos[x.id]}" alt="">` : `<svg viewBox="0 0 24 24">${ICON[x.kind] || ICON.music}</svg>`}</span>
        <span class="tx"><b>${esc(x.app)}${x.playing ? '<span class="eq"><i></i><i></i><i></i></span>' : ''}</b><small>${esc(x.title)}${x.artist ? ' — ' + esc(x.artist) : ''}</small></span>${CHECK}</button>`).join('');
 }
 function placeMenu(){}

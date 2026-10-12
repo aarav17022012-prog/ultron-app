@@ -37,11 +37,19 @@ pub fn free_ram_gb() -> f64 {
     if unsafe { GlobalMemoryStatusEx(&mut m) }.is_ok() { m.ullAvailPhys as f64 / (1u64 << 30) as f64 } else { 8.0 }
 }
 
+/// Room left before Windows can't hand out any more memory at all (RAM and page file together), in GB.
+/// Free RAM alone doesn't show this: with the page file full, a PC with 4 GB "free" still crawls.
+pub fn free_commit_gb() -> f64 {
+    use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    let mut m = MEMORYSTATUSEX { dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32, ..Default::default() };
+    if unsafe { GlobalMemoryStatusEx(&mut m) }.is_ok() { m.ullAvailPageFile as f64 / (1u64 << 30) as f64 } else { 8.0 }
+}
+
 /// Should the big brain sit in memory while nobody's using it? Only when "keep ready" is on AND it isn't
 /// squeezing the PC: with a quick brain answering everyday questions, a 16 GB PC that's nearly full is
 /// better off getting those gigabytes back (it reloads in a few seconds when a thinking question comes).
 fn keep_loaded(app: &AppHandle) -> bool {
-    config(app).keep && (crate::quick::port().is_none() || free_ram_gb() > 3.0)
+    config(app).keep && (crate::quick::port().is_none() || (free_ram_gb() > 3.0 && free_commit_gb() > 4.0))
 }
 
 /// The red stop button: stop talking, thinking and doing. Each press ends the requests that are running
@@ -561,7 +569,7 @@ pub fn start(app: AppHandle) {
         // ready before you ask
         std::thread::sleep(Duration::from_secs(4));
         // (with a graphics card the quick brain covers everyday questions: the big one waits until it's needed, or there's room)
-        if config(&app).keep && (crate::router::specs().vram_gb < 3.5 || free_ram_gb() > 6.0) {
+        if config(&app).keep && (crate::router::specs().vram_gb < 3.5 || (free_ram_gb() > 6.0 && free_commit_gb() > 6.0)) {
             ensure_loaded(&app);
         }
         loop {

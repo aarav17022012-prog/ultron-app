@@ -571,6 +571,12 @@ async fn get_lyrics(title: String, artist: String, album: String, duration: f64)
     tauri::async_runtime::spawn_blocking(move || lyrics::fetch(&title, &artist, &album, duration)).await.ok().flatten()
 }
 
+/// The icon of the app a song is playing from (media.rs).
+#[tauri::command]
+async fn media_icon(id: String) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || media::icon(&id)).await.ok().flatten()
+}
+
 /// A YouTube video's own captions, for the lyrics area (web.rs).
 #[tauri::command]
 async fn yt_captions(title: String, artist: String, duration: f64) -> Option<Vec<(f64, String)>> {
@@ -849,7 +855,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

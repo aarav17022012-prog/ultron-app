@@ -20,7 +20,7 @@ use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetWindowDisplayAff
 /// How often to refresh, in ms (0 = paused). Set by the page from what's on screen.
 static EVERY: AtomicU64 = AtomicU64::new(700);
 const W: u32 = 360; // the backdrop's width: plenty for something this blurred
-const FAST: u64 = 60; // a refresh this often (ms) or oftener means "live": a panel is open
+const FAST: u64 = 120; // a refresh this often (ms) or oftener means "live": a panel or the floating lyrics are showing
 
 pub fn set_rate(ms: u64) {
     EVERY.store(ms, Ordering::SeqCst);
@@ -327,8 +327,8 @@ mod live {
         }
 
         unsafe fn read(&self, info: &DXGI_OUTDUPL_FRAME_INFO, res: Option<&IDXGIResource>, w: usize, h: usize) -> Option<Vec<u8>> {
-            if info.LastPresentTime == 0 {
-                return None; // (only the pointer moved)
+            if info.LastPresentTime == 0 || info.TotalMetadataBufferSize == 0 {
+                return None; // (only the pointer moved, or nothing on screen was redrawn: no need to read the picture back)
             }
             let tex: ID3D11Texture2D = res?.cast().ok()?;
             let p = self.part;

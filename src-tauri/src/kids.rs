@@ -99,3 +99,14 @@ pub fn watch() {
         }
     });
 }
+
+/// Where the program running under this file name (small letters, with .exe) is on disk.
+pub(crate) fn path_of_running(exe: &str) -> Option<String> {
+    let pid = processes().into_iter().find(|p| p.2 == exe)?.0;
+    unsafe {
+        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+        let p = path_of(h);
+        let _ = CloseHandle(h);
+        (!p.is_empty()).then_some(p)
+    }
+}
