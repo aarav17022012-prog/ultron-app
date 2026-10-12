@@ -28,7 +28,7 @@ pub fn all(app: &AppHandle) -> Vec<Fact> {
 }
 
 fn save(app: &AppHandle, facts: &[Fact]) {
-    let _ = std::fs::write(file(app), serde_json::to_string_pretty(facts).unwrap_or_default());
+    let _ = crate::keep(file(app), serde_json::to_string_pretty(facts).unwrap_or_default());
 }
 
 fn now() -> u64 {

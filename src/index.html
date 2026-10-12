@@ -3569,7 +3569,16 @@ function openMail(){
   mailw.style.left = left + 'px'; mailw.style.setProperty('--ox', (b.left + b.width / 2 - left) + 'px');
   mlIn.classList.remove('swap');
   if (ML.on){ paintMailBox(); if (!ML.list.length || Date.now() - ML.at > 45000) loadMail(ML.list.length > 0); }
-  else paintMailSignIn();
+  else {
+    // (not known to be signed in: ask once more before showing the form. One missed answer at start-up used to mean
+    //  the form, and typing the app password again, although the sign-in was saved all along.)
+    paintMailSignIn();
+    invoke('mail_status').then(st => {
+      if (!st || !st.connected || ML.on) return;
+      ML.on = true; ML.email = st.email || ''; setMailDot(st.unread || 0);
+      if (mailw.classList.contains('open')) mlSwap(() => { paintMailBox(); loadMail(false); });
+    });
+  }
   placeGlass(mailw);
   mailw.classList.add('open'); mailBtn.classList.add('on'); mailBtn.setAttribute('aria-expanded', 'true');
   if (!ML.on) setTimeout(() => $('mlEmail')?.focus({preventScroll:true}), 80);
@@ -3603,7 +3612,11 @@ mailw.addEventListener('click', e => {
   const mv = e.target.closest('[data-mv]'); if (mv) return mailFill(mv.closest('.ml-row'), mv.dataset.mv);
   const row = e.target.closest('.ml-row'); if (row && e.target.closest('.ml-hd')) mailRow(row);
 });
-invoke('mail_status').then(st => { if (!st) return; ML.on = !!st.connected; ML.email = st.email || ''; setMailDot(st.unread || 0); });
+const mailAsk = n => invoke('mail_status').then(st => {
+  if (!st){ if (n) setTimeout(() => mailAsk(n - 1), 3000); return; }      // (no answer yet: ask again in a moment)
+  ML.on = !!st.connected; ML.email = st.email || ''; setMailDot(st.unread || 0);
+});
+mailAsk(3);
 listen('mail-state', st => { if (ML.on) setMailDot(st.unread || 0); });
 // something new arrived: the envelope hops, and the notch says who it's from and what they want
 listen('mail-new', m => {

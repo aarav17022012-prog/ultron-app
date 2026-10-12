@@ -776,6 +776,21 @@ async fn menu_action(app: AppHandle, action: String) {
     .await;
 }
 
+/// Save one of ULTRON's own files so that it can't be left half-written: the new contents go into a file
+/// beside it, which then takes its place in one step. (Written straight in, a file is emptied first, and
+/// an ULTRON closed at that moment left it empty: that is how the saved email account came to be lost.)
+pub fn keep(path: impl AsRef<std::path::Path>, data: impl AsRef<[u8]>) -> bool {
+    let path = path.as_ref();
+    let mut beside = path.as_os_str().to_owned();
+    beside.push(".new");
+    let beside = std::path::PathBuf::from(beside);
+    if std::fs::write(&beside, data.as_ref()).is_ok() && std::fs::rename(&beside, path).is_ok() {
+        return true;
+    }
+    let _ = std::fs::remove_file(&beside);
+    std::fs::write(path, data.as_ref()).is_ok()
+}
+
 /// Every ULTRON window shares one WebView2 browser, so they must all start it the same way: this is what
 /// tauri.conf.json gives the main window, and every window made in code (browser.rs, ghost.rs) must be given
 /// it too. A window started differently is refused outright ("not in the correct state").

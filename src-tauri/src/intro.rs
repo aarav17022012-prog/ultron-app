@@ -44,7 +44,7 @@ pub fn finish(app: &AppHandle, name: Option<String>) {
     let _ = std::fs::write(seen_flag(app), b"1");
     let name = name.map(|n| n.trim().chars().take(40).collect::<String>()).filter(|n| !n.is_empty());
     if let Some(n) = &name {
-        let _ = std::fs::write(profile(app), serde_json::json!({ "name": n }).to_string());
+        let _ = crate::keep(profile(app), serde_json::json!({ "name": n }).to_string());
     }
     let _ = app.emit_to("main", "intro-done", serde_json::json!({ "name": name }));
 }

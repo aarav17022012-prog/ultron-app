@@ -17,7 +17,7 @@ use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW,
 const HELPERS: [&str; 2] = ["llama-server.exe", "piper.exe"];
 
 /// Every process running: (its number, its parent's number, its file name in small letters).
-fn processes() -> Vec<(u32, u32, String)> {
+pub(crate) fn processes() -> Vec<(u32, u32, String)> {
     let mut out = Vec::new();
     unsafe {
         let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else { return out };

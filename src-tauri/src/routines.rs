@@ -44,7 +44,7 @@ fn with<T>(app: &AppHandle, change: bool, f: impl FnOnce(&mut Vec<Routine>) -> T
     let list = g.get_or_insert_with(|| std::fs::read_to_string(path(app)).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default());
     let out = f(list);
     if change {
-        let _ = std::fs::write(path(app), serde_json::to_string_pretty(list).unwrap_or_default());
+        let _ = crate::keep(path(app), serde_json::to_string_pretty(list).unwrap_or_default());
     }
     out
 }

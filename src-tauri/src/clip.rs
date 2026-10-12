@@ -22,7 +22,7 @@ static FILE: OnceLock<PathBuf> = OnceLock::new();
 
 fn persist() {
     if let Some(f) = FILE.get() {
-        let _ = std::fs::write(f, serde_json::to_string(&*HISTORY.lock().unwrap()).unwrap_or_default());
+        let _ = crate::keep(f, serde_json::to_string(&*HISTORY.lock().unwrap()).unwrap_or_default());
     }
 }
 

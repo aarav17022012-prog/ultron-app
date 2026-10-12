@@ -51,7 +51,7 @@ pub fn cfg(app: &AppHandle) -> Cfg {
 }
 
 fn save(app: &AppHandle, c: &Cfg) {
-    let _ = std::fs::write(path(app), serde_json::to_string(c).unwrap_or_default());
+    let _ = crate::keep(path(app), serde_json::to_string(c).unwrap_or_default());
     let _ = app.emit_to("main", "cloud-changed", status(app));
 }
 

@@ -61,7 +61,7 @@ pub fn add(app: &AppHandle, user: &str, reply: &str) {
         }
         serde_json::to_string(l).unwrap_or_default()
     });
-    let _ = std::fs::write(path(app), json);
+    let _ = crate::keep(path(app), json);
 }
 
 pub fn clear(app: &AppHandle) {

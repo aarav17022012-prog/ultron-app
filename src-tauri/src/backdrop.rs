@@ -89,13 +89,15 @@ static BUSY: std::sync::Mutex<()> = std::sync::Mutex::new(());
 static WIN: AtomicIsize = AtomicIsize::new(0);
 static SNAP_UNTIL: AtomicU64 = AtomicU64::new(0);
 static LIVE: AtomicBool = AtomicBool::new(false);
+/// Another program is recording or streaming the screen (others_watch).
+static OTHERS: AtomicBool = AtomicBool::new(false);
 
 fn ticks() -> u64 {
     unsafe { windows::Win32::System::SystemInformation::GetTickCount64() }
 }
 
 fn paused() -> bool {
-    HOLD.load(Ordering::SeqCst) || ticks() < SNAP_UNTIL.load(Ordering::SeqCst)
+    HOLD.load(Ordering::SeqCst) || OTHERS.load(Ordering::SeqCst) || ticks() < SNAP_UNTIL.load(Ordering::SeqCst)
 }
 
 /// Leave ULTRON out of screen captures, or put it back.
@@ -117,20 +119,84 @@ pub fn hold(on: bool) {
     }
 }
 
-/// Screenshot keys (PrtSc, Win+Shift+S): ULTRON goes straight back into captures and stays there for a few
-/// seconds, so it is in the screenshot being taken. (Only watched while the live feed has it left out.)
+/// Keys that start a screenshot or a recording in Windows, the Snipping Tool, the Game Bar and NVIDIA's
+/// overlay (PrtSc, Win+Shift+S, Win+Shift+R, Win+Alt+R, Win+Alt+G, Win+G, Alt+F9, Alt+F10, Alt+Z): ULTRON goes
+/// straight back into captures and stays there for a while, so it is in what's being taken and the recorder
+/// isn't put off by a window that hides from it. By then the recording itself is noticed (others_watch).
 fn snap_watch() {
-    use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LWIN, VK_RWIN, VK_SHIFT, VK_SNAPSHOT};
+    use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_F10, VK_F9, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT, VK_SNAPSHOT};
     std::thread::spawn(|| loop {
-        if !LIVE.load(Ordering::SeqCst) {
-            std::thread::sleep(Duration::from_millis(200));
-            continue;
-        }
-        std::thread::sleep(Duration::from_millis(12));
+        std::thread::sleep(Duration::from_millis(20));
         let down = |k: i32| unsafe { GetAsyncKeyState(k) } < 0;
-        if down(VK_SNAPSHOT.0 as i32) || ((down(VK_LWIN.0 as i32) || down(VK_RWIN.0 as i32)) && down(VK_SHIFT.0 as i32) && down(b'S' as i32)) {
-            SNAP_UNTIL.store(ticks() + 5000, Ordering::SeqCst);
+        let (win, shift, alt) = (down(VK_LWIN.0 as i32) || down(VK_RWIN.0 as i32), down(VK_SHIFT.0 as i32), down(VK_MENU.0 as i32));
+        let key = |c: u8| down(c as i32);
+        let hit = down(VK_SNAPSHOT.0 as i32)
+            || (win && shift && (key(b'S') || key(b'R')))
+            || (win && alt && (key(b'R') || key(b'G')))
+            || (win && key(b'G'))
+            || (alt && (down(VK_F9.0 as i32) || down(VK_F10.0 as i32) || key(b'Z')));
+        if hit {
+            SNAP_UNTIL.store(ticks() + 15_000, Ordering::SeqCst);
             exclude(false);
+        }
+    });
+}
+
+/// The graphics card's video encoder, asked through NVIDIA's own library (nvml.dll, which comes with the
+/// driver): how many programs are compressing video right now. Zero when there is no NVIDIA card.
+mod nvenc {
+    use std::sync::OnceLock;
+    type Stats = unsafe extern "C" fn(*mut core::ffi::c_void, *mut u32, *mut u32, *mut u32) -> i32;
+    struct Lib {
+        device: usize,
+        stats: Stats,
+    }
+    static LIB: OnceLock<Option<Lib>> = OnceLock::new();
+
+    pub fn sessions() -> u32 {
+        let lib = LIB.get_or_init(|| unsafe {
+            use windows::core::{s, w};
+            use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+            let h = LoadLibraryW(w!("nvml.dll")).ok()?;
+            let init: unsafe extern "C" fn() -> i32 = std::mem::transmute(GetProcAddress(h, s!("nvmlInit_v2"))?);
+            let by_index: unsafe extern "C" fn(u32, *mut *mut core::ffi::c_void) -> i32 = std::mem::transmute(GetProcAddress(h, s!("nvmlDeviceGetHandleByIndex_v2"))?);
+            let stats: Stats = std::mem::transmute(GetProcAddress(h, s!("nvmlDeviceGetEncoderStats"))?);
+            if init() != 0 {
+                return None;
+            }
+            let mut device = std::ptr::null_mut();
+            (by_index(0, &mut device) == 0).then_some(Lib { device: device as usize, stats })
+        });
+        let Some(l) = lib else { return 0 };
+        let (mut n, mut fps, mut wait) = (0u32, 0u32, 0u32);
+        if unsafe { (l.stats)(l.device as *mut _, &mut n, &mut fps, &mut wait) } == 0 { n } else { 0 }
+    }
+}
+
+/// Is another program recording or streaming the screen? Two signs: the graphics card's video encoder is at
+/// work (NVIDIA's recorder, the Snipping Tool, OBS, Discord and video calls all compress what they capture
+/// with it), or a recording program that doesn't use it is running. While either holds, ULTRON never hides
+/// from captures: its glass keeps the backdrop it has, and the recording shows ULTRON steadily. (Hiding from
+/// captures, even for a moment, made ULTRON blink in other programs' recordings, and can stop NVIDIA's
+/// recorder outright: it treats a window that hides as protected content.)
+fn others_watch() {
+    const RECORDERS: [&str; 10] = ["obs64.exe", "obs32.exe", "sharex.exe", "bdcam.exe", "camrecorder.exe", "bcastdvr.exe", "screenrec.exe", "loom.exe", "action.exe", "captura.exe"];
+    std::thread::spawn(|| {
+        let (mut round, mut by_name, mut told) = (0u32, false, false);
+        loop {
+            std::thread::sleep(Duration::from_millis(400));
+            round = round.wrapping_add(1);
+            if round % 5 == 0 {
+                by_name = crate::kids::processes().iter().any(|p| RECORDERS.contains(&p.2.as_str()));
+            }
+            let on = by_name || nvenc::sessions() > 0;
+            if on != OTHERS.swap(on, Ordering::SeqCst) && on {
+                exclude(false);
+                if !told {
+                    told = true;
+                    crate::log_line("live glass: something is recording the screen, so ULTRON stays in the picture and the glass keeps the backdrop it has");
+                }
+            }
         }
     });
 }
@@ -314,6 +380,7 @@ mod live {
 
 pub fn start(app: AppHandle) {
     snap_watch();
+    others_watch();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(2));
         let mut last_log = Instant::now() - Duration::from_secs(600);

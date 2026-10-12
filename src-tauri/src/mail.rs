@@ -49,11 +49,35 @@ fn path(app: &AppHandle) -> PathBuf {
 }
 
 pub fn account(app: &AppHandle) -> Option<Account> {
-    serde_json::from_str::<Account>(&std::fs::read_to_string(path(app)).ok()?).ok().filter(|a| !a.email.is_empty())
+    if let Some(a) = std::fs::read_to_string(path(app)).ok().and_then(|s| serde_json::from_str::<Account>(&s).ok()).filter(|a| !a.email.is_empty()) {
+        return Some(a);
+    }
+    // mail.json is gone or unreadable, but the sign-in is still in Windows' own store: carry on with that
+    // rather than asking for the app password again
+    let email = saved_email()?;
+    let (host, port) = server_for(&email);
+    let a = Account { email, host, port, seen: 0 };
+    save(app, &a);
+    crate::log_line("mail: the account file was missing or unreadable; carried on from the sign-in Windows has saved");
+    Some(a)
+}
+
+/// The address of the sign-in Windows has saved for ULTRON, if there is one.
+fn saved_email() -> Option<String> {
+    use windows::core::PCWSTR;
+    use windows::Win32::Security::Credentials::{CredEnumerateW, CredFree, CREDENTIALW};
+    let filter: Vec<u16> = "ULTRON mail: *".encode_utf16().chain(Some(0)).collect();
+    let (mut n, mut list): (u32, *mut *mut CREDENTIALW) = (0, std::ptr::null_mut());
+    unsafe {
+        CredEnumerateW(PCWSTR(filter.as_ptr()), Default::default(), &mut n, &mut list).ok()?;
+        let name = if n > 0 && !list.is_null() { (**list).TargetName.to_string().ok() } else { None };
+        CredFree(list as _);
+        name?.strip_prefix("ULTRON mail: ").map(String::from).filter(|e| e.contains('@'))
+    }
 }
 
 fn save(app: &AppHandle, a: &Account) {
-    let _ = std::fs::write(path(app), serde_json::to_string(a).unwrap_or_default());
+    let _ = crate::keep(path(app), serde_json::to_string(a).unwrap_or_default());
 }
 
 /* ---------------- the password, in Windows Credential Manager ---------------- */
