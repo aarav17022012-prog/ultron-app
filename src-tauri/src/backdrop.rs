@@ -91,6 +91,12 @@ static SNAP_UNTIL: AtomicU64 = AtomicU64::new(0);
 static LIVE: AtomicBool = AtomicBool::new(false);
 /// Another program is recording or streaming the screen (others_watch).
 static OTHERS: AtomicBool = AtomicBool::new(false);
+/// The page wants a fresh backdrop now (the wallpaper changed, the bar has just come back down).
+static KICK: AtomicBool = AtomicBool::new(false);
+
+pub fn kick() {
+    KICK.store(true, Ordering::SeqCst);
+}
 
 fn ticks() -> u64 {
     unsafe { windows::Win32::System::SystemInformation::GetTickCount64() }
@@ -453,7 +459,13 @@ pub fn start(app: AppHandle) {
                 last_log = Instant::now();
                 crate::log_line(&format!("live glass: {} ms per refresh", took.as_millis()));
             }
-            std::thread::sleep(Duration::from_millis(every.max(160)).saturating_sub(took).max(Duration::from_millis(60)));
+            // (The wait is taken in short steps, so a panel opening, or a kick, is noticed at once. With only the bar
+            //  showing the page asks for a look every few seconds: behind the bar there is only the wallpaper, and looking
+            //  several times a second cost a tenth of a processor core, all day.)
+            let until = Instant::now() + Duration::from_millis(every.max(160)).saturating_sub(took).max(Duration::from_millis(60));
+            while Instant::now() < until && EVERY.load(Ordering::SeqCst) == every && !KICK.swap(false, Ordering::SeqCst) {
+                std::thread::sleep(Duration::from_millis(80));
+            }
         }
     });
 }

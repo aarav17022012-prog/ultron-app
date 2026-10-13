@@ -25,6 +25,8 @@ imap = "2.4"
 native-tls = "0.2"
 mailparse = "0.15"
 
+windows-future = "0.2"
+
 [dependencies.windows]
 version = "0.61"
 features = [
@@ -33,6 +35,9 @@ features = [
   "Globalization",
   "Graphics_Imaging",
   "Media_Ocr",
+  "Media_MediaProperties",
+  "Media_Transcoding",
+  "Storage",
   "Media_Control",
   "Storage_Streams",
   "UI_Notifications",

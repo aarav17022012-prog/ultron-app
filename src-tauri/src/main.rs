@@ -16,6 +16,7 @@ mod backdrop;
 mod calls;
 mod kids;
 mod rec;
+mod squeeze;
 mod icons;
 mod cloud;
 mod pick;
@@ -576,6 +577,12 @@ async fn get_lyrics(title: String, artist: String, album: String, duration: f64)
     tauri::async_runtime::spawn_blocking(move || lyrics::fetch(&title, &artist, &album, duration)).await.ok().flatten()
 }
 
+/// A fresh backdrop for the glass, now (backdrop.rs).
+#[tauri::command]
+fn backdrop_now() {
+    backdrop::kick();
+}
+
 /// The menu bar keeps its strip of the screen, or gives it up (it hides away: Settings, Look & feel).
 #[tauri::command]
 fn bar_reserve(on: bool) {
@@ -641,6 +648,39 @@ fn start_apps(apps: State<Apps>) -> Vec<StartApp> {
 #[tauri::command]
 async fn app_icons(sources: Vec<String>) -> Vec<String> {
     tauri::async_runtime::spawn_blocking(move || sys::icons(sources)).await.unwrap_or_default()
+}
+
+/// Files, beside Record: Windows' "Open" box, for the files to make smaller.
+#[tauri::command]
+async fn squeeze_pick(app: AppHandle) -> Vec<String> {
+    let owner = app.get_webview_window("main").and_then(|w| hit::hwnd_of(&w)).map(|h| h.0 as isize);
+    tauri::async_runtime::spawn_blocking(move || squeeze::pick(owner)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+fn squeeze_go(app: AppHandle, items: Vec<(u32, String)>, tiny: bool) {
+    squeeze::go(&app, items, tiny);
+}
+
+#[tauri::command]
+fn squeeze_stop(app: AppHandle) {
+    squeeze::stop(&app);
+}
+
+#[tauri::command]
+fn squeeze_folder(app: AppHandle) -> String {
+    squeeze::folder(&app).to_string_lossy().to_string()
+}
+
+#[tauri::command]
+fn squeeze_show(app: AppHandle, path: String) {
+    squeeze::show(&app, &path);
+}
+
+/// The notch's Today page: the weather outside (only asked for while "Look things up online" is on).
+#[tauri::command]
+async fn today_weather() -> Option<(String, String, String)> {
+    tauri::async_runtime::spawn_blocking(web::weather_now).await.ok().flatten()
 }
 
 #[tauri::command]
@@ -866,7 +906,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

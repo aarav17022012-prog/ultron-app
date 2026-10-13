@@ -67,6 +67,12 @@ pub fn agent(timeout: Duration) -> ureq::Agent {
         .build()
 }
 
+/// GET a URL as text, asked the way a command-line tool asks. (wttr.in answers anything that calls itself a
+/// browser with a whole web page, where a one-line answer was wanted.)
+pub fn get_plain(url: &str, timeout: Duration) -> Option<String> {
+    agent(timeout).get(url).set("User-Agent", "curl/8.4.0").call().ok()?.into_string().ok()
+}
+
 /// GET a URL as text.
 pub fn get_text(url: &str, timeout: Duration) -> Option<String> {
     agent(timeout).get(url).call().ok()?.into_string().ok()

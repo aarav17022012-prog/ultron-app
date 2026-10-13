@@ -361,7 +361,7 @@ fn expand(list: &Value) -> Result<Vec<PathBuf>, String> {
 }
 
 /// A free name in `dir` ("report.pdf" → "report (2).pdf" when taken).
-fn free_name(dir: &Path, name: &str) -> PathBuf {
+pub(crate) fn free_name(dir: &Path, name: &str) -> PathBuf {
     let first = dir.join(name);
     if !first.exists() {
         return first;
@@ -761,6 +761,12 @@ fn wait_json(mut child: std::process::Child, limit: Duration) -> Result<Value, S
         return Err(v.get("error").and_then(|e| e.as_str()).unwrap_or("It failed.").to_string());
     }
     Ok(v)
+}
+
+/// One file zipped to `to`: for a file you chose yourself in Windows' "Open" box (Files, in the bar), wherever it lives.
+pub(crate) fn zip_one(src: &Path, to: &Path) -> Result<(), String> {
+    let req = json!({ "files": [src.to_string_lossy()], "to": to.to_string_lossy() });
+    powershell("$r = [Console]::In.ReadToEnd() | ConvertFrom-Json; Compress-Archive -LiteralPath @($r.files) -DestinationPath $r.to -CompressionLevel Optimal; '{\"ok\":true}'", &req, Duration::from_secs(600)).map(|_| ())
 }
 
 pub fn zip_files(a: &Value) -> Res {

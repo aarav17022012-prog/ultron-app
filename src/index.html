@@ -33,7 +33,9 @@ button{font:inherit; color:inherit}
 .glass::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; padding:1.2px;
   background:linear-gradient(135deg, rgba(255,255,255,.75), rgba(255,255,255,.1) 30%, rgba(255,255,255,.04) 62%, rgba(255,255,255,.5));
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude}
-html.live .glass > .gw{background:var(--live) 0 0 / 100vw 100vh no-repeat; transition:none}
+html.live .glass > .gw{transition:none}
+.gw > .gwc{position:absolute; left:0; top:0; width:100vw; height:100vh; display:none; pointer-events:none}
+html.live .gw > .gwc{display:block}
 .glass.panel-glass{box-shadow:inset 0 1px 1px rgba(255,255,255,.35), inset 0 0 24px rgba(255,255,255,.06), 0 24px 60px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.2)}
 
 /* ---------- the first-run tour: ULTRON's own cursor flies to each thing on the bar and explains it ---------- */
@@ -813,6 +815,60 @@ body.pk-out #pet{opacity:0; transition:opacity .22s}       /* (the character has
 .nb-dots i{width:5px; height:5px; border-radius:50%; background:#0c0c0e; animation:mlDot 1s ease-in-out infinite}
 .nb-dots i:nth-child(2){animation-delay:.15s} .nb-dots i:nth-child(3){animation-delay:.3s}
 .nb-say{margin-top:6px} .nb-say:first-child{margin-top:0}
+/* ---------- today: the day at a glance ---------- */
+.td-top{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:1px 0 13px}
+.td-day b, .td-wx b{display:block; font-size:25px; line-height:1.1; font-weight:650; letter-spacing:-.022em; font-variant-numeric:tabular-nums}
+.td-day span, .td-wx span{display:block; margin-top:4px; font-size:12.5px; font-weight:550; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.td-wx{min-width:0; text-align:right; transition:opacity .45s, transform .55s var(--glide)}
+.td-wx span{max-width:190px}
+.td-wx.off{opacity:0; transform:translateY(5px)}
+.td-list{border-top:1px solid var(--line)}
+.td-list li{gap:11px; padding:10px 1px; font-size:13px; font-weight:600; outline:0}
+.td-list li svg{width:15px; height:15px; flex:none; stroke:rgba(255,255,255,.62); fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; transition:stroke .2s}
+.td-list li em{margin-left:auto; min-width:0; max-width:226px; font-style:normal; font-weight:550; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; transition:color .2s}
+.td-list li[data-go]{cursor:pointer}
+.td-list li[data-go]:hover em, .td-list li[data-go]:focus-visible em{color:#fff}
+.td-list li[data-go]:hover svg, .td-list li[data-go]:focus-visible svg{stroke:#fff}
+/* ---------- files: photos, videos and anything else, made much smaller ---------- */
+.st.flb{position:relative}
+.flb.busy{background:rgba(255,255,255,.16)}
+.flb.busy .fa{animation:fzA 1.3s ease-in-out infinite} .flb.busy .fb{animation:fzB 1.3s ease-in-out infinite}
+@keyframes fzA{50%{transform:translateY(2px)}} @keyframes fzB{50%{transform:translateY(-2px)}}
+.flb .fdot{position:absolute; right:4px; top:6px; width:6px; height:6px; border-radius:50%; background:#30d158; transform:scale(0); transition:transform .4s var(--spring)}
+.flb.done .fdot{transform:none}
+#filew{width:328px; filter:none}
+#filew:not(.open){visibility:visible; opacity:.004; pointer-events:none}   /* (kept drawn, like the recorder's box: see below) */
+#filew:not(.open) *{animation-play-state:paused !important}
+#filew .rc-b{animation:none; transition:opacity .35s var(--glide), background .2s, transform .2s}
+#fzPick > svg{fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+#fzPick:active > svg{transform:scale(.86)} #fzPick > svg{transition:transform .3s var(--spring)}
+.fz-lv{display:flex; align-items:center; gap:11px; margin-top:6px}
+.fz-seg{position:relative; display:inline-flex; flex:none; padding:3px; border-radius:12px; background:rgba(255,255,255,.07); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.fz-seg::before{content:""; position:absolute; top:3px; bottom:3px; left:3px; width:calc(50% - 3px); border-radius:9px; background:rgba(255,255,255,.17); transition:transform .45s var(--spring)}
+.fz-seg.two::before{transform:translateX(100%)}
+.fz-seg button{position:relative; width:74px; height:26px; border:0; border-radius:9px; background:none; color:rgba(255,255,255,.55); font:inherit; font-size:12px; font-weight:600; cursor:default; transition:color .2s}
+.fz-seg button[aria-checked="true"]{color:#fff}
+.fz-say{font-size:11px; line-height:1.3; color:rgba(255,255,255,.5)}
+.fz-list{max-height:204px; margin-top:6px; overflow:auto}
+.fz-list::-webkit-scrollbar{display:none}
+.fz-list:empty{display:none}
+.fz-row{position:relative; display:flex; align-items:center; gap:8px; height:36px; margin-top:4px; padding:0 11px; border-radius:11px; background:rgba(255,255,255,.05); overflow:hidden; font-size:12px; animation:fzIn .38s var(--glide) backwards; transition:background .2s}
+@keyframes fzIn{from{opacity:0; transform:scale(.96)}}
+.fz-row:first-child{margin-top:0}
+.fz-bar{position:absolute; inset:0; background:rgba(255,255,255,.11); transform-origin:left; transform:scaleX(0); transition:transform .5s linear, opacity .5s}
+.fz-row[data-s="run"]:not(.pct) .fz-bar{transform:none; animation:fzWork 1.4s ease-in-out infinite}
+@keyframes fzWork{50%{opacity:.3}}
+.fz-row:not([data-s="run"]) .fz-bar{opacity:0}
+.fz-nm{position:relative; flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.fz-sz{position:relative; flex:none; max-width:190px; color:rgba(255,255,255,.55); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.fz-pc{position:relative; flex:none; font-weight:700; font-variant-numeric:tabular-nums}
+.fz-pc:empty{display:none}
+.fz-row[data-s="wait"] .fz-sz{opacity:.6}
+.fz-row[data-s="done"]{cursor:pointer} .fz-row[data-s="done"]:hover{background:rgba(255,255,255,.11)}
+.fz-row[data-s="done"] .fz-pc{animation:fzPop .5s var(--spring)}
+@keyframes fzPop{from{opacity:0; transform:scale(.6)}}
+.fz-row[data-s="fail"] .fz-sz{color:#ff9d94}
+.fz-r{gap:12px !important}
 /* ---------- screen recording ---------- */
 .st.rcb{position:relative; gap:6px}
 .rcb .rdot{fill:#fff; stroke:none; transform-origin:12px 12px; transition:fill .3s}
@@ -1123,7 +1179,11 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .tabs{position:relative; display:inline-flex; padding:3px; background:var(--chip); border-radius:11px; box-shadow:0 0 0 1px var(--line) inset}
 .tabs button{position:relative; z-index:1; border:0; background:none; padding:6px 11px; border-radius:8px; font-size:12.5px; font-weight:600;
   color:var(--dim); cursor:pointer; transition:color .25s; display:flex; align-items:center}
-.tabs button span{display:none}
+.tabs button span{display:block; max-width:0; margin-left:0; opacity:0; overflow:hidden; white-space:nowrap; transition:max-width .34s var(--glide), margin-left .34s var(--glide), opacity .18s}
+.tabs button[aria-selected="true"] span{max-width:72px; margin-left:6px; opacity:1; transition:max-width .34s var(--glide), margin-left .34s var(--glide), opacity .3s .08s}
+/* the browser's tab is there only once the browser has been opened (from Today, News, or by asking) */
+.tabs button[data-tab="browser"]{max-width:0; padding-left:0; padding-right:0; opacity:0; overflow:hidden; pointer-events:none; transition:max-width .4s var(--glide), padding .4s var(--glide), opacity .25s, color .25s}
+.tabs.web button[data-tab="browser"]{max-width:110px; padding-left:11px; padding-right:11px; opacity:1; pointer-events:auto}
 .tabs button[aria-selected="true"]{color:var(--ink)}
 .tabs button:hover{color:rgba(255,255,255,.8)}
 .tabs button:focus-visible{outline:2px solid #fff; outline-offset:1px}
@@ -1502,6 +1562,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button class="mt" data-menu="settings">Settings</button>
   </div>
   <div class="mr">
+    <button class="st flb" id="fileBtn" aria-label="Make files smaller" aria-expanded="false"><svg viewBox="0 0 24 24"><path class="fa" d="M8 4l4 4 4-4"/><path d="M5 12h14"/><path class="fb" d="M8 20l4-4 4 4"/></svg><i class="fdot"></i></button>
     <button class="st rcb" id="recBtn" aria-label="Record the screen" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle class="rdot" cx="12" cy="12" r="3.6"/></svg><span id="recTime" hidden></span></button>
     <button class="st mlb" id="mailBtn" aria-label="Email" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13.5" rx="2.6"/><path class="flap" d="M3.8 7.4L12 13.2L20.2 7.4"/></svg><i class="mdot"></i></button>
     <button class="st aib" id="aiBtn" aria-label="AI Tools" aria-expanded="false"><svg class="spk" viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/><path d="M18.5 14.5c.3 1.6.9 2.2 2.5 2.5-1.6.3-2.2.9-2.5 2.5-.3-1.6-.9-2.2-2.5-2.5 1.6-.3 2.2-.9 2.5-2.5z"/></svg><span>AI</span><i class="tdot"></i></button>
@@ -1519,6 +1580,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 <div class="aiw glass panel-glass" id="aiw" role="dialog" aria-label="AI Tools"><i class="gw"></i><div class="ai-in" id="aiIn"></div></div>
 <div class="mlw glass panel-glass" id="mailw" role="dialog" aria-label="Email"><i class="gw"></i><div class="ml-in" id="mlIn"></div></div>
 <div class="mlw glass panel-glass" id="recw" role="dialog" aria-label="Recording"><i class="gw"></i><div class="ml-in"><button class="ml-sum rc-b" id="rcGo" style="--i:0"><i class="rc-ic"></i><span>Record</span><span class="rc-k" data-k="R"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>R</kbd></span></button><button class="ml-sum rc-b" id="rcStop" style="--i:1"><i class="rc-ic sq"></i><span>Stop</span><span class="rc-k" data-k="S"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>S</kbd></span></button><div class="ai-ft"><span><i></i><span id="rcNote">Documents › ULTRON Files › Recordings</span></span><button class="ml-link" type="button" id="rcOpen">Open folder</button></div></div></div>
+<div class="mlw glass panel-glass" id="filew" role="dialog" aria-label="Make files smaller"><i class="gw"></i><div class="ml-in"><button class="ml-sum rc-b" id="fzPick"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Choose photos, videos or files</span></button><div class="fz-lv"><span class="fz-seg" id="fzLv" role="radiogroup" aria-label="How small"><button data-v="small" role="radio">Smaller</button><button data-v="tiny" role="radio">Smallest</button></span><span class="fz-say" id="fzSay"></span></div><div class="fz-list" id="fzList"></div><div class="ai-ft"><span><i></i><span id="fzNote">Documents › ULTRON Files › Compressed</span></span><span class="fz-r"><button class="ml-link" type="button" id="fzStop" hidden>Stop</button><button class="ml-link" type="button" id="fzOpen">Open folder</button></span></div></div></div>
 <div class="tr-bub nb" id="nb"><div id="nbIn"></div></div>
 <div class="pk" id="pk" aria-live="polite"><div class="pk-hl" id="pkHl"></div><div class="pk-me" id="pkMe"><canvas id="pkCv" width="120" height="108"></canvas></div><div class="tr-bub pk-bub" id="pkBub"></div></div>
 <div class="setw glass panel-glass" id="setw" role="dialog" aria-label="ULTRON Settings">
@@ -1594,11 +1656,12 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
   <div class="panel" id="panel">
     <div class="tabs" role="tablist">
       <span class="pill" id="pill"></span>
-      <button role="tab" data-tab="assistant" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h0"/></svg></button>
-      <button role="tab" data-tab="lyrics" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
-      <button role="tab" data-tab="browser" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg></button>
-      <button role="tab" data-tab="activity" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></button>
-      <button role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></button>
+      <button role="tab" data-tab="assistant" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h0"/></svg><span>Ask</span></button>
+      <button role="tab" data-tab="lyrics" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span>Music</span></button>
+      <button role="tab" data-tab="today" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3.2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Today</span></button>
+      <button role="tab" data-tab="browser" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg><span>Web</span></button>
+      <button role="tab" data-tab="activity" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span>Activity</span></button>
+      <button role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
     </div>
 
     <div class="panes">
@@ -1635,6 +1698,16 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
           <div class="lyr-msg show" id="lyrMsg"><b>Nothing playing</b>Play a song in Spotify, YouTube, or any app and its lyrics show up here.</div>
         </div>
         <div class="srcnote" id="srcnote"><span id="srcnoteText">Lyrics from LRCLIB · follows whatever Windows is playing</span><button class="floatbtn" id="floatBtn" aria-pressed="false" title="Keep the lyrics floating on screen when the notch is closed"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><rect x="11" y="11" width="7" height="5" rx="1.5" fill="currentColor" stroke="none"/></svg>Float</button><span class="nudge" id="nudge" title="Nudge the lyrics if they run early or late"><button data-n="-0.5" aria-label="Lyrics earlier">−</button><span id="nudgeV">sync</span><button data-n="0.5" aria-label="Lyrics later">+</button></span></div>
+      </section>
+
+      <section class="pane" data-pane="today" role="tabpanel">
+        <div class="td-top"><div class="td-day"><b id="tdDay"></b><span id="tdDate"></span></div><div class="td-wx off" id="tdWx"><b id="tdTemp"></b><span id="tdSky"></span></div></div>
+        <ul class="list td-list">
+          <li><svg viewBox="0 0 24 24"><circle cx="12" cy="13.2" r="7.3"/><path d="M12 9.8v3.6l2.3 1.5M9.6 3.2h4.8"/></svg><span>Next up</span><em id="tdNext"></em></li>
+          <li data-go="mail" role="button" tabindex="0"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13.5" rx="2.6"/><path d="M3.8 7.4L12 13.2L20.2 7.4"/></svg><span>Email</span><em id="tdMail"></em></li>
+          <li data-go="music" role="button" tabindex="0"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span>Playing</span><em id="tdSong"></em></li>
+          <li data-go="web" role="button" tabindex="0"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg><span>Web</span><em>Open the browser</em></li>
+        </ul>
       </section>
 
       <section class="pane" data-pane="browser" role="tabpanel">
@@ -1883,37 +1956,47 @@ let faceCur = '', faceK = 0, eyeK = 1, petMood = 'idle';
 })();
 listen('pet-mood', m => { petMood = m; });
 /* live glass: the backdrop arrives from Rust a few times a second while glass is on screen */
-// While a panel is open the pictures come as fast as the screen is drawn. Then only the glass that's on screen is
-// given each one (changing it for the whole page cost a slow frame every time); the rest catches up when the panel closes.
-let glassRate = -1, glassEls = [], glassAt = 0, glassUrl = '';
-const glassFast = () => glassRate > 0 && glassRate <= 120;
-function glassSet(u){ glassAt = performance.now(); document.documentElement.style.setProperty('--live', u); document.documentElement.classList.add('live'); }
-function glassAim(on){
-  const now = on ? [...document.querySelectorAll('.gw')].filter(g => { const p = g.parentElement; return p && p.getClientRects().length && getComputedStyle(p).visibility !== 'hidden'; }) : [];
-  for (const g of glassEls) if (!now.includes(g)) g.style.backgroundImage = '';
-  if (glassUrl) for (const g of now) if (!glassEls.includes(g)) g.style.backgroundImage = glassUrl;      // (glass that has just come on screen starts with the newest picture)
+// The backdrop arrives from Rust as a small picture: every few seconds while only the bar shows, and as fast as
+// the screen is drawn while a panel is open. It is painted straight onto a small canvas inside each glass surface
+// that's on screen. (It used to be handed to the page as an image address, a new one every time. The web engine
+// kept those pictures: 3000 of them left 280 MB behind, measured, and ULTRON makes that many in an hour of sitting
+// idle. And each change restyled the whole page.)
+let glassRate = -1, glassEls = [], glassBmp = null, glassSeq = 0, glassDone = 0, glassSoon = 0;
+function glassDraw(g){
+  if (!glassBmp) return;
+  let c = g._c;
+  if (!c){ c = g._c = document.createElement('canvas'); c.className = 'gwc'; g.appendChild(c); g._x = c.getContext('2d', {alpha:false}); }
+  if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; }
+  g._x.drawImage(glassBmp, 0, 0);
+}
+function glassAim(){
+  const now = [...document.querySelectorAll('.gw')].filter(g => { const p = g.parentElement; return p && p.getClientRects().length && getComputedStyle(p).visibility !== 'hidden'; });
+  for (const g of now) if (!glassEls.includes(g)) glassDraw(g);                    // (glass that has just come on screen starts with the newest picture)
   glassEls = now;
 }
-listen('backdrop', url => {
+listen('backdrop', async url => {
   if (!S.liveGlass) return;
-  glassUrl = `url("${url}")`;
-  if (glassFast() && glassAt){ for (const g of glassEls) g.style.backgroundImage = glassUrl; return; }
-  glassSet(glassUrl);
+  const n = ++glassSeq, bin = atob(url.slice(url.indexOf(',') + 1)), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  let bmp; try { bmp = await createImageBitmap(new Blob([bytes], {type:'image/jpeg'})); } catch(_){ return; }
+  if (n < glassDone){ bmp.close(); return; }                                       // (a newer picture is already up)
+  glassDone = n; if (glassBmp) glassBmp.close(); glassBmp = bmp;
+  for (const g of glassEls) glassDraw(g);
+  document.documentElement.classList.add('live');
 });
+// glass comes on screen with a transition (a panel opening): it gets the picture on that frame, not a moment later
+document.addEventListener('transitionstart', () => { if (!glassSoon) glassSoon = requestAnimationFrame(() => { glassSoon = 0; glassAim(); }); }, true);
 setInterval(() => {
-  const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
+  const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
   const off = !S.liveGlass || fullscreen || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw')].some(el => el && el.classList.contains('open'));
-  // (33: live, each picture of the screen as it is drawn, 30 a second at most. With only the floating lyrics showing,
-  //  which they do for as long as music plays, ten a second is plenty and a third of the work.)
-  const ms = off || answering ? 0 : boxOpen ? 33 : panel ? 100 : 650;
-  if (ms !== glassRate){
-    const was = glassFast(); glassRate = ms; invoke('backdrop_rate', {ms});
-    if (was && !glassFast() && glassUrl) glassSet(glassUrl);                       // (the whole page takes the newest picture as the live feed ends)
-    if (off) document.documentElement.classList.remove('live');
-  }
-  glassAim(glassFast());
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')].some(el => el && el.classList.contains('open'));
+  // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
+  // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
+  // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
+  const ms = off || answering ? 0 : boxOpen ? 33 : panel ? 100 : S.bar === 'hide' ? (barHid ? 0 : 400) : 8000;
+  if (ms !== glassRate){ glassRate = ms; invoke('backdrop_rate', {ms}); if (off) document.documentElement.classList.remove('live'); }
+  glassAim();
 }, 250);
 let typeUntil = 0;
 function faceWant(){
@@ -1987,7 +2070,14 @@ function drawWave(cv, t, bars, gap, amp){
 /* ---------- loop ---------- */
 const clock = new THREE.Clock(), miniCv = $('mini'), waveCv = $('wave');
 let lastW = 0, lastH = 0, bufW = 0, bufH = 0, sizeAt = 0, activeTab = 'assistant', lastRender = 0, miniStill = false;
-let lastFrame = 0, lastAim = 0;
+let lastFrame = 0, lastAim = 0, lastPose = '', lastBig = '';
+// how the character stands, to a fraction of a pixel (for "would drawing it again look any different?")
+const poseKey = c => {
+  const q = (v, k) => Math.round(v * k / c), o = [];
+  for (const [m, kp, ks] of [[mochi, 200, 150], [eyePivot, 320, 60], [eyeL, 320, 24], [eyeR, 320, 24]])
+    o.push(q(m.position.x, kp), q(m.position.y, kp), q(m.rotation.x, 100), q(m.rotation.y, 100), q(m.rotation.z, 100), q(m.scale.x, ks), q(m.scale.y, ks));
+  return o.join() + '|' + q(camera.position.z, 100) + '|' + q(eyeK, 20) + '|' + bodyMat.color.getHex();
+};
 const shine = {x:innerWidth / 2, s:0, tx:innerWidth / 2, ts:0};
 renderer.setAnimationLoop(now => {
   // never faster than 60fps (30 while collapsed): looks the same, costs a fraction on 120/144Hz screens
@@ -2024,7 +2114,19 @@ renderer.setAnimationLoop(now => {
   if (activeTab === 'lyrics' && isOpen) updateLyrics();
   // the tiny collapsed character doesn't need 60fps
   // a resized canvas is blank until drawn, so always draw on those frames (that was the flicker)
-  if (isOpen || resized || t - lastRender > 1 / 30){ lastRender = t; renderer.render(scene, camera); }
+  // Collapsed, the character is drawn again only when it would look different: while it just breathes that's about
+  // half as often (a pose a fraction of a pixel off the last one isn't drawn). Each drawing costs a frame of the
+  // whole overlay, and that was most of what ULTRON used while sitting idle (18% of a core, measured).
+  if (isOpen || resized || t - lastRender > 1 / 30){
+    let draw = isOpen || resized || faceCur || faceK > .01, fine = '', big = '';
+    if (!draw){
+      // A change you could see (a third of a pixel or more: a blink, a look, a hop) is drawn at once. The slow drift of
+      // breathing moves the character less than that from one frame to the next, and is caught up on five times a second.
+      big = poseKey(4); fine = poseKey(1);
+      draw = big !== lastBig || (fine !== lastPose && t - lastRender > .2);
+    }
+    if (draw){ lastPose = fine; lastBig = big; lastRender = t; renderer.render(scene, camera); }
+  }
   const tt = reduce ? 0 : t;
   const miniLive = micLevel > .015 || voiceState === 'transcribing' || voiceState === 'hearing';
   if (!isOpen && (miniLive || !miniStill)){ drawWave(miniCv, tt, 5, 2.5, .9); miniStill = !miniLive; }
@@ -2034,7 +2136,9 @@ renderer.setAnimationLoop(now => {
 /* ---------- tabs + height ---------- */
 const tabs = [...document.querySelectorAll('.tabs button')], pill = $('pill');
 const panes = Object.fromEntries([...document.querySelectorAll('.pane')].map(p => [p.dataset.pane, p]));
-const order = ['assistant', 'lyrics', 'browser', 'activity', 'settings'];
+const order = ['assistant', 'lyrics', 'today', 'browser', 'activity', 'settings'];
+// the browser's tab shows only while there's a browser to go back to
+function webTab(){ let on = activeTab === 'browser'; try { on = on || bwHasPage; } catch(_){} document.querySelector('.tabs').classList.toggle('web', on); }
 function placePill(){ const b = tabs.find(x => x.dataset.tab === activeTab); pill.style.left = b.offsetLeft + 'px'; pill.style.width = b.offsetWidth + 'px'; }
 const vbar = $('vbar'), footSpace = $('footSpace');
 const menu = $('pick'), srcBtn = $('src');
@@ -2112,7 +2216,9 @@ function selectTab(name){
   const wasBrowser = activeTab === 'browser';
   activeTab = name;
   if (wasBrowser) syncBrowser();
+  webTab();
   if (name === 'activity') renderActivity();
+  if (name === 'today'){ tdPaint(); tdWeather(); }
   if (name === 'lyrics') { lastLine = -9; lyrQuiet = true; }
   mediaFastSync();
   tabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
@@ -2137,10 +2243,42 @@ function trackPill(){ const end = performance.now() + 700; (function f(){ placeP
 tabs.forEach(b => b.addEventListener('click', () => selectTab(b.dataset.tab)));
 document.querySelector('.tabs').addEventListener('keydown', e => {
   if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-  const i = (order.indexOf(activeTab) + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length;
+  let i = order.indexOf(activeTab);
+  do i = (i + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length; while (tabs[i].offsetWidth < 4);
   selectTab(order[i]); tabs[i].focus();
 });
 addEventListener('resize', () => { placePill(); fit(); });
+
+/* ---------- today ----------
+   The day at a glance, where the browser's tab used to be: the date, the weather (when "Look things up online" is
+   on), what's coming up, your email and what's playing. The browser is the last row, and gets its tab back while
+   it's in use. */
+var TD = {wx:null, at:0, asking:false}, mailUn = 0;
+function tdPaint(){
+  const d = new Date();
+  $('tdDay').textContent = d.toLocaleDateString('en-GB', {weekday:'long'});
+  $('tdDate').textContent = d.toLocaleDateString('en-GB', {day:'numeric', month:'long'});
+  const n = timers.slice().sort((a, b) => a.at - b.at)[0];
+  $('tdNext').textContent = n ? `${n.label || (n.kind || 'timer').replace(/^./, c => c.toUpperCase())} in ${timeLeft(n)}` : 'Nothing coming up';
+  $('tdMail').textContent = !ML.on ? 'Not set up' : mailUn ? `${mailUn} unread` : 'All caught up';
+  $('tdSong').textContent = cur && cur.title ? (cur.artist ? `${cur.title} by ${cur.artist}` : cur.title) : 'Nothing playing';
+}
+function tdWxShow(){ const [t, sky, place] = TD.wx; $('tdTemp').textContent = t; $('tdSky').textContent = place ? `${sky} in ${place}` : sky; $('tdWx').classList.remove('off'); }
+function tdWeather(){
+  if (!S.web || !TAURI){ $('tdWx').classList.add('off'); return; }
+  if (TD.wx) tdWxShow();
+  if (TD.asking || Date.now() - TD.at < 1800000) return;   // (asked again half an hour on; five minutes on when it didn't answer)
+  TD.asking = true;
+  invoke('today_weather').then(w => { TD.asking = false; TD.at = Date.now() - (w ? 0 : 1500000); if (w){ TD.wx = w; tdWxShow(); } }).catch(() => { TD.asking = false; });
+}
+function tdGo(e){
+  const go = e.target.closest('[data-go]'); if (!go || (e.type === 'keydown' && e.key !== 'Enter')) return;
+  e.stopPropagation();
+  if (go.dataset.go === 'music') selectTab('lyrics');
+  else if (go.dataset.go === 'web') selectTab('browser');
+  else if (go.dataset.go === 'mail'){ openedAt = 0; setOpen(false); setTimeout(openMail, 80); }
+}
+panes.today.addEventListener('click', tdGo); panes.today.addEventListener('keydown', tdGo);
 
 /* ---------- settings UI ---------- */
 const label = $('label');
@@ -2628,8 +2766,8 @@ function renderFloat(m){
 }
 // its own controls press the notch's (so the two always agree), and show it at once
 $('flCtl').addEventListener('click', e => {
+  e.stopPropagation();                                     // (nothing pressed here is a press on the bar itself)
   const b = e.target.closest('[data-fl]'); if (!b) return;
-  e.stopPropagation();
   b.classList.remove('tap'); void b.offsetWidth; b.classList.add('tap');
   if (b.dataset.fl === 'play' && cur) flyr.classList.toggle('playing', !cur.playing);
   $(b.dataset.fl).click();
@@ -2662,7 +2800,8 @@ const flDrop = () => {
   try { localStorage.setItem('ultron-flyr', JSON.stringify(flPos)); } catch(_){} syncHit();
 };
 flyr.addEventListener('pointerup', flDrop); flyr.addEventListener('pointercancel', flDrop);
-flyr.addEventListener('dblclick', e => { if (!e.target.closest('.fl-x')){ setOpen(true); selectTab('lyrics'); } });
+// (two quick presses on pause or next are not a double-click on the bar: that used to open the music tab)
+flyr.addEventListener('dblclick', e => { if (!e.target.closest('.fl-x, .fl-ctl')){ setOpen(true); selectTab('lyrics'); } });
 $('flX').addEventListener('click', e => { e.stopPropagation(); S.floatLyrics = false; save(); paintFloatBtn(); });
 addEventListener('resize', () => { if (flyr.classList.contains('on')) placeFloat(); });
 function floatTick(){
@@ -3008,6 +3147,7 @@ function tickTimers(){
   if (due.length){ timers = timers.filter(t => t.at > now); saveTimers(); due.forEach(ring); }
   $('aiBtn').classList.toggle('timer', timers.length > 0);
   paintAITimers();
+  if (activeTab === 'today' && notch.classList.contains('open')) tdPaint();
 }
 const timeLeft = t => { const sec = Math.max(0, Math.ceil((t.at - Date.now()) / 1000));
   return sec >= 3600 ? `${Math.floor(sec / 3600)}h ${Math.floor(sec % 3600 / 60)}m` : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
@@ -3134,9 +3274,14 @@ function aiSetMode(tool){
       ? `<div class="ai-chips">${REWRITES.map(([l, how], k) => `<button data-how="${esc(how)}" style="--i:${k}">${l}</button>`).join('')}</div><div class="ai-note">Select some text in any app first, or type your own way to rewrite it.</div>`
       : `<div class="ai-note">Type it above and press <b>Enter</b>.</div>`;
     extra.classList.add('open');
+    list.querySelectorAll('.ai-row.sel').forEach(r => r.classList.remove('sel'));
     aiRows = [list.querySelector('.ai-row.chosen')]; aiSelI = 0;
-    const t0 = performance.now();
-    (function follow(){ aiSelect(0, true); if (performance.now() - t0 < 400) requestAnimationFrame(follow); })();
+    const t0 = performance.now(), mine = tool;
+    (function follow(){
+      if (aiMode !== mine) return;                         // (something else was chosen meanwhile: this one stops steering)
+      aiSelect(0, true);
+      if (performance.now() - t0 < 420) requestAnimationFrame(follow); else list.scrollTop = 0;
+    })();
   } else {
     list.querySelectorAll('.ai-row.chosen').forEach(r => r.classList.remove('chosen'));
     extra.classList.remove('open');
@@ -3150,7 +3295,13 @@ function openAI(){
   const b = $('aiBtn').getBoundingClientRect();
   const left = Math.max(8, Math.min(innerWidth - 368, b.right - 360 + 8));
   aiw.style.left = left + 'px'; aiw.style.setProperty('--ox', (b.left + b.width / 2 - left) + 'px');
-  aiMode = null; aiSelI = 0; renderAI(); placeGlass(aiw);
+  // (Opened again after being closed with a tool chosen, the search bar still showed that tool while the list showed
+  //  them all: the next thing clicked sat on top of it. Everything is put back before it shows.)
+  aiMode = null; aiSelI = 0; renderAI();
+  $('aiSearch').classList.remove('moded'); $('aiModeName').textContent = '';
+  { const q = $('aiQ'); q.value = ''; q.placeholder = 'Ask ULTRON, or find a tool…'; }
+  $('aiExtra').classList.remove('open'); $('aiList').scrollTop = 0; filterAI();
+  placeGlass(aiw);
   aiw.classList.add('open'); $('aiBtn').classList.add('on'); $('aiBtn').setAttribute('aria-expanded', 'true');
   setTimeout(() => $('aiQ')?.focus({preventScroll:true}), 60);
   syncHit(); syncBrowser(); setTimeout(syncHit, 400);
@@ -3164,10 +3315,14 @@ function closeAI(){
 $('aiBtn').addEventListener('click', e => { e.stopPropagation(); aiw.classList.contains('open') ? closeAI() : openAI(); });
 addEventListener('pointerdown', e => { if (aiw.classList.contains('open') && !(Pick && Pick.on) && !e.target.closest('#aiw') && !e.target.closest('#aiBtn')) closeAI(); });
 function aiRun(cmd){ closeAI(); setTimeout(() => askUltron(cmd), 120); }
+let aiBusy = 0;
 async function aiActivate(row){
   if (!row) return;
   if (row.dataset.free){ const v = $('aiQ').value.trim(); if (v) aiRun(v); return; }
   const tool = AIT.find(t => t.id === row.dataset.ai); if (!tool) return;
+  // (one thing at a time: a second click while the list is still folding left two half-open things on top of each other)
+  if (performance.now() < aiBusy) return;
+  aiBusy = performance.now() + 380;
   if (row.classList.contains('chosen')) return aiSetMode(null);   // tap it again to go back
   if (tool.ask) return aiSetMode(tool);
   if (tool.fn === 'read') return aiPick(tool, {fn:'read', label:'Read aloud'});
@@ -3175,7 +3330,10 @@ async function aiActivate(row){
   aiRun(tool.run());
 }
 aiw.addEventListener('input', e => { if (e.target.id === 'aiQ' && !aiMode) filterAI(); });
-aiw.addEventListener('pointermove', e => { const r = e.target.closest('.ai-row'); if (r && !r.classList.contains('sel')) aiSelect(aiRows.indexOf(r)); });
+aiw.addEventListener('pointermove', e => {
+  const r = e.target.closest('.ai-row'), i = r ? aiRows.indexOf(r) : -1;          // (a row that's folding away isn't one to light up: -1 used to light the last row and scroll to it)
+  if (i >= 0 && !r.classList.contains('sel')) aiSelect(i);
+});
 aiw.addEventListener('click', e => {
   e.stopPropagation();
   const c = e.target.closest('[data-cancel]');
@@ -3387,6 +3545,7 @@ function pickStop(keepPanel){
     syncHit();
   }, 420);
   if (!keepPanel && aiw.classList.contains('open')) closeAI();
+  else if (keepPanel !== 'mode' && aiMode && aiw.classList.contains('open')){ const m = aiMode; setTimeout(() => { if (aiMode === m && !Pick.on) aiSetMode(null); }, 0); }
   syncHit();
 }
 listen('pick', e => {
@@ -3465,7 +3624,7 @@ const ML_ICO = {
   spk:'<svg viewBox="0 0 24 24"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/></svg>',
 };
 const ML_DOTS = '<i class="ml-dots"><i></i><i></i><i></i></i>';
-function setMailDot(n){ mailBtn.classList.toggle('unread', n > 0); mailBtn.setAttribute('aria-label', n ? `Email, ${n} unread` : 'Email'); }
+function setMailDot(n){ mailUn = n; mailBtn.classList.toggle('unread', n > 0); mailBtn.setAttribute('aria-label', n ? `Email, ${n} unread` : 'Email'); }
 function mailHint(addr){
   const d = (addr.split('@')[1] || '').toLowerCase();
   if (/^(gmail|googlemail)\./.test(d)) return 'Gmail needs an <b>app password</b> (16 letters), not your normal one. 2-Step Verification has to be on. <button type="button" data-ml="gapp">Get one from Google</button>';
@@ -3765,7 +3924,7 @@ function recPlace(){
 recw.inert = true; setTimeout(recPlace, 1800);
 function openRec(){
   if (winH < 700){ winH = 700; invoke('set_window_height', {h:700}); }
-  closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail();
+  closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeFiles();
   recPlace(); recKeys(); recw.inert = false; recw.classList.add('open'); recBtn.setAttribute('aria-expanded', 'true');
   syncHit(); setTimeout(syncHit, 460);
 }
@@ -3870,11 +4029,97 @@ listen('rec-key', async k => {
   setTimeout(() => { const b = $('rcGo').getBoundingClientRect(); invoke('rec_click', {x:b.left + b.width / 2, y:b.top + b.height / 2}); }, 520);
 });
 
+/* ---------- files ----------
+   Beside Record in the bar. Photos are saved again (and scaled down when they're huge), videos are encoded again
+   by Windows, anything else is zipped. The files you choose are never touched: the small copies go to
+   Documents › ULTRON Files › Compressed, and a finished row opens that folder with the copy picked out. */
+const filew = $('filew'), fileBtn = $('fileBtn');
+var FZ = {n:0, tiny:false, rows:new Map(), busy:0, saved:0, was:false, picking:false, t:0};
+try { FZ.tiny = localStorage.getItem('ultron-fz') === 'tiny'; } catch(_){}
+const fzSize = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : b >= 1048576 ? (b / 1048576).toFixed(b >= 104857600 ? 0 : 1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+function fzPlace(){
+  const b = fileBtn.getBoundingClientRect(), left = Math.max(8, Math.min(innerWidth - 336, b.left + b.width / 2 - 240));
+  filew.style.left = left + 'px'; filew.style.setProperty('--ox', (b.left + b.width / 2 - left) + 'px'); placeGlass(filew);
+}
+function fzLevel(){
+  filew.querySelectorAll('#fzLv button').forEach(b => b.setAttribute('aria-checked', (b.dataset.v === 'tiny') === FZ.tiny));
+  $('fzLv').classList.toggle('two', FZ.tiny);
+  $('fzSay').textContent = FZ.tiny ? 'As light as it gets' : 'Keeps it looking the same';
+}
+fzLevel(); filew.inert = true; setTimeout(fzPlace, 1900);
+function openFiles(){
+  if (winH < 700){ winH = 700; invoke('set_window_height', {h:700}); }
+  closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec();
+  fzPlace(); filew.inert = false; filew.classList.add('open'); fileBtn.setAttribute('aria-expanded', 'true'); fileBtn.classList.remove('done');
+  syncHit(); setTimeout(syncHit, 460);
+}
+function closeFiles(){
+  if (!filew.classList.contains('open')) return;
+  filew.classList.remove('open'); filew.inert = true; fileBtn.setAttribute('aria-expanded', 'false'); setTimeout(syncHit, 320);
+}
+function fzBusy(){
+  const on = FZ.busy > 0;
+  fileBtn.classList.toggle('busy', on); $('fzStop').hidden = !on;
+  if (on){ FZ.was = true; clearTimeout(FZ.t); $('fzNote').textContent = FZ.busy > 1 ? `Shrinking ${FZ.busy} files…` : 'Shrinking…'; return; }
+  if (!FZ.was) return;
+  FZ.was = false; $('fzNote').textContent = FZ.saved > 0 ? `Saved ${fzSize(FZ.saved)}` : 'Done'; FZ.saved = 0;
+  if (!filew.classList.contains('open')){ fileBtn.classList.add('done'); setTimeout(() => fileBtn.classList.remove('done'), 8000); }
+  FZ.t = setTimeout(() => { if (!FZ.busy) $('fzNote').textContent = 'Documents › ULTRON Files › Compressed'; }, 7000);
+}
+function fzAdd(paths){
+  const items = paths.slice(0, 40).map(p => [++FZ.n, p]), list = $('fzList');
+  for (const [id, p] of items){
+    const el = document.createElement('div');
+    el.className = 'fz-row'; el.dataset.s = 'wait';
+    el.innerHTML = `<i class="fz-bar"></i><span class="fz-nm">${esc(p.split(/[\\/]/).pop())}</span><span class="fz-sz">Waiting</span><b class="fz-pc"></b>`;
+    list.appendChild(el); FZ.rows.set(id, el);
+  }
+  while (list.children.length > 40 && list.firstChild.dataset.s !== 'run' && list.firstChild.dataset.s !== 'wait') list.firstChild.remove();
+  list.scrollTop = list.scrollHeight;
+  FZ.busy += items.length; fzBusy();
+  invoke('squeeze_go', {items, tiny:FZ.tiny});
+}
+async function fzPick(){
+  if (FZ.picking) return;
+  FZ.picking = true;
+  const paths = await invoke('squeeze_pick').catch(() => []);
+  FZ.picking = false;
+  if (paths && paths.length) fzAdd(paths);
+}
+listen('squeeze', e => {
+  const el = FZ.rows.get(e.id); if (!el) return;
+  const sz = el.querySelector('.fz-sz');
+  if (e.s === 'run'){
+    el.dataset.s = 'run';
+    if (e.pct >= 0){ el.classList.add('pct'); el.querySelector('.fz-bar').style.transform = `scaleX(${Math.max(.02, e.pct / 100).toFixed(3)})`; sz.textContent = Math.round(e.pct) + '%'; }
+    else sz.textContent = e.kind === 'video' ? 'Getting ready…' : 'Shrinking…';
+    return;
+  }
+  el.dataset.s = e.s; FZ.rows.delete(e.id); FZ.busy = Math.max(0, FZ.busy - 1);
+  if (e.s === 'done'){
+    sz.textContent = `${fzSize(e.from)} → ${fzSize(e.to)}`; el.querySelector('.fz-pc').textContent = '−' + Math.min(99, Math.max(1, Math.round((1 - e.to / e.from) * 100))) + '%';
+    el._path = e.path; el.title = 'Show in its folder'; FZ.saved += e.from - e.to;
+  } else sz.textContent = e.s === 'same' ? 'Already as small as it gets' : e.s === 'stop' ? 'Stopped' : (e.why || 'Couldn’t shrink this one');
+  fzBusy();
+});
+fileBtn.addEventListener('click', e => { e.stopPropagation(); filew.classList.contains('open') ? closeFiles() : openFiles(); });
+addEventListener('pointerdown', e => { if (filew.classList.contains('open') && !e.target.closest('#filew') && !e.target.closest('#fileBtn')) closeFiles(); });
+filew.addEventListener('click', e => {
+  e.stopPropagation();
+  const lv = e.target.closest('#fzLv button'), row = e.target.closest('.fz-row');
+  if (e.target.closest('#fzPick')) fzPick();
+  else if (lv){ FZ.tiny = lv.dataset.v === 'tiny'; try { localStorage.setItem('ultron-fz', FZ.tiny ? 'tiny' : 'small'); } catch(_){} fzLevel(); }
+  else if (e.target.closest('#fzStop')) invoke('squeeze_stop');
+  else if (e.target.closest('#fzOpen')) invoke('squeeze_folder').then(f => f && invoke('launch', {target:f}));
+  else if (row && row._path) invoke('squeeze_show', {path:row._path});
+});
+new ResizeObserver(() => { if (filew.classList.contains('open')) syncHit(); }).observe(filew);
+
 /* ---------- status lines change with a little life ----------
    Wherever ULTRON says what it's doing in a line of small print, a change rolls over: the letters the old
    and the new line share stay where they are and only the rest is swapped ("Translating…" to "Translated",
    "Saving…" to "Saved"). A line that's still at work breathes. Nothing about the line's size changes. */
-const SL_SEL = '#lgNote, #rcNote, #kwNote, #mlHint, #cbMsg, .ai-note, .kw-note';
+const SL_SEL = '#lgNote, #rcNote, #fzNote, #fzSay, #kwNote, #mlHint, #cbMsg, .ai-note, .kw-note';
 const slLast = new Map();
 function slTouch(el){
   const key = el.id || el.className.replace(/\s*\bsl-\w+\b/g, ''), now = el.textContent, was = slLast.get(key);
@@ -3906,6 +4151,31 @@ new MutationObserver(recs => {
   seen.forEach(slTouch);
 }).observe(document.body, {childList:true, characterData:true, subtree:true});
 document.querySelectorAll(SL_SEL).forEach(slTouch);
+
+/* ---------- a press near a button's edge still counts ----------
+   Many buttons shrink a little while pressed. Pressed near its edge, a button shrank out from under the pointer,
+   so the release landed beside it and the browser didn't call that a click: play, stop and the others only worked
+   from their middle, and a press on the floating bar's pause fell through to the bar (which opened the notch). */
+let pressOn = null;
+addEventListener('pointerdown', e => {
+  const b = e.button === 0 && e.target.closest && e.target.closest('button, [role="button"]');
+  pressOn = b && !b.disabled ? {b, r:b.getBoundingClientRect()} : null;
+}, true);
+addEventListener('pointerup', e => {
+  const p = pressOn; pressOn = null;
+  if (!p || e.button !== 0 || p.b.contains(e.target) || !p.b.isConnected) return;
+  const r = p.r;
+  if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+    p.b._edge = performance.now();
+    setTimeout(() => p.b.click(), 0);                      // (after the browser has sent its own click to whatever is beside it)
+  }
+}, true);
+// (that stray click beside the button is swallowed: it's the one that opened things it shouldn't have)
+addEventListener('click', e => {
+  if (!e.isTrusted) return;
+  const near = e.target.closest && e.target.closest('#flyr, #lyricsPane');
+  if (near && [...near.querySelectorAll('button')].some(b => b._edge && performance.now() - b._edge < 60 && !b.contains(e.target))){ e.stopPropagation(); e.preventDefault(); }
+}, true);
 
 async function onHeard(text){
   if (isEcho(text)) return;                             // that was ULTRON's own voice
@@ -4177,7 +4447,7 @@ function toUrl(q){
 function bwGo(q){
   if (!q.trim()) return;
   const url = toUrl(q);
-  bwHasPage = true; $('bwHome').classList.add('gone'); $('bwProg').classList.add('on');
+  bwHasPage = true; webTab(); $('bwHome').classList.add('gone'); $('bwProg').classList.add('on');
   $('bwUrl').value = url; $('bwUrl').blur();
   if (bwShown) invoke('browser_go', {action:'navigate', url});
   else { bwPending = url; syncBrowser(0); }
@@ -4219,6 +4489,7 @@ function setOpen(open, byVoice){
   if (open){ requestAnimationFrame(() => { trackPill(); fit(); }); hop = .6; setTimeout(warmAI, 650); }   // the brain wakes once the opening animation is done, not during it
   else { closeMenu(); syncBrowser(); fit(); clearTimeout(autoClose); }
   if (open && activeTab === 'browser') syncBrowser(560);
+  if (open && activeTab === 'today'){ tdPaint(); tdWeather(); }
   nbOnOpen(open);
   mediaFastSync();
   setVoice(lastVoice);
@@ -5158,7 +5429,7 @@ let savedName = ''; try { savedName = localStorage.getItem('ultron-name') || '';
 if (savedName) setUserName(savedName);
 else invoke('user_name').then(n => { if (n) setUserName(n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()); });
 
-function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); }
+function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); }
 
 /* ---------- settings window ---------- */
 const setEl = $('setw'), swHl = $('swHl');
@@ -5426,7 +5697,7 @@ function syncHit(){
   if (fl.classList.contains('on')) rects.push({x:Math.floor(fl.offsetLeft - 4), y:Math.floor(fl.offsetTop - 4), w:fl.offsetWidth + 8, h:fl.offsetHeight + 8});
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (nbOn && nbBox) rects.push(nbBox);
-  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw')]) if (el.classList.contains('open')){
+  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')]) if (el.classList.contains('open')){
     // layout size, not the on-screen size: while a panel animates in it's scaled down, which left dead spots
     const w = Math.max(el.offsetWidth, parseFloat(el.style.width) || 0), x = el.id === 'start' || el.id === 'setw' ? (innerWidth - w) / 2 : el.offsetLeft;
     const h = Math.max(el.offsetHeight, parseFloat(el.style.height) || 0);
@@ -5442,10 +5713,11 @@ new ResizeObserver(() => keepMeasuring(300)).observe(notch);
    windows use the whole screen and the bar comes down over them, the way Windows' own taskbar does when it hides. */
 var barHid = false, barT = 0, barUp = 0;
 const barBusy = () => notch.classList.contains('open') || notch.classList.contains('call') || !!ddFor || tourOn || document.body.classList.contains('intro') || nbOn || REC.starting
-  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw')].some(el => el.classList.contains('open'));
+  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')].some(el => el.classList.contains('open'));
 function barShow(on){
   if (barHid === !on) return;
   barHid = !on; document.body.classList.toggle('barhid', barHid);
+  if (on) invoke('backdrop_now');                          // (coming down over your windows: its glass shows what's there now)
   keepMeasuring(800); syncHit(); setTimeout(syncHit, 520);
 }
 function barMode(){
@@ -5495,6 +5767,7 @@ if (TAURI){
     if (!openedByVoice && activeTab !== 'browser') setOpen(false);
   }, 160));
   invoke('wallpaper').then(setWall); listen('wallpaper', setWall);
+  listen('wallpaper', () => invoke('backdrop_now'));       // (a new wallpaper: the glass looks again at once, not at its next turn)
   invoke('ai_status').then(st => { if (st){ aiStat = st; setVoice(lastVoice); } });
   pushAI(); document.body.classList.toggle('calm', !!S.reduceMotion); tickTimers();
   listen('front-app', setAppName);
@@ -5513,7 +5786,7 @@ requestAnimationFrame(enter);
    start with Windows. It plays once, the first time ULTRON is opened; replay it from Settings › About. */
 const TOUR = [
   {sel:'#notch', say:'Hi, I’m *ULTRON*. Let me show you around.'},
-  {sel:'#notch', say:'This is my home. Click it to *talk* or *type* to me, see your music, or browse the web.'},
+  {sel:'#notch', say:'This is my home. Click it to *talk* or *type* to me, see your music, or check your *day*.'},
   {sel:'.mt.logo', say:'Your *apps* live here. Right-click one to pin it.'},
   {sel:'.mt[data-menu="clip"]', say:'Everything you *copy* is kept here, ready to use again.'},
   {sel:'.mt[data-menu="notes"]', say:'Quick *notes*, one click away.'},
@@ -5521,6 +5794,7 @@ const TOUR = [
   {sel:'.mt[data-menu="news"]', say:'Today’s *headlines* at a glance.'},
   {sel:'.mt[data-menu="lang"]', say:'*Translate* anything in a moment.'},
   {sel:'.mt[data-menu="settings"]', say:'Make me yours: my *memory*, my look and more.'},
+  {sel:'#fileBtn', say:'*Shrink* photos, videos and files, so they’re easy to send.'},
   {sel:'#recBtn', say:'*Record* your screen: one click to start, one to stop.'},
   {sel:'#mailBtn', say:'Your *email*, read and summed up for you.'},
   {sel:'#aiBtn', say:'*AI tools* for the page you’re on and the text you select.'},

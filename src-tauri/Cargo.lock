@@ -4495,6 +4495,7 @@ dependencies = [
  "ureq 2.12.1",
  "whisper-rs",
  "windows 0.61.3",
+ "windows-future 0.2.1",
 ]
 
 [[package]]

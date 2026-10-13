@@ -120,9 +120,21 @@ fn weather(q: &str) -> Option<String> {
     }
     let place = l.split(" in ").nth(1).map(|p| p.trim_end_matches(['?', '.', '!']).replace("today", "").replace("tomorrow", "").trim().to_string()).unwrap_or_default();
     let url = format!("https://wttr.in/{}?format=%l:+%C,+%t+(feels+like+%f),+humidity+%h,+wind+%w&m", enc(&place));
-    let t = get(&url)?;
+    let t = crate::net::get_plain(&url, Duration::from_millis(2500))?;
     let t = t.trim();
     (!t.is_empty() && !t.contains("Unknown location") && t.len() < 300).then(|| format!("Current weather from wttr.in: {t}"))
+}
+
+/// The weather where this PC is, for the notch's Today page: ("31°", "Partly cloudy", "Mumbai").
+/// wttr.in places you by your address on the internet, and picks the units your country uses.
+pub fn weather_now() -> Option<(String, String, String)> {
+    let t = crate::net::get_plain("https://wttr.in/?format=%t;%C;%l", Duration::from_millis(3500))?;
+    let mut p = t.trim().split(';');
+    let (temp, sky, place) = (p.next()?.trim(), p.next()?.trim(), p.next().unwrap_or("").trim());
+    let temp = temp.trim_start_matches('+').trim_end_matches(['C', 'F']); // "+31°C" → "31°"
+    let place = place.split(',').next().unwrap_or("").trim();
+    let place = if place.chars().any(|c| c.is_ascii_digit()) { "" } else { place }; // (sometimes it only knows coordinates)
+    (temp.ends_with('°') && temp.chars().count() <= 5 && !sky.is_empty() && sky.len() < 40).then(|| (temp.to_string(), sky.to_string(), place.to_string()))
 }
 
 /// A translation from the web (MyMemory's free service: about a second, and right in the languages the
