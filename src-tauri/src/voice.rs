@@ -307,19 +307,16 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
     set_status(&app, if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" }, "", 0.0);
 
     for seg in rx {
-        // a long unbroken stretch while music plays is the song coming through the mic, not you:
-        // only check its start for "Ultron", quickly, instead of transcribing all of it
-        let music = app.state::<crate::media::Media>().state.lock().unwrap().sessions.iter().any(|s| s.playing);
-        let seg = if music && seg.len() > RATE * 9 { seg[..RATE * 5].to_vec() } else { seg };
-        let wake_only = music && seg.len() == RATE * 5;
-        // A song with words in it is "speech" phrase after phrase, and each was transcribed in full (about a second on
-        // half the processor's cores) to find that it wasn't for ULTRON. While a song plays and only "Ultron ..." would
-        // be acted on, the first three seconds are checked for the name the quick way, and the careful transcription
-        // is kept for when it's there.
+        let music =app.state::<crate::media::Media>().state.lock().unwrap().sessions.iter().any(|s| s.playing);
+        // A song or a video with words in it is "speech" for as long as it plays, and each stretch was transcribed
+        // carefully (a second or two on half the processor's cores) to find that it wasn't for ULTRON: over a core,
+        // all the while. Nearly all of that time goes into listening to the clip, and it grows with the clip's length.
+        // So while something plays and only "Ultron ..." would be acted on, just the first second and a half (where
+        // the name has to be) is heard first, the quick way; the careful pass is kept for when the name is there.
         let prompt = voice.prompt.lock().unwrap().clone();
-        if music && !wake_only && voice.wake.load(Ordering::SeqCst) {
+        if music && voice.wake.load(Ordering::SeqCst) {
             let t0 = std::time::Instant::now();
-            let head = prepare(&seg[..seg.len().min(RATE * 3)]);
+            let head = prepare(&seg[..seg.len().min(RATE * 8 / 5)]);
             let mut q = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
             q.set_language(Some("en"));
             q.set_n_threads(threads.min(4));
@@ -330,7 +327,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
             q.set_print_progress(false);
             q.set_print_realtime(false);
             q.set_print_timestamps(false);
-            q.set_audio_ctx(384);
+            q.set_audio_ctx(128); // (two and a half seconds' worth: the clip, its padding, and a little over)
             if !prompt.is_empty() {
                 q.set_initial_prompt(&prompt); // (the words it's told to expect, "Ultron" first among them)
             }
@@ -348,6 +345,10 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
                 continue;
             }
         }
+        // a long unbroken stretch while music plays is the song coming through the mic, not you:
+        // only its start is transcribed, quickly, instead of all of it
+        let seg = if music && seg.len() > RATE * 9 { seg[..RATE * 5].to_vec() } else { seg };
+        let wake_only = music && seg.len() == RATE * 5;
         set_status(&app, "transcribing", "", 0.0);
         let audio = prepare(&seg);
         let mut p = params(&prompt, threads, audio.len());
