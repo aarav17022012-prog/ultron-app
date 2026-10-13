@@ -58,8 +58,8 @@ const TOOLS: &[(&str, &str, &str, &[&str])] = &[
     ("remember", "save a fact about the user for later", r#"{"fact":{"type":"string"}}"#, &["fact"]),
     ("undo", "undo the last file move, sort or rename", r#"{}"#, &[]),
     ("system_info", "this PC right now: battery, memory, disk space, processor, graphics, Wi-Fi, and the heaviest apps", r#"{}"#, &[]),
-    ("run_powershell", "run a PowerShell command and read its output, for anything about this PC that no other tool covers (processes, services, network, startup apps, installed software, settings). Commands that only read run at once; ones that change something are shown to the user first",
-     r#"{"command":{"type":"string"}}"#, &["command"]),
+    ("run_powershell", "run a PowerShell command and read its output, for anything about this PC that no other tool covers (processes, services, the registry, network, startup apps, installed software, any Windows setting). Commands that only read run at once; ones that change something are shown to the user first. Set admin to true when it needs administrator rights (services, system-wide settings, Windows features, network settings): Windows then asks the user to allow it",
+     r#"{"admin":{"type":"boolean"},"command":{"type":"string"}}"#, &["command"]),
     ("list_apps", "the apps and windows that are open right now", r#"{}"#, &[]),
     ("close_app", "close an open app by name (force only if it is frozen)", r#"{"name":{"type":"string"},"force":{"type":"boolean"}}"#, &["name"]),
     ("window", "minimize, maximize, close or snap the window in front (left / right), or switch to another open app", r#"{"action":{"enum":["minimize","maximize","close","left","right","switch"]},"app":{"type":"string"}}"#, &["action"]),
@@ -94,7 +94,7 @@ Rules:\n\
 - Don't repeat a step that already worked. When the task is complete, call done right away.\n\
 - Use ask_user only if the task can't start without an answer.\n\
 - To work inside any app: open it, call look to see everything on it by number, then click or type_in_field using those numbers (or type_text / press_keys), and look again to check it worked. Numbers change after every click: always use the newest look.\n\
-- For questions about the PC itself use system_info, or run_powershell with a command that only reads. Never use run_powershell to delete files or download things.\n\nTools:\n",
+- For questions about the PC itself use system_info, or run_powershell with a command that only reads. To change a Windows setting, a service, the registry, the network or anything else on this PC that no other tool covers, use run_powershell with the exact command, and admin true when it needs administrator rights; the user is shown the command and must allow it. Never use run_powershell to delete files or download things.\n\nTools:\n",
     );
     for (name, about, props, req) in TOOLS {
         let args: Vec<String> = serde_json::from_str::<Value>(props).ok().and_then(|v| v.as_object().cloned()).map(|o| {
@@ -155,7 +155,11 @@ pub fn wants(text: &str) -> bool {
     let software = has(&[" install ", "uninstall ", "startup apps", "start-up apps", "powershell", "run the command", "run command", "command prompt", "on my clipboard", "to the clipboard", "to my clipboard",
         "as my wallpaper", "as wallpaper", "as the wallpaper", "wallpaper to "]);
     let power = has(&["restart", "reboot", "shut down", "shutdown", "sign out", "log off", "log out", " to sleep"]) && has(&[" pc", "computer", "laptop", "system", "windows"]);
-    (files && file_verbs) || (asks && pc && mine) || apps || software || power || office || research || reading || has(&["step by step", " and then ", "undo that", "undo the last"]) && !has(&["what is", "who is"])
+    // Windows itself: a service, the registry, the network, a feature... with something to be done to it
+    let windows = has(&[" service", "registry", " dns", "environment variable", " path variable", "scheduled task", "task scheduler", "windows feature", "firewall rule", "power plan", "computer name", "time zone",
+        "timezone", " proxy", " hosts file", "as administrator", "as admin", "group policy", "network adapter"])
+        && has(&[" stop ", " start ", " restart ", " disable ", " enable ", " turn ", " set ", " change ", " add ", " remove ", " create ", " make ", " switch ", " rename ", " edit "]);
+    (files && file_verbs) || (asks && pc && mine) || apps || software || power || windows || office || research || reading || has(&["step by step", " and then ", "undo that", "undo the last"]) && !has(&["what is", "who is"])
 }
 
 /// Long jobs inside a website or an app ("go to ... and build me ...", "sign me up on ..."). They need the
@@ -329,7 +333,12 @@ pub fn prefill(app: &AppHandle) {
 fn ask_first(tool: &str, a: &Value) -> Option<(String, &'static str)> {
     let st = |k: &str| a.get(k).and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
     match tool {
-        "run_powershell" => matches!(tools::ps_risk(&st("command")), tools::Risk::Ask).then(|| (format!("Run this command?  {}", short(&st("command"), 220)), "Run it")),
+        "run_powershell" => {
+            // (as administrator: the user says yes here, to this exact command, and then again to Windows' own prompt)
+            let admin = tools::needs_admin(a);
+            (admin || matches!(tools::ps_risk(&st("command")), tools::Risk::Ask))
+                .then(|| (format!("{}  {}", if admin { "Run this as administrator? (Windows will ask you too.)" } else { "Run this command?" }, short(&st("command"), 220)), if admin { "Allow" } else { "Run it" }))
+        }
         "install_app" => Some((format!("Install {} with winget?", st("id")), "Install")),
         "uninstall_app" => Some((format!("Uninstall {}?", st("name")), "Uninstall")),
         "power" => match st("action").as_str() {
@@ -390,6 +399,100 @@ pub fn answer_pending(app: &AppHandle, text: &str) -> Option<Reply> {
     actions.push(w.label);
     log.push((w.call, short(&text, 3000)));
     run_from(app, &w.goal, log, actions)
+}
+
+/// The app builders on the web ("vibe coding" tools): the names each goes by, what to call it, its page and,
+/// where the builder takes the request in its address, that address ({} is where the request goes; Lovable
+/// documents this, v0 and the chat sites accept it). The others get the request typed into their page.
+const BUILDERS: &[(&[&str], &str, &str, Option<&str>)] = &[
+    (&["lovable"], "Lovable", "https://lovable.dev/", Some("https://lovable.dev/?autosubmit=true#prompt={}")),
+    (&["v0.dev", "v0.app", " v0 ", "vercel"], "v0", "https://v0.dev/", Some("https://v0.dev/chat?q={}")),
+    (&["bolt.new", " bolt"], "Bolt", "https://bolt.new/", None),
+    (&["ai studio", "aistudio"], "Google AI Studio", "https://aistudio.google.com/apps", None),
+    (&["replit"], "Replit", "https://replit.com/", None),
+    (&["firebase studio"], "Firebase Studio", "https://studio.firebase.google.com/", None),
+    (&["chatgpt", "chat gpt"], "ChatGPT", "https://chatgpt.com/", Some("https://chatgpt.com/?q={}")),
+    (&["claude"], "Claude", "https://claude.ai/new", Some("https://claude.ai/new?q={}")),
+];
+
+/// The request itself, without the part that only says where to build it: "Open Dia and search for Google AI
+/// Studio and make me a to-do app using Google AI Studio" is "make me a to-do app".
+fn build_request(goal: &str, names: &[&str]) -> String {
+    let low = goal.to_ascii_lowercase();
+    let word = |w: &str| low.match_indices(w).map(|(i, _)| i).find(|&i| (i == 0 || !low.as_bytes()[i - 1].is_ascii_alphanumeric()) && low[i + w.len()..].chars().next().map_or(true, |c| !c.is_ascii_alphanumeric()));
+    let from = ["make", "build", "create", "generate", "code", "develop", "design"].iter().filter_map(|v| word(v)).min().unwrap_or(0);
+    let mut out = goal[from..].to_string();
+    for n in names.iter().map(|n| n.trim()).chain(["google ai studio", "vibe coding platform", "vibe coding tool", "vibe coding"]) {
+        for lead in [" using ", " on ", " in ", " with ", " at ", " via ", " through ", " from ", " by using "] {
+            for the in ["", "the ", "a "] {
+                let cut = format!("{lead}{the}{n}");
+                while let Some(i) = out.to_ascii_lowercase().find(&cut) {
+                    out.replace_range(i..i + cut.len(), "");
+                }
+            }
+        }
+    }
+    out.trim().trim_end_matches(['.', ',', '!']).trim().to_string()
+}
+
+fn pct(s: &str) -> String {
+    s.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect()
+}
+
+/// "Build me a to-do app on Lovable" (or Bolt, v0, Replit, Google AI Studio...): the builder is opened in your
+/// browser with the request already in it, so it starts building at once. No clicking through its pages, and
+/// nothing for a small brain to get wrong: the only thinking is done by the builder itself. You need to be
+/// signed in there. With no builder named ("with a vibe coding tool"), the one used last time is used again.
+pub fn build_online(app: &AppHandle, goal: &str) -> Option<Reply> {
+    let l = format!(" {} ", goal.to_ascii_lowercase());
+    let asks = wants_build(goal) || [" make ", " build ", " create ", " generate "].iter().any(|v| l.contains(v));
+    let named = BUILDERS.iter().find(|b| b.0.iter().any(|n| l.contains(n)));
+    let any = ["vibe cod", "app builder", "no-code", "no code", "ai builder"].iter().any(|w| l.contains(w));
+    if !asks || (named.is_none() && !any) {
+        return None;
+    }
+    let last = tauri::Manager::path(app).app_data_dir().ok().map(|d| d.join("builder.txt"));
+    let before = last.as_ref().and_then(|f| std::fs::read_to_string(f).ok());
+    let Some((names, name, page, with)) = named.or_else(|| BUILDERS.iter().find(|b| Some(b.1) == before.as_deref().map(str::trim))).copied() else {
+        return Some(Reply { reply: "Which builder should I use: Lovable, Bolt, v0, Replit or Google AI Studio? Say it like “build me a to-do app on Lovable”, and I'll remember your choice.".into(),
+            action: String::new(), icon: "agent", ok: true });
+    };
+    // (the chat sites only when it really is something to build: "create a ChatGPT account" is not)
+    if (name == "ChatGPT" || name == "Claude") && !wants_build(goal) {
+        return None;
+    }
+    if let Some(f) = &last {
+        crate::keep(f, name);
+    }
+    let request = build_request(goal, names);
+    crate::log_line(&format!("builder: {name}, request {request:?}"));
+    let mut sess = agent::Session::new();
+    emit(app, 0, &format!("Opening {name}"), "run");
+    let url = with.map(|u| u.replace("{}", &pct(&request))).unwrap_or_else(|| page.to_string());
+    if run_tool(app, &mut sess, "open", &json!({ "target": url })).is_err() {
+        emit(app, 0, &format!("Opening {name}"), "fail");
+        sess.finish(app, false);
+        return Some(Reply { reply: format!("I couldn't open {name}."), action: String::new(), icon: "agent", ok: false });
+    }
+    emit(app, 0, &format!("Opening {name}"), "ok");
+    let mut note = String::new();
+    if with.is_none() {
+        emit(app, 1, "Typing your request", "run");
+        match agent::prompt_page(&request) {
+            Ok(()) => emit(app, 1, "Typing your request", "ok"),
+            Err(e) => {
+                emit(app, 1, "Typing your request", "fail");
+                note = e;
+            }
+        }
+    }
+    sess.finish(app, true);
+    Some(Reply {
+        reply: if note.is_empty() { format!("{name} has your request and is building it. If it asks you to sign in, do that and it carries on.") } else { format!("I opened {name}. {note}") },
+        action: format!("Opening {name}"),
+        icon: "agent",
+        ok: note.is_empty(),
+    })
 }
 
 /// "Make me an app": ULTRON writes it itself, as one file that runs when opened, saves it with the rest of

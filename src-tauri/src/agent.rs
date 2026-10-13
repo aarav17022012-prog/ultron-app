@@ -926,6 +926,43 @@ fn type_into(app: &AppHandle, h: HWND, text: &str) -> bool {
 
 /// Put a piece of text in by pasting it. Stops if you switched windows or pressed Stop.
 /// Type at full speed (names in a search box, a message that waits for your OK anyway).
+/// A page has just been opened in the browser: find the box it wants its request typed into (the big one, or
+/// the one that says what it's for; never the browser's own address bar), type the request and send it.
+pub fn prompt_page(text: &str) -> Result<(), String> {
+    let t0 = Instant::now();
+    std::thread::sleep(Duration::from_millis(2600)); // (the browser comes to the front and starts loading)
+    let mut spot = None;
+    while spot.is_none() && t0.elapsed() < Duration::from_secs(24) {
+        if crate::ai::cancelled() {
+            return Err("Stopped.".into());
+        }
+        let h = fg_root();
+        let mut win = RECT::default();
+        let _ = unsafe { GetWindowRect(h, &mut win) };
+        let (ww, wh) = ((win.right - win.left).max(1), (win.bottom - win.top).max(1));
+        let boxes: Vec<(String, RECT)> = crate::vision::edits(h).into_iter().filter(|(_, r)| r.top > win.top + wh * 14 / 100 && r.right - r.left > ww / 6).collect();
+        let says = |n: &str| {
+            let n = n.to_lowercase();
+            ["prompt", "describe", "build", "idea", "ask", "message", "what", "create", "app", "type", "make"].iter().any(|w| n.contains(w))
+        };
+        let size = |r: &RECT| (r.right - r.left) * (r.bottom - r.top).min(220);
+        spot = boxes.iter().filter(|(n, _)| says(n)).max_by_key(|(_, r)| size(r)).or_else(|| boxes.iter().max_by_key(|(_, r)| size(r))).map(|(_, r)| (*r, h));
+        if spot.is_none() {
+            std::thread::sleep(Duration::from_millis(700));
+        }
+    }
+    let (r, h) = spot.ok_or("I couldn't find where to type the request on that page (it may be waiting for you to sign in).")?;
+    crate::log_line(&format!("builder: the request box was found after {} ms", t0.elapsed().as_millis()));
+    real_click((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+    std::thread::sleep(Duration::from_millis(260));
+    if !type_fast(h, text) {
+        return Err("You switched windows, so I stopped before sending it.".into());
+    }
+    std::thread::sleep(Duration::from_millis(380));
+    press(&[VK_RETURN]);
+    Ok(())
+}
+
 fn type_fast(h: HWND, text: &str) -> bool {
     for (i, c) in text.chars().enumerate() {
         if i % 16 == 0 && (fg_root() != h || crate::ai::cancelled()) {
@@ -1211,15 +1248,18 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
             let mut win = RECT::default();
             let _ = unsafe { GetWindowRect(h, &mut win) };
             let (ww, wh) = ((win.right - win.left).max(1), (win.bottom - win.top).max(1));
+            // (The boxes are asked for by kind, and names are read off the screen. Asking the app for everything on it,
+            //  as this used to, took seconds a time in a chat app with its whole history on screen: 24 s to find a chat
+            //  and 36 s to have the message written, measured. The thorough way is still there for when reading fails.)
             let search = {
                 let mut found = None;
-                for _ in 0..(if existing.is_some() { 2 } else { 6 }) {
-                    found = crate::vision::seen(h).into_iter().filter(|(edit, name, r)| *edit && crate::vision::norm(name).contains("search") && r.top < win.top + wh / 2)
-                        .min_by_key(|(_, _, r)| r.top).map(|(_, _, r)| r);
+                for _ in 0..(if existing.is_some() { 3 } else { 8 }) {
+                    found = crate::vision::edits(h).into_iter().filter(|(name, r)| crate::vision::norm(name).contains("search") && r.top < win.top + wh / 2)
+                        .min_by_key(|(_, r)| r.top).map(|(_, r)| r);
                     if found.is_some() || crate::ai::cancelled() || fg_root() != h {
                         break;
                     }
-                    std::thread::sleep(Duration::from_millis(350));
+                    std::thread::sleep(Duration::from_millis(250));
                 }
                 found
             };
@@ -1231,51 +1271,48 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
                 if !type_fast(h, to) {
                     return Err(gone("You switched windows, so I stopped."));
                 }
-                // their row: something under the search box, in its column, whose name starts with theirs (the topmost one)
-                let mut row = None;
-                for _ in 0..9 {
-                    std::thread::sleep(Duration::from_millis(230));
+                // their row: the topmost line with their name under the search box, read off the screen
+                let results = RECT { left: sb.left, top: sb.bottom + 4, right: sb.right, bottom: win.bottom };
+                let (mut at, mut by) = (None, "reading the screen");
+                for i in 0..5 {
+                    std::thread::sleep(Duration::from_millis(if i == 0 { 420 } else { 260 }));
                     if crate::ai::cancelled() || fg_root() != h {
                         return Err(gone("You switched windows, so I stopped."));
                     }
-                    row = crate::vision::seen(h).into_iter()
-                        .filter(|(edit, name, r)| !*edit && r.top >= sb.bottom - 2 && r.left < sb.right && r.right > sb.left && r.bottom - r.top < 130 && named(name, to))
-                        .min_by_key(|(_, _, r)| r.top)
-                        .map(|(_, _, r)| r);
-                    if row.is_some() {
+                    at = crate::vision::find_text(results, to, |r| -(r.top - sb.bottom) as f64 / 4000.0);
+                    if at.is_some() {
                         break;
                     }
                 }
-                // not said by the app itself? then read the results off the screen
-                let at = row.map(|r| ((r.left + r.right) / 2, (r.top + r.bottom) / 2)).or_else(|| {
-                    crate::vision::find_text(RECT { left: sb.left, top: sb.bottom + 4, right: sb.right, bottom: win.bottom }, to, |r| -(r.top - sb.bottom) as f64 / 4000.0)
-                });
+                if at.is_none() {
+                    // (it couldn't be read: the thorough way, by what the app says about itself)
+                    at = crate::vision::seen(h).into_iter()
+                        .filter(|(edit, name, r)| !*edit && r.top >= sb.bottom - 2 && r.left < sb.right && r.right > sb.left && r.bottom - r.top < 130 && named(name, to))
+                        .min_by_key(|(_, _, r)| r.top)
+                        .map(|(_, _, r)| ((r.left + r.right) / 2, (r.top + r.bottom) / 2));
+                    by = "its name";
+                }
                 match at {
                     Some((x, y)) => {
-                        crate::log_line(&format!("message: found their chat by {} after {} ms", if row.is_some() { "its name" } else { "reading the screen" }, t0.elapsed().as_millis()));
+                        crate::log_line(&format!("message: found their chat by {by} after {} ms", t0.elapsed().as_millis()));
                         real_click(x, y);
                         opened = true;
                     }
                     None => crate::log_line("message: no row with that name in the search results"),
                 }
                 if opened {
-                    // the chat is open when its name is at the top, outside the search column, and there's a box to write in
+                    // the chat is open when their name is at the top, outside the search column, and there's a box to write in
                     let two = (sb.right - sb.left) * 10 < ww * 6;
+                    let top = RECT { left: if two { sb.right } else { win.left }, top: win.top, right: win.right, bottom: win.top + wh * 22 / 100 };
                     let mut ok = false;
                     let mut boxes: Vec<RECT> = Vec::new();
-                    for _ in 0..8 {
+                    for _ in 0..7 {
                         std::thread::sleep(Duration::from_millis(220));
-                        let all = crate::vision::seen(h);
-                        boxes = all.iter().filter(|(edit, name, r)| *edit && !crate::vision::norm(name).contains("search") && r.top > win.top + wh / 2).map(|(_, _, r)| *r).collect();
-                        let header = all.iter().any(|(edit, name, r)| !*edit && r.top < win.top + wh * 22 / 100 && (!two || (r.left + r.right) / 2 > sb.right) && named(name, to));
-                        if header && !boxes.is_empty() {
+                        boxes = crate::vision::edits(h).into_iter().filter(|(name, r)| !crate::vision::norm(name).contains("search") && r.top > win.top + wh / 2).map(|(_, r)| r).collect();
+                        if !boxes.is_empty() && crate::vision::find_text(top, to, |_| 0.0).is_some() {
                             ok = true;
                             break;
                         }
-                    }
-                    if !ok {
-                        let top = RECT { left: if two { sb.right } else { win.left }, top: win.top, right: win.right, bottom: win.top + wh * 22 / 100 };
-                        ok = !boxes.is_empty() && crate::vision::find_text(top, to, |_| 0.0).is_some();
                     }
                     if !ok {
                         press(&[VK_ESCAPE]);

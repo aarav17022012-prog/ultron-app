@@ -771,3 +771,43 @@ mod tests {
         assert!(!els.is_empty());
     }
 }
+
+/// Only the boxes you can type in (a search box, a message box), asked for by kind. A chat app lists thousands
+/// of things when asked for everything on it, and each such look took seconds (finding a chat that way took
+/// 24 s, measured); the boxes alone come back at once.
+pub fn edits(h: HWND) -> Vec<(String, RECT)> {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let uia: IUIAutomation = match CoCreateInstance(&CUIAutomation8, None, CLSCTX_INPROC_SERVER) {
+            Ok(u) => u,
+            Err(_) => match CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER) {
+                Ok(u) => u,
+                Err(_) => return Vec::new(),
+            },
+        };
+        if let Ok(u2) = uia.cast::<IUIAutomation2>() {
+            let _ = u2.SetTransactionTimeout(2500);
+            let _ = u2.SetConnectionTimeout(1500);
+        }
+        let Ok(cache) = uia.CreateCacheRequest() else { return Vec::new() };
+        for p in [UIA_NamePropertyId, UIA_BoundingRectanglePropertyId, UIA_IsOffscreenPropertyId, UIA_IsEnabledPropertyId] {
+            let _ = cache.AddProperty(p);
+        }
+        let kind = windows::Win32::System::Variant::VARIANT::from(EDIT);
+        let (Ok(root), Ok(cond)) = (uia.ElementFromHandle(h), uia.CreatePropertyCondition(UIA_ControlTypePropertyId, &kind)) else { return Vec::new() };
+        let Ok(all) = root.FindAllBuildCache(TreeScope_Descendants, &cond, &cache) else { return Vec::new() };
+        let mut out = Vec::new();
+        for i in 0..all.Length().unwrap_or(0).min(200) {
+            let Ok(e) = all.GetElement(i) else { continue };
+            if e.CachedIsOffscreen().map(|b| b.as_bool()).unwrap_or(false) || !e.CachedIsEnabled().map(|b| b.as_bool()).unwrap_or(true) {
+                continue;
+            }
+            let rect = e.CachedBoundingRectangle().unwrap_or_default();
+            if rect.right - rect.left < 20 || rect.bottom - rect.top < 8 {
+                continue;
+            }
+            out.push((e.CachedName().map(|b| b.to_string()).unwrap_or_default().trim().chars().take(160).collect(), rect));
+        }
+        out
+    }
+}

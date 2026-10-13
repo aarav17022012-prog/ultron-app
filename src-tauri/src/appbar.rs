@@ -22,6 +22,7 @@ const WM_APPBAR: u32 = WM_APP + 0x51;
 struct Bar {
     hwnd: isize,
     reserve: f64, // CSS px kept free for the menu bar
+    full: f64,    // what that is when the bar is always there (it's 0 while the bar hides away)
     height: f64,  // CSS px of the window (taller, so the notch can open downward)
 }
 
@@ -40,7 +41,7 @@ fn data(hwnd: HWND) -> APPBARDATA {
 
 pub fn register(app: &AppHandle, hwnd: HWND, reserve: f64, height: f64) {
     let _ = APP.set(app.clone());
-    *BAR.lock().unwrap() = Some(Bar { hwnd: hwnd.0 as isize, reserve, height });
+    *BAR.lock().unwrap() = Some(Bar { hwnd: hwnd.0 as isize, reserve, full: reserve, height });
     unsafe {
         let mut abd = data(hwnd);
         SHAppBarMessage(ABM_NEW, &mut abd);
@@ -70,6 +71,15 @@ pub fn position() {
         let wh = (bar.height * s).round() as i32;
         let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), m.left, abd.rc.top, m.right - m.left, wh, SWP_NOACTIVATE);
     }
+}
+
+/// Keep room for the bar at the top of the screen (windows stop below it), or none: the bar then hides away and
+/// comes down over the windows when it's wanted, the way Windows' own taskbar does when it hides.
+pub fn reserve(on: bool) {
+    if let Some(bar) = BAR.lock().unwrap().as_mut() {
+        bar.reserve = if on { bar.full } else { 0.0 };
+    }
+    position();
 }
 
 /// Keep the remembered window height (CSS px) in step with the page's own resizes.

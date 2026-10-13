@@ -365,6 +365,11 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
             return commands::Reply { reply: said, action: String::new(), icon: "chat", ok: true };
         }
         memory::notice(&app, &text);
+        // "build me ... on Lovable / Bolt / v0 / AI Studio": straight to that builder, with the request
+        if let Some(r) = doer::build_online(&app, &text) {
+            ai::remember_chat(&app, &text, &r.reply);
+            return r;
+        }
         // bigger jobs (files, Excel, Word, research): the task agent plans them step by step with tools
         if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && cloud::active(&app).is_some()) {
             if let Some(r) = doer::run(&app, &text) {
@@ -569,6 +574,12 @@ fn media_control(media: State<Media>, action: String, value: Option<f64>, id: Op
 #[tauri::command]
 async fn get_lyrics(title: String, artist: String, album: String, duration: f64) -> Option<lyrics::Lyrics> {
     tauri::async_runtime::spawn_blocking(move || lyrics::fetch(&title, &artist, &album, duration)).await.ok().flatten()
+}
+
+/// The menu bar keeps its strip of the screen, or gives it up (it hides away: Settings, Look & feel).
+#[tauri::command]
+fn bar_reserve(on: bool) {
+    appbar::reserve(on);
 }
 
 /// The icon of the app a song is playing from (media.rs).
@@ -855,7 +866,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

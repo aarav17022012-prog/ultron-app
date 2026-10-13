@@ -131,6 +131,12 @@ body:not(.boot) .mbar{transform:translateY(-100%)}
 body.boot .mbar{animation:barIn .55s var(--glide) backwards}
 @keyframes barIn{from{transform:translateY(-100%)}}
 body.fullscreen .mbar, body.leaving .mbar{transform:translateY(-100%); opacity:0}
+/* the menu bar set to hide away (Settings, Look & feel): bar, notch and its ears slide up together, and come back down together */
+body.autohide .mbar{transition:transform .4s var(--glide), opacity .3s, translate .5s var(--glide)}
+body.autohide .notch{transition:width .48s var(--glide), height .42s var(--glide), border-radius .48s var(--glide), box-shadow .4s var(--soft), margin-left .48s var(--glide), translate .5s var(--glide), opacity .3s}
+body.autohide .notch.flow{transition:width .48s var(--glide), border-radius .48s var(--glide), box-shadow .4s var(--soft), margin-left .48s var(--glide), translate .5s var(--glide), opacity .3s}
+body.autohide .ears{transition:width .48s var(--glide), margin-left .48s var(--glide), translate .5s var(--glide), opacity .3s}
+body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 -150%; opacity:0}
 .mbar.glass::after{display:none}
 .mbar{--hs:0}
 .mbar .ml, .mbar .mr{display:flex; align-items:center; gap:1px; height:100%}
@@ -1535,7 +1541,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>Everything saved in the Clipboard menu</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
     <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small>Version 0.3 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
@@ -1718,6 +1724,7 @@ const DEFAULTS = {follow:true, blink:true, eye:1, speed:1, sens:1, label:true, t
 let S = {...DEFAULTS};
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
 S.speak = false;                                           // ULTRON answers in writing (its voice was taken out)
+if (S.bar !== 'hide') S.bar = 'show';                      // the menu bar: always there, unless it's been set to hide away
 const save = () => { try { localStorage.setItem('ultron-notch', JSON.stringify(S)); } catch(e){} };
 
 /* ---------- renderer ---------- */
@@ -2161,6 +2168,7 @@ function applySetting(k){
   if (AI_KEYS.includes(k)) pushAI();
   if (k === 'autostart') invoke('set_autostart', {on:!!S.autostart});
   if (k === 'reduceMotion') document.body.classList.toggle('calm', !!S.reduceMotion);
+  if (k === 'bar') barMode();
   if (k === 'hearSongs') songReq();
   if (k === 'muted'){ invoke('voice_config', {paused:S.muted}); paintMute(); }
 }
@@ -4202,6 +4210,7 @@ let openedAt = 0;
 function setOpen(open, byVoice){
   if (open === notch.classList.contains('open')) return;
   if (open && winH < 700){ winH = 700; invoke('set_window_height', {h:700}); }
+  if (open && barHid) barShow(true);
   if (open) openedAt = performance.now();
   else if (performance.now() - openedAt < 450) return;
   if (!byVoice) openedByVoice = false;
@@ -5410,7 +5419,7 @@ function syncHit(){
   const r = notchRect;
   const pad = notch.classList.contains('open') ? 0 : 6;
   const rects = [{x:Math.floor(r.left - pad - 10), y:0, w:Math.ceil(r.width + pad * 2 + 20), h:Math.ceil(r.bottom + pad)}];
-  if (!fullscreen) rects.push({x:0, y:0, w:innerWidth, h:32});
+  if (!fullscreen && !barHid) rects.push({x:0, y:0, w:innerWidth, h:32});
   if (tourOn) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
   if (bwWide.classList.contains('on')){ const w = bwWide.getBoundingClientRect(); rects.push({x:Math.floor(w.left - 4), y:Math.floor(w.top - 14), w:Math.ceil(w.width + 8), h:Math.ceil(w.height + 18)}); }
   const fl = $('flyr');
@@ -5427,12 +5436,48 @@ function syncHit(){
   if (k !== hitKey){ hitKey = k; invoke('set_hit_rects', {rects}); }
 }
 new ResizeObserver(() => keepMeasuring(300)).observe(notch);
+/* ---------- the menu bar can hide away ----------
+   Settings, Look & feel, Menu bar, "Hides away": the bar and the notch slide up off the screen and come back when
+   the pointer rests on the top edge. While it is set to hide, the bar keeps no strip of the screen for itself:
+   windows use the whole screen and the bar comes down over them, the way Windows' own taskbar does when it hides. */
+var barHid = false, barT = 0, barUp = 0;
+const barBusy = () => notch.classList.contains('open') || notch.classList.contains('call') || !!ddFor || tourOn || document.body.classList.contains('intro') || nbOn || REC.starting
+  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw')].some(el => el.classList.contains('open'));
+function barShow(on){
+  if (barHid === !on) return;
+  barHid = !on; document.body.classList.toggle('barhid', barHid);
+  keepMeasuring(800); syncHit(); setTimeout(syncHit, 520);
+}
+function barMode(){
+  const hide = S.bar === 'hide';
+  document.body.classList.toggle('autohide', hide);
+  invoke('bar_reserve', {on:!hide});
+  clearTimeout(barT); barT = 0;
+  if (!hide) barShow(true);
+}
+// (asked on every move of the pointer, and a few times a second besides, for when a panel closes with the pointer elsewhere)
+function barWatch(){
+  if (S.bar !== 'hide' || fullscreen) return;
+  const y = cursorY, busy = barBusy();
+  if (barHid){
+    // only the very top edge brings it back, and only if the pointer rests there a moment (not on its way to a window's own buttons)
+    if (busy) return barShow(true);
+    if (y >= -4 && y <= 2){ if (!barUp) barUp = setTimeout(() => { barUp = 0; if (cursorY >= -4 && cursorY <= 2) barShow(true); }, 180); }
+    else { clearTimeout(barUp); barUp = 0; }
+    return;
+  }
+  const near = y >= -4 && y <= 110;                       // on the bar, the notch, or just under them
+  if (near || busy){ clearTimeout(barT); barT = 0; return; }
+  if (!barT) barT = setTimeout(() => { barT = 0; if (S.bar === 'hide' && !barBusy() && !(cursorY >= -4 && cursorY <= 110)) barShow(false); }, 1100);
+}
+setInterval(barWatch, 600);
 function enter(){
   document.body.classList.remove('leaving', 'boot'); void document.body.offsetWidth;
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); });
+  barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
   listen('intro-start', () => { document.body.classList.add('intro'); setOpen(false); closeDD(); closePanels(); });
