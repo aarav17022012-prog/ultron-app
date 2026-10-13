@@ -186,7 +186,7 @@ pub fn layout(n: usize, area: RECT, gap: i32) -> Vec<RECT> {
 }
 
 /// Lay the open windows on the main screen out side by side, the one in front first. Gives how many.
-pub fn tile(app: &AppHandle) -> usize {
+pub fn tile(app: &AppHandle, gap: i32) -> usize {
     unsafe {
         let main = MonitorFromWindow(HWND::default(), MONITOR_DEFAULTTOPRIMARY);
         let mut wins: Vec<OpenWin> = app.state::<Apps>().open_windows().into_iter().filter(|w| !w.min).collect();
@@ -196,7 +196,7 @@ pub fn tile(app: &AppHandle) -> usize {
         if wins.is_empty() || SystemParametersInfoW(SPI_GETWORKAREA, 0, Some(&mut area as *mut _ as _), SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0)).is_err() {
             return 0;
         }
-        let gap = (10.0 * crate::hit::scale_of(HWND::default()).max(1.0)) as i32;
+        let gap = (gap.clamp(0, 40) as f64 * crate::hit::scale_of(HWND::default()).max(1.0)) as i32;
         let spots = layout(wins.len(), area, gap);
         let mut before = Vec::new();
         for (w, to) in wins.iter().zip(spots) {

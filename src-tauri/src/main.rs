@@ -745,8 +745,8 @@ async fn dock_act(id: String, what: String) {
 }
 
 #[tauri::command]
-async fn dock_tile(app: AppHandle) -> usize {
-    tauri::async_runtime::spawn_blocking(move || dock::tile(&app)).await.unwrap_or(0)
+async fn dock_tile(app: AppHandle, gap: Option<i32>) -> usize {
+    tauri::async_runtime::spawn_blocking(move || dock::tile(&app, gap.unwrap_or(10))).await.unwrap_or(0)
 }
 
 #[tauri::command]
