@@ -316,6 +316,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
         // half the processor's cores) to find that it wasn't for ULTRON. While a song plays and only "Ultron ..." would
         // be acted on, the first three seconds are checked for the name the quick way, and the careful transcription
         // is kept for when it's there.
+        let prompt = voice.prompt.lock().unwrap().clone();
         if music && !wake_only && voice.wake.load(Ordering::SeqCst) {
             let t0 = std::time::Instant::now();
             let head = prepare(&seg[..seg.len().min(RATE * 3)]);
@@ -330,6 +331,9 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
             q.set_print_realtime(false);
             q.set_print_timestamps(false);
             q.set_audio_ctx(384);
+            if !prompt.is_empty() {
+                q.set_initial_prompt(&prompt); // (the words it's told to expect, "Ultron" first among them)
+            }
             let mut start = String::new();
             if state.full(q, &head).is_ok() {
                 for s in state.as_iter() {
@@ -346,7 +350,6 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
         }
         set_status(&app, "transcribing", "", 0.0);
         let audio = prepare(&seg);
-        let prompt = voice.prompt.lock().unwrap().clone();
         let mut p = params(&prompt, threads, audio.len());
         if wake_only {
             p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
