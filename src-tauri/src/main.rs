@@ -17,6 +17,7 @@ mod calls;
 mod kids;
 mod rec;
 mod squeeze;
+mod wall;
 mod icons;
 mod cloud;
 mod pick;
@@ -654,7 +655,30 @@ async fn app_icons(sources: Vec<String>) -> Vec<String> {
 #[tauri::command]
 async fn squeeze_pick(app: AppHandle) -> Vec<String> {
     let owner = app.get_webview_window("main").and_then(|w| hit::hwnd_of(&w)).map(|h| h.0 as isize);
-    tauri::async_runtime::spawn_blocking(move || squeeze::pick(owner)).await.unwrap_or_default()
+    tauri::async_runtime::spawn_blocking(move || squeeze::pick(owner, false)).await.unwrap_or_default()
+}
+
+/// Wallpaper, in the bar: which one is on, and your own pictures.
+#[tauri::command]
+async fn wall_list(app: AppHandle) -> serde_json::Value {
+    tauri::async_runtime::spawn_blocking(move || wall::list(&app)).await.unwrap_or_default()
+}
+
+/// Make one of ULTRON's wallpapers ("our:dusk") or a picture of yours (its path) the wallpaper.
+#[tauri::command]
+async fn wall_apply(app: AppHandle, pick: String) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || wall::apply(&app, &pick)).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn wall_pick(app: AppHandle) -> Option<String> {
+    let owner = app.get_webview_window("main").and_then(|w| hit::hwnd_of(&w)).map(|h| h.0 as isize);
+    tauri::async_runtime::spawn_blocking(move || squeeze::pick(owner, true)).await.ok().and_then(|v| v.into_iter().next())
+}
+
+#[tauri::command]
+fn wall_folder(app: AppHandle) -> String {
+    wall::folder(&app).to_string_lossy().to_string()
 }
 
 #[tauri::command]
@@ -906,7 +930,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

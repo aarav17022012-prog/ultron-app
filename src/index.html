@@ -208,6 +208,35 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 .dd hr{border:0; height:1px; background:rgba(255,255,255,.12); margin:4px 8px}
 /* rich menu panels */
 .rp{width:300px; padding:8px 8px 6px; text-shadow:0 1px 2px rgba(0,0,0,.3)}
+/* wallpaper */
+.rp-wall{width:326px}
+.wp-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:9px; padding:0 2px}
+.wp-mine{margin-top:11px} .wp-mine:empty{display:none}
+.wp-t{position:relative; min-width:0; padding:0; border:0; background:none; color:#fff; font:inherit; text-align:left; cursor:default}
+.wp-t img{display:block; width:100%; aspect-ratio:16/10; object-fit:cover; border-radius:9px; background:rgba(255,255,255,.08);
+  box-shadow:0 0 0 1px rgba(255,255,255,.16), 0 4px 12px rgba(0,0,0,.28); transition:transform .35s var(--spring), box-shadow .25s}
+.wp-t:hover img{transform:scale(1.035)} .wp-t:active img{transform:scale(.96)}
+.wp-t.on img{box-shadow:0 0 0 2px #fff, 0 6px 16px rgba(0,0,0,.36)}
+.wp-t span{display:block; margin:6px 2px 0; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.58); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .25s}
+.wp-t.on span{color:#fff}
+.wp-ok{position:absolute; right:6px; top:6px; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; background:#fff; transform:scale(0); transition:transform .45s var(--spring)}
+.wp-ok svg{width:11px; height:11px; fill:none; stroke:#0c0c0e; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:20; stroke-dashoffset:20; transition:stroke-dashoffset .35s var(--glide) .14s}
+.wp-t.on .wp-ok{transform:none} .wp-t.on .wp-ok svg{stroke-dashoffset:0}
+.wp-t.go img{animation:wpGo .6s var(--spring)}
+@keyframes wpGo{0%{transform:scale(.92)} 55%{transform:scale(1.045)}}
+.wp-t.new{animation:wpNew .6s var(--spring) backwards}
+@keyframes wpNew{from{opacity:0; transform:translateY(16px) scale(.78)}}
+.wp-drop{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:calc(100% - 4px); height:84px; margin:12px 2px 0; border:0; border-radius:12px;
+  background:rgba(255,255,255,.05); color:#fff; font:inherit; cursor:default; outline:1.5px dashed rgba(255,255,255,.26); outline-offset:-1.5px;
+  transition:background .2s, outline-color .2s, transform .35s var(--spring)}
+.wp-drop svg{width:18px; height:18px; margin-bottom:4px; fill:none; stroke:rgba(255,255,255,.75); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; transition:transform .35s var(--spring), stroke .2s}
+.wp-drop b{font-size:12.5px; font-weight:600} .wp-drop span{font-size:11px; color:rgba(255,255,255,.5)}
+.wp-drop:hover{background:rgba(255,255,255,.09); outline-color:rgba(255,255,255,.42)}
+.wp-drop:active{transform:scale(.985)}
+.wp-drop.over{background:rgba(255,255,255,.17); outline-color:#fff; transform:scale(1.02)}
+.wp-drop.over svg{transform:translateY(3px); stroke:#fff}
+.wp-drop.take svg{animation:wpTake .55s var(--glide)}
+@keyframes wpTake{45%{transform:translateY(10px); opacity:0} 46%{transform:translateY(-10px); opacity:0}}
 .rp h4{margin:2px 4px 10px; font-size:11.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.55);
   display:flex; justify-content:space-between; align-items:center}
 .chipb{border:0; font:inherit; font-size:12px; font-weight:600; color:#fff; background:rgba(255,255,255,.14); padding:5px 12px; border-radius:99px; cursor:default;
@@ -1553,7 +1582,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
   <div class="ml">
     <button class="mt logo" data-menu="ultron" aria-label="ULTRON menu"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg></button>
     <button class="mt app" data-menu="app"><span class="app-name" id="appName">Ultron</span></button>
-    <button class="mt" data-menu="clip">Clipboard</button>
+    <button class="mt" data-menu="wall">Wallpaper</button>
     <button class="mt" data-menu="notes">Notes</button>
     <button class="mt" data-menu="calc">Calc</button>
     <button class="mt" data-menu="news">News</button>
@@ -1605,7 +1634,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
     <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
-    <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>Everything saved in the Clipboard menu</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
+    <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>What the old Clipboard menu had saved. Nothing new is kept.</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
     <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small>Version 0.3 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
   </div>
 </div>
@@ -1826,7 +1855,7 @@ const key = new THREE.DirectionalLight(0xffffff, .9); key.position.set(1.5, 3, 4
 /* ---------- geometry cache (reading layout every frame was a source of jank) ---------- */
 const notch = $('notch'), panelEl = $('panel');
 let notchRect = notch.getBoundingClientRect(), petRect = canvas.getBoundingClientRect(), liveUntil = 0;
-const keepMeasuring = (ms = 900) => { liveUntil = Math.max(liveUntil, performance.now() + ms); };
+const keepMeasuring = (ms = 900) => { liveUntil = Math.max(liveUntil, performance.now() + ms); wake(); };
 function measure(){ notchRect = notch.getBoundingClientRect(); petRect = canvas.getBoundingClientRect(); }
 
 /* cursor relative to the character; it comes from the OS, so the eyes follow it anywhere on screen */
@@ -1962,13 +1991,29 @@ listen('pet-mood', m => { petMood = m; });
 // kept those pictures: 3000 of them left 280 MB behind, measured, and ULTRON makes that many in an hour of sitting
 // idle. And each change restyled the whole page.)
 let glassRate = -1, glassEls = [], glassBmp = null, glassSeq = 0, glassDone = 0, glassSoon = 0;
-function glassDraw(g){
+function glassDraw(g, a){
   if (!glassBmp) return;
-  let c = g._c;
-  if (!c){ c = g._c = document.createElement('canvas'); c.className = 'gwc'; g.appendChild(c); g._x = c.getContext('2d', {alpha:false}); }
-  if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; }
+  let c = g._c, blank = false;
+  if (!c){ c = g._c = document.createElement('canvas'); c.className = 'gwc'; g.appendChild(c); g._x = c.getContext('2d', {alpha:false}); blank = true; }
+  if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; blank = true; }
+  g._x.globalAlpha = blank || a == null ? 1 : a;             // (a < 1: the new picture is laid over the old one a little at a time)
   g._x.drawImage(glassBmp, 0, 0);
 }
+/* A picture that arrives after a pause (the bar's own occasional look, the first live one once something opens) is
+   melted in over a quarter of a second. Cut in, it made the glass jump darker or lighter. A steady stream isn't melted. */
+let glassAt = 0, glassMixT = 0, glassMixRaf = 0, glassMixLast = 0, glassAsked = 0;
+function glassMixStep(t){
+  glassMixRaf = 0;
+  const left = glassMixT - performance.now(), dt = Math.min(50, t - glassMixLast); glassMixLast = t;
+  for (const g of glassEls) glassDraw(g, left > 0 ? 1 - Math.exp(-dt / 60) : 1);
+  if (left > 0) glassMixRaf = requestAnimationFrame(glassMixStep);
+}
+// the pointer has come up to the bar, or something is being pressed: if the bar's picture is an old one, look again now
+function glassFresh(){
+  const n = performance.now();
+  if (glassRate >= 400 && n - glassAt > 500 && n - glassAsked > 700){ glassAsked = n; invoke('backdrop_now'); }
+}
+addEventListener('pointerdown', glassFresh, true);
 function glassAim(){
   const now = [...document.querySelectorAll('.gw')].filter(g => { const p = g.parentElement; return p && p.getClientRects().length && getComputedStyle(p).visibility !== 'hidden'; });
   for (const g of now) if (!glassEls.includes(g)) glassDraw(g);                    // (glass that has just come on screen starts with the newest picture)
@@ -1981,7 +2026,10 @@ listen('backdrop', async url => {
   let bmp; try { bmp = await createImageBitmap(new Blob([bytes], {type:'image/jpeg'})); } catch(_){ return; }
   if (n < glassDone){ bmp.close(); return; }                                       // (a newer picture is already up)
   glassDone = n; if (glassBmp) glassBmp.close(); glassBmp = bmp;
-  for (const g of glassEls) glassDraw(g);
+  const now = performance.now(), gap = now - glassAt; glassAt = now;
+  if (gap > 300 && document.documentElement.classList.contains('live')) glassMixT = now + 260;
+  if (now < glassMixT){ if (!glassMixRaf){ glassMixLast = now; glassMixRaf = requestAnimationFrame(glassMixStep); } }
+  else for (const g of glassEls) glassDraw(g);
   document.documentElement.classList.add('live');
 });
 // glass comes on screen with a transition (a panel opening): it gets the picture on that frame, not a moment later
@@ -2079,14 +2127,35 @@ const poseKey = c => {
   return o.join() + '|' + q(camera.position.z, 100) + '|' + q(eyeK, 20) + '|' + bodyMat.color.getHex();
 };
 const shine = {x:innerWidth / 2, s:0, tx:innerWidth / 2, ts:0};
-renderer.setAnimationLoop(now => {
-  // never faster than 60fps (30 while collapsed): looks the same, costs a fraction on 120/144Hz screens
+// How long until the next picture is due, in ms. Never faster than 60 a second (30 while collapsed): looks the same,
+// costs a fraction on 120/144Hz screens.
+function loopStep(now){
   const open_ = notch.classList.contains('open');
-  if (fullscreen && !open_) return;
-  // collapsed and nothing happening (cursor still, not listening): the tiny character only breathes, 20fps looks identical
-  const calm = !open_ && now - lastAim > 2000 && micTarget < .01 && !hovering;
-  if (now - lastFrame < (open_ ? 15.5 : calm ? 48 : 32)) return;
-  lastFrame = now;
+  if (fullscreen && !open_) return 250;
+  const still = now - lastAim > 2000;
+  // collapsed and nothing happening (pointer still, no more than a room's hum at the microphone): the tiny character
+  // only breathes, 20 a second looks identical
+  const calm = !open_ && still && micTarget < .08 && !hovering;
+  // collapsed while a song plays: the character keeps time (and the meter hears the song) for hours on end. Drawn 12
+  // times a second, 20 while the pointer moves, the little bars look the same as at 30, for well under half the work.
+  const tune = !open_ && !hovering && !!(disp && disp.playing);
+  return open_ || performance.now() < liveUntil || flow.on ? 15.5 : tune ? (still ? 80 : 48) : calm ? 48 : 32;
+}
+/* Open (or while something is moving), the loop runs with the screen. Collapsed, it is woken only when the next
+   picture is due: on a 144 Hz screen it used to be called 144 times a second to draw 12, and every call is a turn of
+   the web engine's whole frame machinery, drawn or not. Whatever needs it sooner (the notch opening, the pointer
+   moving, a voice) wakes it at once. */
+var loopT = 0;                                              // (var: things earlier in the file call wake() while it loads)
+function pump(now){
+  const step = loopStep(now);
+  if (step < 200 && now - lastFrame >= step - 2){ lastFrame = now; frame(now); }
+  if (step < 20) requestAnimationFrame(pump);
+  else loopT = setTimeout(() => { loopT = 0; requestAnimationFrame(pump); }, Math.max(4, step - (now - lastFrame) - 5));
+}
+function wake(){ if (loopT){ clearTimeout(loopT); loopT = 0; requestAnimationFrame(pump); } }
+requestAnimationFrame(pump);
+function frame(now){
+  const open_ = notch.classList.contains('open');
   if (Math.abs(shine.tx - shine.x) > .5 || Math.abs(shine.ts - shine.s) > .004){
     shine.x += (shine.tx - shine.x) * .16; shine.s += (shine.ts - shine.s) * .14;
     mbar.style.setProperty('--hx', shine.x.toFixed(1) + 'px'); mbar.style.setProperty('--hs', shine.s.toFixed(3));
@@ -2128,10 +2197,10 @@ renderer.setAnimationLoop(now => {
     if (draw){ lastPose = fine; lastBig = big; lastRender = t; renderer.render(scene, camera); }
   }
   const tt = reduce ? 0 : t;
-  const miniLive = micLevel > .015 || voiceState === 'transcribing' || voiceState === 'hearing';
+  const miniLive = micLevel > .08 || voiceState === 'transcribing' || voiceState === 'hearing';   // (.08: above a quiet room's hum)
   if (!isOpen && (miniLive || !miniStill)){ drawWave(miniCv, tt, 5, 2.5, .9); miniStill = !miniLive; }
   if (vbar.classList.contains('show')) drawWave(waveCv, tt, 0, 3, activeTab === 'assistant' ? 1 : .85);
-});
+}
 
 /* ---------- tabs + height ---------- */
 const tabs = [...document.querySelectorAll('.tabs button')], pill = $('pill');
@@ -2928,8 +2997,8 @@ function setVoice(st){
   if (voiceState === 'hearing'){ hop = .5; warmAI(); }
 }
 let lastVoice = {state:'loading'};
-listen('voice', st => { lastVoice = st; setVoice(st); });
-listen('mic-level', l => { micTarget = l; });
+listen('voice', st => { lastVoice = st; setVoice(st); wake(); });
+listen('mic-level', l => { micTarget = l; if (l > .08) wake(); });
 
 let reveals = 0;
 function reveal(el, text, step){
@@ -4119,7 +4188,7 @@ new ResizeObserver(() => { if (filew.classList.contains('open')) syncHit(); }).o
    Wherever ULTRON says what it's doing in a line of small print, a change rolls over: the letters the old
    and the new line share stay where they are and only the rest is swapped ("Translating…" to "Translated",
    "Saving…" to "Saved"). A line that's still at work breathes. Nothing about the line's size changes. */
-const SL_SEL = '#lgNote, #rcNote, #fzNote, #fzSay, #kwNote, #mlHint, #cbMsg, .ai-note, .kw-note';
+const SL_SEL = '#lgNote, #rcNote, #fzNote, #fzSay, #wpNote, #kwNote, #mlHint, #cbMsg, .ai-note, .kw-note';
 const slLast = new Map();
 function slTouch(el){
   const key = el.id || el.className.replace(/\s*\bsl-\w+\b/g, ''), now = el.textContent, was = slLast.get(key);
@@ -4506,7 +4575,7 @@ let fullscreen = false, ddFor = null, appName = 'Ultron';
 const MENUS = {
   ultron:[['About ULTRON','about'],['What can ULTRON do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],'-',['Lock Screen','lock','Win L'],'-',['Quit ULTRON','quit']],
   app:[['Show Desktop','desktop','Win D'],['Task View','task-view','Win Tab'],'-',['Quit {app}','quit-app','Alt F4']],
-  music:'rich', clip:'rich', notes:'rich', focus:'rich', system:'rich', calc:'rich', convert:'rich', world:'rich', lang:'rich', news:'rich',
+  music:'rich', clip:'rich', wall:'rich', notes:'rich', focus:'rich', system:'rich', calc:'rich', convert:'rich', world:'rich', lang:'rich', news:'rich',
 };
 const pillEl = document.createElement('span'); pillEl.className = 'mt-pill'; mbar.querySelector('.ml').prepend(pillEl);
 function movePill(btn, instant){
@@ -4673,6 +4742,64 @@ $('micSt').addEventListener('click', e => {
   again('tap'); pttUntil ? endTalk() : startTalk();
 });
 $('micSt').addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); muteBtn.click(); });
+
+/* ---------- wallpaper ----------
+   In the bar, where Clipboard was: three wallpapers of ULTRON's own, your three newest, and a box to drop a picture
+   on (or click, to choose one). Windows fades to the new wallpaper, and the bar's glass melts into it. */
+const WP_HOME = 'Kept in ULTRON Files › Wallpapers';
+var WP = {ours:[{id:'dusk', name:'Dusk'}, {id:'tide', name:'Tide'}, {id:'graphite', name:'Graphite'}], mine:[], cur:'', busy:false, drag:null, noteT:0};
+const wpTile = (pick, name, src) => `<button class="wp-t${WP.cur === pick ? ' on' : ''}" data-x="wset" data-pick="${esc(pick)}"><img src="${esc(src)}" alt="" draggable="false"><i class="wp-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></i><span>${esc(name)}</span></button>`;
+const wallOpen = () => !!ddFor && ddFor.dataset.menu === 'wall';
+function wallNote(t, hold){
+  const n = document.getElementById('wpNote'); if (n) n.textContent = t;
+  clearTimeout(WP.noteT); if (hold) WP.noteT = setTimeout(() => { const m = document.getElementById('wpNote'); if (m) m.textContent = WP_HOME; }, hold);
+}
+// what the menu shows, brought up to date in place (so nothing in it starts its entrance again)
+function wallPaint(r, fresh){
+  if (r){ WP.cur = r.current || ''; WP.mine = r.mine || []; }
+  if (!wallOpen()) return;
+  const row = document.getElementById('wpMine'), key = WP.mine.map(m => m.path).join('|');
+  if (row && row.dataset.k !== key){
+    ddFit(() => { row.innerHTML = WP.mine.map(m => wpTile(m.path, m.name, m.thumb)).join(''); row.dataset.k = key; });
+    if (fresh){ const t = [...row.children].find(b => b.dataset.pick === fresh); if (t) t.classList.add('new'); }
+    placeGlass(dd);
+  }
+  dd.querySelectorAll('.wp-t').forEach(b => b.classList.toggle('on', b.dataset.pick === WP.cur));
+}
+function wallLoad(){ const row = document.getElementById('wpMine'); if (row) row.dataset.k = WP.mine.map(m => m.path).join('|'); invoke('wall_list').then(r => wallPaint(r)).catch(() => {}); }
+async function wallSet(pick, el){
+  if (WP.busy || !pick) return;
+  WP.busy = true; wallNote('Changing…');
+  if (el){ el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
+  try {
+    const r = await invokeLoud('wall_apply', {pick});            // (this one says why when it can't)
+    wallPaint(r, el ? '' : r.current); wallNote('Wallpaper changed', 4000);
+  } catch(e){ wallNote(String(e), 6000); }
+  WP.busy = false;
+}
+// A picture dragged in from a folder: held over Wallpaper in the bar it opens the menu, and let go on the menu it's used.
+if (TAURI){
+  const isPic = p => /\.(jpe?g|png|bmp)$/i.test(p || '');
+  const where = pos => { const x = pos.x / devicePixelRatio, y = pos.y / devicePixelRatio, hit = el => { if (!el) return false; const r = el.getBoundingClientRect(); return x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6; };
+    return {btn:hit(mbar.querySelector('.mt[data-menu="wall"]')), menu:wallOpen() && hit(dd)}; };
+  const over = p => {
+    if (!WP.drag || !p.position) return;
+    const w = where(p.position);
+    if (w.btn && !wallOpen()){ openDD(mbar.querySelector('.mt[data-menu="wall"]')); ddPinned = true; }
+    document.getElementById('wpDrop')?.classList.toggle('over', w.menu || w.btn);
+  };
+  listen('tauri://drag-enter', p => { WP.drag = (p.paths || []).find(isPic) || ''; over(p); });
+  listen('tauri://drag-over', over);
+  listen('tauri://drag-leave', () => { WP.drag = null; document.getElementById('wpDrop')?.classList.remove('over'); });
+  listen('tauri://drag-drop', p => {
+    const pic = (p.paths || []).find(isPic), box = document.getElementById('wpDrop'), w = p.position ? where(p.position) : {};
+    WP.drag = null; if (box) box.classList.remove('over');
+    if (!(w.menu || w.btn) || !wallOpen()) return;
+    if (!pic){ wallNote('ULTRON takes JPG, PNG or BMP pictures', 5000); return; }
+    if (box){ box.classList.remove('take'); void box.offsetWidth; box.classList.add('take'); }
+    wallSet(pic);
+  });
+}
 
 /* ---------- rich menus: Music, Clipboard, Notes, Focus, System ---------- */
 const SVGI = {
@@ -4959,6 +5086,13 @@ const RICH = {
       <div class="mu-prog"><i id="muP"></i></div><div class="mu-time"><span id="muC">0:00</span><span id="muD">${cur.duration ? fmt(cur.duration / 1000) : '–:––'}</span></div>
       <div class="mu-ctl"><button data-x="mprev" aria-label="Previous">${SVGI.prev}</button><button class="pp" data-x="mtoggle" id="muPP" aria-label="Play or pause">${cur.playing ? SVGI.pause : SVGI.play}</button><button data-x="mnext" aria-label="Next">${SVGI.next}</button></div>`;
   },
+  wall(){
+    return `<h4>Wallpaper</h4>
+      <div class="wp-grid">${WP.ours.map(o => wpTile('our:' + o.id, o.name, `wallpapers/${o.id}-s.jpg`)).join('')}</div>
+      <div class="wp-grid wp-mine" id="wpMine">${WP.mine.map(m => wpTile(m.path, m.name, m.thumb)).join('')}</div>
+      <button class="wp-drop" data-x="wpick" id="wpDrop"><svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4M5 15v2.5A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg><b>Drop a picture here</b><span>or click to choose one</span></button>
+      <div class="foot-s"><span id="wpNote">${WP_HOME}</span><button class="chipb" data-x="wopen">Open folder</button></div>`;
+  },
   clip(){
     const rows = clipItems.slice(0, 8).map((t, i) => `<div class="cl-row" data-x="ccopy" data-i="${i}" style="animation-delay:${i * 30}ms">${esc(t)}<button class="cl-x" data-x="cdel" data-i="${i}" aria-label="Remove">✕</button></div>`).join('');
     return `<h4>Clipboard <span style="text-transform:none;letter-spacing:0">${clipItems.length ? clipItems.length + ' saved' : ''}</span></h4>
@@ -5047,6 +5181,7 @@ function richMount(k){
   if (k === 'lang'){ invoke('ai_wake'); paintLang(); setTimeout(() => document.getElementById('lgIn')?.focus({preventScroll:true}), 380); }
   if (k === 'world'){ paintWorld(); richTimer = setInterval(paintWorld, 1000); }
   if (k === 'notes') setTimeout(() => document.getElementById('noteTa')?.focus({preventScroll:true}), 380);
+  if (k === 'wall') wallLoad();
 }
 function refreshRich(k){
   // re-render a rich menu in place (same size budget, no slide)
@@ -5089,6 +5224,9 @@ function richAction(x, el){
     case 'mprev': invoke('media_control', {action:'prev'}); break;
     case 'mnext': invoke('media_control', {action:'next'}); break;
     case 'mtoggle': if (cur){ cur.playing = !cur.playing; cur.position = posNow() * 1000; cur.updated = Date.now(); paintMusic(); } invoke('media_control', {action:'toggle'}); break;
+    case 'wset': wallSet(el.dataset.pick, el); break;
+    case 'wpick': invoke('wall_pick').then(p => { if (p) wallSet(p); }); break;
+    case 'wopen': invoke('wall_folder').then(f => f && invoke('launch', {target:f})); break;
     case 'ccopy':
       invoke('clip_action', {action:'copy', text:clipItems[i]});
       el.classList.add('copied'); setTimeout(() => el.classList.remove('copied'), 700); break;
@@ -5158,6 +5296,9 @@ function placeGlass(el){
   if (el.id === 'start' || el.id === 'setw') x = (innerWidth - el.offsetWidth) / 2;     // centred with a transform
   gw.style.left = -x + 'px'; gw.style.top = -y + 'px';
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px';
+  // (Drawn now, not a frame or two on: until its picture came, glass that had just opened showed the wallpaper, or the
+  //  picture from the last time it was open. That was the dark box a menu started as.)
+  glassDraw(gw);
 }
 placeGlass(mbar);
 
@@ -5748,7 +5889,7 @@ function enter(){
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
@@ -5788,7 +5929,7 @@ const TOUR = [
   {sel:'#notch', say:'Hi, I’m *ULTRON*. Let me show you around.'},
   {sel:'#notch', say:'This is my home. Click it to *talk* or *type* to me, see your music, or check your *day*.'},
   {sel:'.mt.logo', say:'Your *apps* live here. Right-click one to pin it.'},
-  {sel:'.mt[data-menu="clip"]', say:'Everything you *copy* is kept here, ready to use again.'},
+  {sel:'.mt[data-menu="wall"]', say:'Change your *wallpaper* here, or drop in a picture of your own.'},
   {sel:'.mt[data-menu="notes"]', say:'Quick *notes*, one click away.'},
   {sel:'.mt[data-menu="calc"]', say:'A *calculator* that’s always at hand.'},
   {sel:'.mt[data-menu="news"]', say:'Today’s *headlines* at a glance.'},
@@ -6022,7 +6163,7 @@ async function prewarm(tries = 0){
   const frames = n => new Promise(r => { const f = () => (--n <= 0 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
   prewarming = true; document.documentElement.classList.add('prewarm');
   try {
-    for (const name of ['clip', 'notes', 'calc', 'news', 'lang']){
+    for (const name of ['wall', 'notes', 'calc', 'news', 'lang']){
       const b = mbar.querySelector(`.mt[data-menu="${name}"]`);
       if (b && MENUS[name]){ openDD(b); await frames(4); }
     }
@@ -6041,7 +6182,7 @@ if (TAURI) invoke('dev_mode').then(on => {
   let n = 0, s25 = 0, s50 = 0, worst = 0, sum = 0, last = performance.now(), note = '';
   const state = () => (notch.classList.contains('open') ? 'open' : 'closed') + (dd.classList.contains('open') ? '+menu' : '') + (aiStream ? '+answering' : '')
     + (S.liveGlass ? '' : '+noglass') + (note ? '+' + note : '');
-  (function f(now){ const d = now - last; last = now; n++; sum += d; if (d > 25) s25++; if (d > 50) s50++; if (d > worst) worst = d; requestAnimationFrame(f); })(last);
+  (function f(now){ const d = now - last; last = now; n++; sum += d; if (d > 25) s25++; if (d > 50) s50++; if (d > worst) worst = d; if (window.__noprobe) setTimeout(() => requestAnimationFrame(f), 1000); else requestAnimationFrame(f); })(last);   // (__noprobe: for measuring what ULTRON costs without this probe's own frames)
   setInterval(() => {
     invoke('page_log', {msg:`perf ${state()}: ${n} frames, avg ${(sum / Math.max(1, n)).toFixed(1)} ms, over25 ${s25}, over50 ${s50}, worst ${worst.toFixed(0)} ms`});
     n = s25 = s50 = worst = sum = 0;

@@ -348,11 +348,12 @@ struct Vad {
     seg: Vec<f32>,
     pre: std::collections::VecDeque<Vec<f32>>,
     tick: u32,
+    told: (f32, u32),
 }
 
 impl Vad {
     fn new() -> Self {
-        Vad { floor: 0.004, hot: 0, speaking: false, voiced: 0, silence: 0, seg: Vec::new(), pre: Default::default(), tick: 0 }
+        Vad { floor: 0.004, hot: 0, speaking: false, voiced: 0, silence: 0, seg: Vec::new(), pre: Default::default(), tick: 0, told: (0.0, 0) }
     }
 
     fn reset(&mut self) {
@@ -368,7 +369,12 @@ impl Vad {
         self.tick += 1;
         if self.tick % 3 == 0 {
             let lvl = (rms / 0.09).min(1.0).sqrt();
-            let _ = app.emit_to("main", "mic-level", lvl);
+            // (Told when it has moved, or twice a second. In a quiet room the same small number was sent to the page
+            //  17 times a second, all day, and each one woke it.)
+            if (lvl - self.told.0).abs() >= 0.02 || self.tick.wrapping_sub(self.told.1) >= 25 {
+                self.told = (lvl, self.tick);
+                let _ = app.emit_to("main", "mic-level", lvl);
+            }
         }
         let loud = (self.floor * 2.2).max(0.006) / sens;
         let start_p = (0.6 / sens).clamp(0.3, 0.9);

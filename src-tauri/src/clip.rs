@@ -16,6 +16,9 @@ use windows::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM
 
 const CF_UNICODETEXT: u32 = 13;
 const MAX: usize = 25;
+/// The Clipboard menu left the bar (13 Oct 2026), so what you copy is no longer recorded. What it had saved
+/// is still read at start-up, so that Settings, Privacy, Clear can wipe it.
+const KEEPING: bool = false;
 
 static HISTORY: Mutex<Vec<String>> = Mutex::new(Vec::new());
 static FILE: OnceLock<PathBuf> = OnceLock::new();
@@ -104,6 +107,9 @@ pub fn watch(app: AppHandle) {
             *HISTORY.lock().unwrap() = saved;
         }
         let _ = FILE.set(f);
+    }
+    if !KEEPING {
+        return;
     }
     std::thread::spawn(move || {
         let mut seq = unsafe { GetClipboardSequenceNumber() };

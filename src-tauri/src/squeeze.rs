@@ -24,21 +24,29 @@ pub fn folder(app: &AppHandle) -> PathBuf {
     d
 }
 
-/// Windows' own "Open" box, for several files at once. It belongs to ULTRON's window so that it
-/// comes up in front. Empty when it was closed without choosing.
-pub fn pick(owner: Option<isize>) -> Vec<String> {
+/// Windows' own "Open" box: for several files of any kind (Files), or for one picture (Wallpaper). It
+/// belongs to ULTRON's window so that it comes up in front. Empty when it was closed without choosing.
+pub fn pick(owner: Option<isize>, picture: bool) -> Vec<String> {
     use windows::core::w;
     use windows::Win32::Foundation::HWND;
     use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED};
+    use windows::Win32::UI::Shell::Common::COMDLG_FILTERSPEC;
     use windows::Win32::UI::Shell::{FileOpenDialog, IFileOpenDialog, FOS_ALLOWMULTISELECT, FOS_FILEMUSTEXIST, FOS_FORCEFILESYSTEM, SIGDN_FILESYSPATH};
     std::thread::spawn(move || unsafe {
         let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         let mut out = Vec::new();
         let _ = (|| -> windows::core::Result<()> {
             let d: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
-            d.SetOptions(d.GetOptions()? | FOS_ALLOWMULTISELECT | FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST)?;
-            d.SetTitle(w!("Choose photos, videos or files to make smaller"))?;
-            d.SetOkButtonLabel(w!("Shrink"))?;
+            if picture {
+                d.SetOptions(d.GetOptions()? | FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST)?;
+                d.SetFileTypes(&[COMDLG_FILTERSPEC { pszName: w!("Pictures"), pszSpec: w!("*.jpg;*.jpeg;*.png;*.bmp") }])?;
+                d.SetTitle(w!("Choose a picture for your wallpaper"))?;
+                d.SetOkButtonLabel(w!("Use"))?;
+            } else {
+                d.SetOptions(d.GetOptions()? | FOS_ALLOWMULTISELECT | FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST)?;
+                d.SetTitle(w!("Choose photos, videos or files to make smaller"))?;
+                d.SetOkButtonLabel(w!("Shrink"))?;
+            }
             d.Show(owner.map(|h| HWND(h as _)))?; // (closing the box without choosing ends here)
             let items = d.GetResults()?;
             for i in 0..items.GetCount()? {

@@ -393,6 +393,7 @@ pub fn start(app: AppHandle) {
         let mut feed: Option<live::Feed> = None;
         let (mut dims, mut last, mut retry) = ((0usize, 0usize), Vec::new(), Instant::now());
         let (mut shown, mut spent, mut since, mut told) = (0u32, Duration::ZERO, Instant::now(), false);
+        let (mut sent, mut sent_at) = (String::new(), Instant::now());
         loop {
             let every = EVERY.load(Ordering::SeqCst);
             let fast = every > 0 && every <= FAST && !paused();
@@ -452,7 +453,11 @@ pub fn start(app: AppHandle) {
             }
             let t0 = Instant::now();
             if let Some(url) = capture(&app) {
-                let _ = app.emit_to("main", "backdrop", url);
+                // (nothing behind ULTRON has changed since the last look: the page already has this picture)
+                if url != sent || sent_at.elapsed() > Duration::from_secs(60) {
+                    let _ = app.emit_to("main", "backdrop", &url);
+                    (sent, sent_at) = (url, Instant::now());
+                }
             }
             let took = t0.elapsed();
             if last_log.elapsed() > Duration::from_secs(300) {
