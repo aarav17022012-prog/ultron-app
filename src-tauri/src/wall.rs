@@ -153,11 +153,14 @@ pub fn list(app: &AppHandle) -> Value {
 /// Make `pick` ("our:dusk", or the path of a picture) the wallpaper: it pours in over the old one (see
 /// veil.rs), and Windows is given it once it covers the screen. Gives back what `list` gives.
 /// `dry` (only while ULTRON runs with its developer inbox) rehearses the arrival and leaves the wallpaper alone.
-pub fn apply(app: &AppHandle, pick: &str, dry: bool) -> Result<Value, String> {
+pub fn apply(app: &AppHandle, pick: &str, dry: bool, how: u8) -> Result<Value, String> {
     let p = prepare(app, pick)?;
     let dry = dry && std::env::var("ULTRON_DEV_INBOX").is_ok();
+    if dry {
+        crate::veil::HOW.store(how, std::sync::atomic::Ordering::SeqCst);
+    }
     let real = p.clone();
-    crate::veil::arrive(p, if dry { 700 } else { 1500 }, Box::new(move || if dry { Ok(()) } else { set(&real) }))?;
+    crate::veil::arrive(p, if dry { 700 } else { 650 }, Box::new(move || if dry { Ok(()) } else { set(&real) }))?;
     crate::backdrop::kick(); // (the glass takes on the new picture at once)
     Ok(list(app))
 }

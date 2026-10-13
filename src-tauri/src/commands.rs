@@ -143,7 +143,7 @@ fn key(vk: VIRTUAL_KEY, up: bool) -> INPUT {
     }
 }
 
-fn type_text(text: &str) {
+pub(crate) fn type_text(text: &str) {
     let mut inputs = Vec::new();
     for u in text.encode_utf16() {
         for up in [false, true] {
@@ -424,7 +424,7 @@ pub fn run(app: &AppHandle, raw: &str) -> Reply {
 
     // typing into the focused app
     if let Some(r) = strip_any(raw.trim(), &["Type", "type", "Write", "write", "Dictate", "dictate"]) {
-        let text = r.trim_start_matches([',', ':']).trim();
+        let text = &crate::dictate::marks(r.trim_start_matches([',', ':']).trim()); // ("comma", "question mark" said aloud)
         if !text.is_empty() {
             type_text(text);
             return done("Typed it.", format!("Typed “{text}”"), "type");

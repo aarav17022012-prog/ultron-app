@@ -33,6 +33,8 @@ pub struct Voice {
     ready: AtomicBool,
     /// Only speech that starts with "Ultron" would be acted on just now (the page says so).
     pub wake: AtomicBool,
+    /// Dictating: a pause has to be twice as long before it ends what you're saying.
+    pub patient: AtomicBool,
     sens: AtomicU32, // f32 bits
     prompt: Mutex<String>,
     status: Mutex<VoiceStatus>,
@@ -45,6 +47,7 @@ impl Default for Voice {
             paused: AtomicBool::new(false),
             ready: AtomicBool::new(false),
             wake: AtomicBool::new(false),
+            patient: AtomicBool::new(false),
             sens: AtomicU32::new(1.0f32.to_bits()),
             prompt: Mutex::new(String::new()),
             status: Mutex::new(VoiceStatus { state: "loading".into(), ..Default::default() }),
@@ -410,7 +413,7 @@ impl Vad {
     }
 
     /// One 20 ms frame plus RNNoise's "is this a voice?" score. Returns a finished utterance when one ends.
-    fn frame(&mut self, app: &AppHandle, f: &[f32], sens: f32, voice_p: f32) -> Option<Vec<f32>> {
+    fn frame(&mut self, app: &AppHandle, f: &[f32], sens: f32, voice_p: f32, patient: bool) -> Option<Vec<f32>> {
         let rms = (f.iter().map(|s| s * s).sum::<f32>() / f.len() as f32).sqrt();
         self.tick += 1;
         if self.tick % 3 == 0 {
@@ -449,8 +452,8 @@ impl Vad {
             self.silence += 1;
         }
         let long = self.seg.len() >= RATE * 20;
-        // ~0.7 s without a voice = you're done (short pauses mid-sentence don't cut you off)
-        if self.silence >= 30 || long {
+        // ~0.7 s without a voice = you're done (short pauses mid-sentence don't cut you off); dictating, 1.3 s
+        if self.silence >= if patient { 60 } else { 30 } || long {
             self.speaking = false;
             self.hot = 0;
             let mut seg = std::mem::take(&mut self.seg);
@@ -560,7 +563,7 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
             let a = probs.pop_front().unwrap_or(last_p);
             let b = probs.pop_front().unwrap_or(a);
             last_p = b;
-            if let Some(seg) = vad.frame(&app, &out16[used..used + FRAME], sens, a.max(b)) {
+            if let Some(seg) = vad.frame(&app, &out16[used..used + FRAME], sens, a.max(b), voice.patient.load(Ordering::SeqCst)) {
                 if let Some(tx) = voice.seg_tx.lock().unwrap().as_ref() {
                     let _ = tx.try_send(seg);
                 }

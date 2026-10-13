@@ -1,11 +1,14 @@
 //! The new wallpaper arriving. Windows swaps wallpapers in one cut, so ULTRON draws the arrival itself:
-//! the new picture pours down from under the bar, soft-edged, over the old one, on the desktop's own
-//! level (behind the icons and every window). Once it covers the screen Windows is told to change the
-//! wallpaper underneath, and a moment later ULTRON's copy fades away over the identical real one.
+//! the new picture pours down from under the bar, soft-edged, over the old one, behind every window.
+//! Once it covers the screen Windows is told to change the wallpaper underneath, and a moment later
+//! ULTRON's copy fades away over the identical real one.
 //!
-//! The picture is drawn in a window of ULTRON's own, placed inside the desktop where the shell keeps its
-//! wallpaper layer. If that place can't be found (it has moved between Windows versions), nothing is
-//! drawn and the wallpaper simply changes.
+//! The picture is drawn in a window of ULTRON's own that sits under every other window, just above the
+//! desktop. (So the desktop's icons are covered while it plays, about a second and a half, and come
+//! back as it fades. Inside the desktop, behind the icons, would be the place for it, and the code for
+//! that is here, ways 1 to 3: but Windows 11 from build 26300 doesn't draw a window put there, though
+//! the window reports itself visible. Measured with a magenta test picture and ULTRON's own look at
+//! the screen behind its bar, 14 Oct 2026.)
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -14,15 +17,21 @@ use windows::core::{w, BOOL, PCWSTR};
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows::Win32::Graphics::Dwm::DwmFlush;
 use windows::Win32::Graphics::Gdi::{
-    CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, EnumDisplayMonitors, SelectObject, AC_SRC_ALPHA, AC_SRC_OVER, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION, DIB_RGB_COLORS, HBITMAP,
-    HDC, HGDIOBJ, HMONITOR,
+    BeginPaint, BitBlt, CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, EndPaint, EnumDisplayMonitors, InvalidateRect, SelectObject, AC_SRC_ALPHA, AC_SRC_OVER, BITMAPINFO, BITMAPINFOHEADER,
+    BLENDFUNCTION, DIB_RGB_COLORS, HBITMAP, HDC, HGDIOBJ, HMONITOR, PAINTSTRUCT, SRCCOPY,
 };
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, EnumWindows, FindWindowExW, FindWindowW, GetWindowRect, PeekMessageW, RegisterClassW, SendMessageTimeoutW, SetWindowPos,
-    TranslateMessage, UpdateLayeredWindow, UpdateLayeredWindowIndirect, HWND_TOP, MSG, PM_REMOVE, SMTO_NORMAL, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW, ULW_ALPHA,
-    UPDATELAYEREDWINDOWINFO, WNDCLASSW, WS_CHILD, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TRANSPARENT,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, EnumWindows, FindWindowExW, FindWindowW, GetClassNameW, GetClientRect, GetParent, GetWindow, GetWindowLongPtrW, GetWindowRect,
+    IsWindowVisible, PeekMessageW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWLP_USERDATA, GW_HWNDNEXT, GW_HWNDPREV, HWND_BOTTOM, LWA_ALPHA, WM_PAINT, RegisterClassW, SendMessageTimeoutW, SetParent, SetWindowPos,
+    TranslateMessage, UpdateLayeredWindow, UpdateLayeredWindowIndirect, HWND_TOP, MSG, PM_REMOVE, SMTO_NORMAL, SWP_NOACTIVATE, SWP_SHOWWINDOW, ULW_ALPHA,
+    UPDATELAYEREDWINDOWINFO, WNDCLASSW, WS_CHILD, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
 };
+
+/// How the picture's window is made (a developer's knob, set through the rehearsal command):
+/// 0 as shipped (a window of its own just above the desktop); inside the desktop, behind the icons: 1 made on its
+/// own and moved in, per-pixel; 2 the same at one opacity for all of it; 3 born there, one opacity.
+pub static HOW: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
 
 /// One screen's worth: the window, the picture to show (BGRA, scaled to fill the screen), and the
 /// surface the window is drawn from (the picture with the pour's see-through edge worked in).
@@ -37,10 +46,45 @@ struct Layer {
     h: i32,
     full: i32, // rows from the top that already show the picture whole
     rects: bool, // this Windows takes "only these rows changed" (else the whole surface is handed over each time)
+    whole: bool, // shown at one opacity for the whole picture (it dissolves in) instead of row by row (it pours)
 }
 
 unsafe extern "system" fn proc(h: HWND, m: u32, w: WPARAM, l: LPARAM) -> LRESULT {
-    unsafe { DefWindowProcW(h, m, w, l) }
+    unsafe {
+        if m == WM_PAINT {
+            // (only the one-opacity kind is painted this way: its picture is in the surface whose handle it carries)
+            let dc = HDC(GetWindowLongPtrW(h, GWLP_USERDATA) as _);
+            let mut ps = PAINTSTRUCT::default();
+            let to = BeginPaint(h, &mut ps);
+            if !dc.is_invalid() {
+                let mut r = RECT::default();
+                let _ = GetClientRect(h, &mut r);
+                let _ = BitBlt(to, 0, 0, r.right, r.bottom, Some(dc), 0, 0, SRCCOPY);
+            }
+            let _ = EndPaint(h, &ps);
+            return LRESULT(0);
+        }
+        DefWindowProcW(h, m, w, l)
+    }
+}
+
+/// Where a window ended up, in words (for the log while this is being made to work on a new Windows).
+unsafe fn whereabouts(h: HWND) -> String {
+    unsafe {
+        let name = |w: windows::core::Result<HWND>| -> String {
+            match w {
+                Ok(w) if !w.is_invalid() => {
+                    let mut b = [0u16; 64];
+                    let n = GetClassNameW(w, &mut b);
+                    String::from_utf16_lossy(&b[..n.max(0) as usize])
+                }
+                _ => "nothing".into(),
+            }
+        };
+        let mut r = RECT::default();
+        let _ = GetWindowRect(h, &mut r);
+        format!("visible {}, at {},{} {}x{}, inside {}, above it {}, below it {}", IsWindowVisible(h).as_bool(), r.left, r.top, r.right - r.left, r.bottom - r.top, name(GetParent(h)), name(GetWindow(h, GW_HWNDPREV)), name(GetWindow(h, GW_HWNDNEXT)))
+    }
 }
 
 unsafe extern "system" fn each_window(h: HWND, l: LPARAM) -> BOOL {
@@ -97,15 +141,23 @@ fn blend(alpha: u8) -> BLENDFUNCTION {
 
 unsafe fn build(picture: &Path) -> Vec<Layer> {
     unsafe {
-        let Some((home, behind, how)) = spot() else {
-            crate::log_line("wallpaper: the desktop's picture layer wasn't found, so the change isn't animated");
-            return Vec::new();
+        let way = HOW.load(std::sync::atomic::Ordering::SeqCst);
+        let (home, behind, how) = if matches!(way, 1 | 2 | 3) {
+            let Some(found) = spot() else {
+                crate::log_line("wallpaper: the desktop's picture layer wasn't found, so the change isn't animated");
+                return Vec::new();
+            };
+            found
+        } else {
+            (HWND::default(), None, "a window of its own, under every other")
         };
         let Ok(img) = image::open(picture) else { return Vec::new() };
         let mut screens: Vec<RECT> = Vec::new();
         let _ = EnumDisplayMonitors(None, None, Some(each_screen), LPARAM(&mut screens as *mut Vec<RECT> as isize));
         let mut at = RECT::default();
-        let _ = GetWindowRect(home, &mut at);
+        if !home.is_invalid() {
+            let _ = GetWindowRect(home, &mut at);
+        }
         static CLASS: std::sync::Once = std::sync::Once::new();
         let inst: Option<windows::Win32::Foundation::HINSTANCE> = GetModuleHandleW(None).ok().map(|m| m.into());
         CLASS.call_once(|| {
@@ -131,19 +183,50 @@ unsafe fn build(picture: &Path) -> Vec<Layer> {
             std::ptr::write_bytes(bits as *mut u8, 0, (w * h * 4) as usize); // (nothing of it shows yet)
             let dc = CreateCompatibleDC(None);
             let was = SelectObject(dc, bmp.into());
-            let made = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT, w!("UltronVeil"), w!(""), WS_CHILD, s.left - at.left, s.top - at.top, w, h, Some(home), None, inst, None);
-            let shown = made.as_ref().ok().and_then(|hwnd| {
+            let how = way;
+            let make = |child: bool, whole: bool, inside: bool| -> Result<HWND, String> {
+                let (style, x, y, parent) = if child { (WS_CHILD, s.left - at.left, s.top - at.top, Some(home)) } else { (WS_POPUP, s.left, s.top, None) };
+                let hwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW, w!("UltronVeil"), w!(""), style, x, y, w, h, parent, None, inst, None).map_err(|e| format!("making it: {e}"))?;
                 let (size, zero) = (SIZE { cx: w, cy: h }, POINT::default());
-                UpdateLayeredWindow(*hwnd, None, None, Some(&size), Some(dc), Some(&zero), COLORREF(0), Some(&blend(255)), ULW_ALPHA).ok()?;
-                SetWindowPos(*hwnd, Some(behind.unwrap_or(HWND_TOP)), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW).ok()
-            });
-            match (made, shown) {
-                (Ok(hwnd), Some(())) => layers.push(Layer { hwnd, dc, bmp, was, bits: bits as *mut u8, src, w, h, full: 0, rects: true }),
-                (made, _) => {
-                    crate::log_line(&format!("wallpaper: this Windows wouldn't take a picture on the desktop's layer ({how}), so the change isn't animated"));
-                    if let Ok(hwnd) = made {
-                        let _ = DestroyWindow(hwnd);
+                let placed = (|| -> Result<(), String> {
+                    if whole {
+                        std::ptr::copy_nonoverlapping(src.as_ptr(), bits as *mut u8, src.len());
+                        SetWindowLongPtrW(hwnd, GWLP_USERDATA, dc.0 as isize);
+                        SetLayeredWindowAttributes(hwnd, COLORREF(0), 0, LWA_ALPHA).map_err(|e| format!("its opacity: {e}"))?;
+                    } else {
+                        UpdateLayeredWindow(hwnd, None, None, Some(&size), Some(dc), Some(&zero), COLORREF(0), Some(&blend(255)), ULW_ALPHA).map_err(|e| format!("its first picture: {e}"))?;
                     }
+                    if !child && inside {
+                        SetParent(hwnd, Some(home)).map_err(|e| format!("moving it in: {e}"))?;
+                    }
+                    if inside {
+                        SetWindowPos(hwnd, Some(behind.unwrap_or(HWND_TOP)), s.left - at.left, s.top - at.top, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW).map_err(|e| format!("placing it: {e}"))
+                    } else {
+                        // (not inside: at the very bottom of the windows, which is just above the desktop)
+                        SetWindowPos(hwnd, Some(HWND_BOTTOM), s.left, s.top, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW).map_err(|e| format!("placing it: {e}"))
+                    }
+                })();
+                if let Err(e) = placed {
+                    let _ = DestroyWindow(hwnd);
+                    return Err(e);
+                }
+                Ok(hwnd)
+            };
+            let made = match how {
+                1 => make(false, false, true).map(|h| (h, false)),
+                2 => make(false, true, true).map(|h| (h, true)),
+                3 => make(true, true, true).map(|h| (h, true)),
+                _ => make(false, false, false).map(|h| (h, false)),
+            };
+            match made {
+                Ok((hwnd, whole)) => {
+                    if how != 0 {
+                        crate::log_line(&format!("wallpaper: way {how}: {}", whereabouts(hwnd)));
+                    }
+                    layers.push(Layer { hwnd, dc, bmp, was, bits: bits as *mut u8, src, w, h, full: 0, rects: true, whole })
+                }
+                Err(why) => {
+                    crate::log_line(&format!("wallpaper: no picture could be put on the desktop's layer ({how}; {why}), so the change isn't animated"));
                     SelectObject(dc, was);
                     let _ = DeleteObject(bmp.into());
                     let _ = DeleteDC(dc);
@@ -210,6 +293,27 @@ unsafe fn pour(layers: &mut [Layer], ms: u64) -> (u32, Duration) {
     }
 }
 
+/// The plainer arrival, for where the picture can only be shown at one opacity: it dissolves in (or out).
+unsafe fn dissolve(layers: &[Layer], ms: u64, up: bool) {
+    unsafe {
+        let t0 = Instant::now();
+        loop {
+            let t = (t0.elapsed().as_secs_f32() / (ms as f32 / 1000.0)).min(1.0);
+            let p = if t < 0.5 { 2.0 * t * t } else { 1.0 - (-2.0 * t + 2.0).powi(2) / 2.0 };
+            for l in layers.iter().filter(|l| l.whole) {
+                let _ = SetLayeredWindowAttributes(l.hwnd, COLORREF(0), ((if up { p } else { 1.0 - p }) * 255.0) as u8, LWA_ALPHA);
+            }
+            pump();
+            if t >= 1.0 {
+                break;
+            }
+            if DwmFlush().is_err() {
+                std::thread::sleep(Duration::from_millis(7));
+            }
+        }
+    }
+}
+
 unsafe fn wait(ms: u64) {
     unsafe {
         let until = Instant::now() + Duration::from_millis(ms);
@@ -222,10 +326,13 @@ unsafe fn wait(ms: u64) {
 
 unsafe fn leave(layers: Vec<Layer>, ms: u64) {
     unsafe {
+        if layers.iter().any(|l| l.whole) {
+            dissolve(&layers, ms, false);
+        }
         let t0 = Instant::now();
         loop {
             let t = (t0.elapsed().as_secs_f32() / (ms as f32 / 1000.0)).min(1.0);
-            for l in &layers {
+            for l in layers.iter().filter(|l| !l.whole) {
                 let _ = UpdateLayeredWindow(l.hwnd, None, None, None, None, None, COLORREF(0), Some(&blend(((1.0 - t) * 255.0) as u8)), ULW_ALPHA);
             }
             pump();
@@ -252,8 +359,16 @@ pub fn arrive(picture: PathBuf, hold: u64, then: Box<dyn FnOnce() -> Result<(), 
     std::thread::spawn(move || unsafe {
         let mut layers = build(&picture);
         if !layers.is_empty() {
-            let (frames, took) = pour(&mut layers, 900);
-            crate::log_line(&format!("wallpaper: poured in {} ms, {} frames{}", took.as_millis(), frames, if layers.iter().all(|l| l.rects) { "" } else { " (whole surface each frame)" }));
+            if layers.iter().any(|l| l.whole) {
+                for l in &layers {
+                    let _ = InvalidateRect(Some(l.hwnd), None, false);
+                }
+                dissolve(&layers, 800, true);
+                crate::log_line("wallpaper: dissolved in");
+            } else {
+                let (frames, took) = pour(&mut layers, 900);
+                crate::log_line(&format!("wallpaper: poured in {} ms, {} frames{}", took.as_millis(), frames, if layers.iter().all(|l| l.rects) { "" } else { " (whole surface each frame)" }));
+            }
         }
         let _ = tx.send(then());
         if !layers.is_empty() {

@@ -26,7 +26,7 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumChildWindows, EnumWindows, GetAncestor, GetClassNameW, GetForegroundWindow, GetWindow, GetWindowLongW,
-    GetWindowTextLengthW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, PostMessageW, SetForegroundWindow,
+    GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, PostMessageW, SetForegroundWindow,
     ShowWindow, GA_ROOTOWNER, GWL_EXSTYLE, GW_OWNER, SW_RESTORE, SW_SHOWNORMAL, WM_CLOSE, WS_EX_APPWINDOW,
     WS_EX_TOOLWINDOW,
 };
@@ -36,6 +36,18 @@ pub struct AppEntry {
     pub name: String,
     pub key: String,
     pub launch: String,
+}
+
+/// A window that's open, as ULTRON's taskbar shows it. `launch` is what starts its app (the same
+/// string the Start list and its pins use, when the app is in that list; else the program's path).
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+pub struct OpenWin {
+    pub id: String,
+    pub title: String,
+    pub name: String,
+    pub launch: String,
+    pub active: bool,
+    pub min: bool,
 }
 
 #[derive(Default)]
@@ -222,6 +234,44 @@ fn real_pid(h: HWND, pid: u32) -> u32 {
 }
 
 impl Apps {
+    /// Every app window that's open, front to back (for ULTRON's taskbar).
+    pub fn open_windows(&self) -> Vec<OpenWin> {
+        let own = unsafe { GetCurrentProcessId() };
+        let mut all: Vec<HWND> = Vec::new();
+        unsafe {
+            let _ = EnumWindows(Some(collect), LPARAM(&mut all as *mut _ as isize));
+        }
+        let front = unsafe { GetForegroundWindow() };
+        let index = self.index.read().unwrap();
+        all.into_iter()
+            .filter(|h| is_app_window(*h, own))
+            .filter_map(|h| {
+                let mut pid = window_pid(h);
+                let (mut exe, mut aumid) = process_identity(pid)?;
+                if exe.to_lowercase().ends_with("applicationframehost.exe") {
+                    pid = real_pid(h, pid);
+                    (exe, aumid) = process_identity(pid)?;
+                }
+                let key = key_for(Some(&exe), aumid.as_deref());
+                let known = index.iter().find(|e| e.key == key);
+                let name = known.map(|e| e.name.clone()).or_else(|| file_description(&exe)).unwrap_or_else(|| exe_stem(&exe));
+                let mut buf = [0u16; 300];
+                let n = unsafe { GetWindowTextW(h, &mut buf) }.max(0) as usize;
+                let title = String::from_utf16_lossy(&buf[..n]);
+                // (a Store app whose own process couldn't be told from its host's: its window's name is its name)
+                let name = if exe.to_lowercase().ends_with("applicationframehost.exe") { title.clone() } else { name };
+                Some(OpenWin {
+                    id: (h.0 as isize).to_string(),
+                    title,
+                    name,
+                    launch: known.map(|e| e.launch.clone()).unwrap_or(exe),
+                    active: h == front,
+                    min: unsafe { IsIconic(h) }.as_bool(),
+                })
+            })
+            .collect()
+    }
+
     /// Close the windows of a running app whose name matches (for "close spotify").
     pub fn quit_by_name(&self, name: &str) -> Option<String> {
         let n = name.to_lowercase();

@@ -844,6 +844,73 @@ body.pk-out #pet{opacity:0; transition:opacity .22s}       /* (the character has
 .nb-dots i{width:5px; height:5px; border-radius:50%; background:#0c0c0e; animation:mlDot 1s ease-in-out infinite}
 .nb-dots i:nth-child(2){animation-delay:.15s} .nb-dots i:nth-child(3){animation-delay:.3s}
 .nb-say{margin-top:6px} .nb-say:first-child{margin-top:0}
+/* ---------- ULTRON's own taskbar ----------
+   A glass island floating in the strip Windows' taskbar had: Start, your apps (the ones pinned in Start, then
+   whatever else is open), your open windows, tiling, and Ask. Everything moves by transform and opacity only. */
+.dock{position:fixed; z-index:6; left:50%; bottom:calc((var(--strip, 48px) - 44px) / 2 - 2px); width:max-content; height:44px; display:flex; align-items:center; gap:3px; padding:0 6px; border-radius:15px; color:#fff;
+  translate:-50% 0; transform:translateY(90px) scale(.92); opacity:0; visibility:hidden; pointer-events:none;
+  transition:transform .5s var(--glide), opacity .3s, visibility 0s .5s}
+body.docked .dock{transform:none; opacity:1; visibility:visible; pointer-events:auto; transition:transform .8s cubic-bezier(.2,1.32,.3,1) .16s, opacity .35s .16s, visibility 0s}
+body.docked.fullscreen .dock, body.docked.leaving .dock{transform:translateY(90px); opacity:0; pointer-events:none}
+.dk-bg{position:absolute; inset:0; z-index:-1; border-radius:inherit; --tint:rgba(16,16,20,.34); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 10px 28px rgba(0,0,0,.3)}
+.dk-b{position:relative; flex:none; display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:11px; background:none; color:#fff; cursor:default; transition:background .2s, transform .35s var(--spring)}
+.dk-b:hover{background:rgba(255,255,255,.14)} .dk-b:active{transform:scale(.88)}
+.dk-b svg{width:17px; height:17px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; transition:transform .4s var(--spring)}
+.dk-b[aria-expanded="true"], .dk-b[aria-pressed="true"]{background:rgba(255,255,255,.2)}
+.dk-b[aria-pressed="true"] svg{transform:scale(.88)}
+.dk-logo{width:19px !important; height:19px !important}
+.dk-logo ellipse{fill:#fff; stroke:none} .dk-logo circle{fill:#111; stroke:none}
+.dk-sep{flex:none; width:1px; height:20px; margin:0 4px; background:rgba(255,255,255,.16)}
+.dk-apps{display:flex; align-items:center; gap:2px}
+.dk-app{position:relative; flex:none; display:grid; place-items:center; width:38px; height:38px; padding:0; border:0; border-radius:11px; background:none; color:#fff; cursor:default;
+  transition:background .2s, transform .4s var(--spring); animation:dkIn .5s var(--spring) backwards}
+@keyframes dkIn{from{width:0; opacity:0; transform:scale(.3)}}
+.dk-app.bye{width:0; opacity:0; transform:scale(.3); pointer-events:none; transition:width .28s var(--glide), opacity .2s, transform .28s var(--glide)}
+.dk-app:hover{background:rgba(255,255,255,.12); transform:translateY(-3px)}
+.dk-app:active{transform:scale(.9)}
+.dk-app img{width:24px; height:24px; object-fit:contain; opacity:0; transition:opacity .25s} .dk-app img.ok{opacity:1}
+.dk-app.tap img{animation:dkTap .5s var(--spring)}
+@keyframes dkTap{35%{transform:translateY(-7px) scale(1.08)}}
+.dk-app .fbk{position:absolute; inset:8px; display:grid; place-items:center; border-radius:7px; background:rgba(255,255,255,.14); font-size:12px; font-weight:700}
+.dk-app img.ok + .fbk{display:none}
+.dk-app i{position:absolute; left:50%; bottom:2px; width:14px; height:3px; margin-left:-7px; border-radius:2px; background:#fff; opacity:0; transform:scaleX(.28); transition:transform .45s var(--spring), opacity .25s}
+.dk-app.run i{opacity:.5} .dk-app.act i{opacity:1; transform:none}
+.dk-app.act{background:rgba(255,255,255,.1)}
+.dk-ask{flex:none; display:flex; align-items:center; gap:7px; height:32px; margin-left:4px; padding:0 13px 0 11px; border:0; border-radius:10px; background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+  color:rgba(255,255,255,.72); font:inherit; font-size:12.5px; font-weight:600; cursor:default; transition:background .2s, color .2s, transform .3s var(--spring)}
+.dk-ask:hover{background:rgba(255,255,255,.18); color:#fff} .dk-ask:active{transform:scale(.96)}
+.dk-ask svg{width:13px; height:13px; fill:#fff; flex:none; transition:transform .5s var(--spring)}
+.dk-ask:hover svg{transform:rotate(90deg) scale(1.1)}
+/* the name of a thing, above it, when the pointer rests there */
+.dock [data-tip]::after{content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 12px); translate:-50% 0; max-width:260px; padding:5px 10px; border-radius:9px; background:rgba(20,20,24,.88);
+  box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 6px 16px rgba(0,0,0,.3); color:#fff; font-size:11.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  opacity:0; transform:translateY(5px); pointer-events:none; transition:opacity .15s, transform .25s var(--glide)}
+.dock [data-tip]:hover::after{opacity:1; transform:none; transition-delay:.4s}
+/* Windows' taskbar, as it was, leaving (a picture of it: the real one is already hidden underneath) */
+.dk-old{position:fixed; z-index:5; left:0; right:0; bottom:-2px; height:var(--strip, 48px); background:center / 100% 100% no-repeat; opacity:0; pointer-events:none}
+.dk-old.go{animation:dkOld .7s var(--glide) forwards}
+@keyframes dkOld{0%{opacity:1; transform:none} 100%{opacity:0; transform:translateY(100%)}}
+.dk-old.hold{opacity:1}
+/* the open windows */
+.dkw{position:fixed; z-index:31; left:0; bottom:calc(var(--strip, 48px) + 8px); width:440px; max-width:92vw; border-radius:20px; color:#fff; --tint:rgba(18,18,24,.55); text-shadow:0 1px 2px rgba(0,0,0,.25);
+  transform:translateY(18px) scale(.95); transform-origin:50% 100%; opacity:0; visibility:hidden; transition:opacity .16s, transform .22s var(--glide), visibility 0s .22s}
+.dkw.open{opacity:1; visibility:visible; transform:none; transition:opacity .2s, transform .5s cubic-bezier(.16,1.12,.3,1), visibility 0s}
+.dkw-in{padding:8px; max-height:430px; overflow:auto} .dkw-in::-webkit-scrollbar{display:none}
+.dkw-h{display:flex; justify-content:space-between; margin:4px 6px 8px; font-size:11.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.55)}
+.dkw-row{position:relative; display:flex; align-items:center; gap:11px; height:44px; margin-top:4px; padding:0 44px 0 11px; border-radius:13px; background:rgba(255,255,255,.07); font-size:13px; cursor:default; transition:background .2s}
+.dkw-row:first-of-type{margin-top:0}
+.dkw-row:hover, .dkw-row:focus-visible{background:rgba(255,255,255,.15); outline:0}
+.dkw-row.act{box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.dkw-row img{flex:none; width:22px; height:22px; object-fit:contain; opacity:0; transition:opacity .2s} .dkw-row img.ok{opacity:1}
+.dkw-row b{flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dkw-row span{flex:none; max-width:120px; font-size:11.5px; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dkw-x{position:absolute; right:9px; top:9px; width:26px; height:26px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:11px; opacity:0; cursor:default; transition:opacity .15s, background .15s, transform .2s}
+.dkw-row:hover .dkw-x{opacity:1} .dkw-x:hover{background:rgba(255,80,80,.75)} .dkw-x:active{transform:scale(.88)}
+.dkw.open .dkw-row{animation:aiIn .4s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 28ms + 50ms)}
+.dkw-row.bye{opacity:0; transform:translateX(26px); transition:opacity .2s, transform .25s var(--glide)}
+/* Start, opened from the taskbar, rises from it */
+body.docked .start.low{top:auto; bottom:calc(var(--strip, 48px) + 8px); transform:translate(-50%, 46px) scale(.94); transform-origin:50% 100%}
+body.docked .start.low.open{transform:translate(-50%, 0)}
 /* ---------- today: the day at a glance ---------- */
 .td-top{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:1px 0 13px}
 .td-day b, .td-wx b{display:block; font-size:25px; line-height:1.1; font-weight:650; letter-spacing:-.022em; font-variant-numeric:tabular-nums}
@@ -1602,6 +1669,17 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button class="st clock" id="clock" aria-label="Calendar"></button>
   </div>
 </header>
+<div class="dk-old" id="dkOld" aria-hidden="true"></div>
+<nav class="dock" id="dock" aria-label="Taskbar"><div class="dk-bg glass"><i class="gw"></i></div>
+  <button class="dk-b" id="dkStart" aria-label="Start" data-tip="Start"><svg class="dk-logo" viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5"/><circle cx="9.3" cy="12.6" r="1.25"/><circle cx="14.7" cy="12.6" r="1.25"/></svg></button>
+  <span class="dk-sep"></span>
+  <div class="dk-apps" id="dkApps"></div>
+  <span class="dk-sep"></span>
+  <button class="dk-b" id="dkWinsBtn" aria-label="Open windows" aria-expanded="false" data-tip="Open windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="7.5" width="12.5" height="10.5" rx="2.4"/><path d="M8 7.5V7A2.4 2.4 0 0 1 10.4 4.6h7.7A2.4 2.4 0 0 1 20.5 7v6.2a2.4 2.4 0 0 1-2.4 2.4H16"/></svg></button>
+  <button class="dk-b" id="dkTile" aria-label="Tile the windows" aria-pressed="false" data-tip="Tile the windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg></button>
+  <button class="dk-ask" id="dkAsk" aria-label="Ask ULTRON"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Ask ULTRON</span></button>
+</nav>
+<div class="dkw glass panel-glass" id="dkw" role="dialog" aria-label="Open windows"><i class="gw"></i><div class="dkw-in" id="dkwIn"></div></div>
 <div class="dd glass panel-glass" id="dd" role="menu"></div>
 <div class="cal glass panel-glass" id="cal" role="dialog" aria-label="Calendar"><i class="gw"></i><div class="ca-in" id="calIn"></div></div>
 <div class="wifi glass panel-glass" id="wifi" role="dialog" aria-label="Wi-Fi"><i class="gw"></i><div class="wf-in" id="wfIn"></div></div>
@@ -1632,7 +1710,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Taskbar<small>ULTRON’s own: Windows’ taskbar steps aside for a glass one with your apps, your open windows, tiling and Ask</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>What the old Clipboard menu had saved. Nothing new is kept.</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
     <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small>Version 0.3 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
@@ -1826,7 +1904,8 @@ const DEFAULTS = {follow:true, blink:true, eye:1, speed:1, sens:1, label:true, t
 let S = {...DEFAULTS};
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
 S.speak = false;                                           // ULTRON answers in writing (its voice was taken out)
-if (S.bar !== 'hide') S.bar = 'show';                      // the menu bar: always there, unless it's been set to hide away
+if (S.bar !== 'hide') S.bar = 'show';
+if (S.dock !== 'ultron') S.dock = 'win';                    // the taskbar: Windows' own, unless ULTRON's has been chosen                      // the menu bar: always there, unless it's been set to hide away
 const save = () => { try { localStorage.setItem('ultron-notch', JSON.stringify(S)); } catch(e){} };
 
 /* ---------- renderer ---------- */
@@ -2035,10 +2114,10 @@ listen('backdrop', async url => {
 // glass comes on screen with a transition (a panel opening): it gets the picture on that frame, not a moment later
 document.addEventListener('transitionstart', () => { if (!glassSoon) glassSoon = requestAnimationFrame(() => { glassSoon = 0; glassAim(); }); }, true);
 setInterval(() => {
-  const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
+  const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
   const off = !S.liveGlass || fullscreen || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')].some(el => el && el.classList.contains('open'));
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw')].some(el => el && el.classList.contains('open'));
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -2376,6 +2455,7 @@ function applySetting(k){
   if (k === 'autostart') invoke('set_autostart', {on:!!S.autostart});
   if (k === 'reduceMotion') document.body.classList.toggle('calm', !!S.reduceMotion);
   if (k === 'bar') barMode();
+  if (k === 'dock') (S.dock === 'ultron' ? dockOn() : dockOff());
   if (k === 'hearSongs') songReq();
   if (k === 'muted'){ invoke('voice_config', {paused:S.muted}); paintMute(); }
 }
@@ -2453,9 +2533,27 @@ function setMsg(title, body){
   lyricsPane.classList.toggle('empty', !!title);   // no empty space when there are no words
   if (activeTab === 'lyrics' && notch.classList.contains('open')) fit();
 }
+/* A video's captions run to thousands of lines. Only the 70 around the one being spoken are kept on the page: with
+   all of them there, every new line meant restyling and measuring thousands (the stutter while captions showed). */
+const LYR_WIN = 70;
+let lyrAll = null, lyrFrom = 0, lyrMovedAt = 0;
+const lineHtml = (l, cls, on) => `<div class="ln${cls || ''}">${l.trim() ? l.split(' ').map((w, k) => `<span class="wd${k < on ? ' on' : ''}">${esc(w)}</span>`).join(' ') : '♪'}</div>`;
+// The kept lines move along with the one being spoken (`on`: how many of its words are lit). Gives true when they did.
+function lyrShift(li, on){
+  if (!lyrAll) return false;
+  const n = linesEl.children.length, k = li - lyrFrom, last = lyrFrom + n >= lyrAll.length;
+  if (k >= (lyrFrom ? 10 : 0) && (k < n - 22 || last)) return false;                  // comfortably inside what's there
+  const from = Math.max(0, Math.min(li - 24, lyrAll.length - LYR_WIN));
+  if (from === lyrFrom) return false;
+  linesEl.classList.remove('fresh', 'jump');
+  lyrFrom = from;
+  linesEl.innerHTML = lyrAll.slice(from, from + LYR_WIN).map((l, i) => lineHtml(l, from + i < li ? ' past' : from + i === li ? ' cur' : '', from + i === li ? on : 0)).join('');
+  return true;
+}
 function renderLines(list, plain){
   linesEl.classList.toggle('plain', !!plain);
-  linesEl.innerHTML = list.map(l => `<div class="ln">${l.trim() ? l.split(' ').map(w => `<span class="wd">${esc(w)}</span>`).join(' ') : '♪'}</div>`).join('');
+  lyrAll = !plain && list.length > 120 ? list : null; lyrFrom = 0;
+  linesEl.innerHTML = (lyrAll ? list.slice(0, LYR_WIN) : list).map(l => lineHtml(l)).join('');
   linesEl.style.transition = 'none'; linesEl.style.transform = 'translateY(40px)'; void linesEl.offsetWidth; linesEl.style.transition = '';
   linesEl.classList.remove('fresh'); void linesEl.offsetWidth; linesEl.classList.add('fresh');
   lastLine = -9; lastWords = -1;
@@ -2522,7 +2620,7 @@ listen('song-lines', ({key, lines}) => {
 async function loadLyrics(s, key){
   const id = ++lyrLoad;
   listenMode = 'off'; listenLines = []; songReq();
-  lyr = null; linesEl.innerHTML = ''; setMsg(''); skel.classList.add('show');
+  lyr = null; lyrAll = null; lyrFrom = 0; linesEl.innerHTML = ''; setMsg(''); skel.classList.add('show');
   $('nudge').classList.remove('show'); $('srcnoteText').textContent = 'Lyrics from LRCLIB · follows whatever Windows is playing';
   try { lyrOffset = JSON.parse(localStorage.getItem('ultron-lyr-offsets') || '{}')[s.title + '|' + s.artist] || 0; } catch(e){ lyrOffset = 0; }
   paintNudge();
@@ -2642,7 +2740,7 @@ function applyMedia(m){
     if (!cur){
       $('ttl').textContent = 'Nothing playing'; $('by').textContent = 'Play something to see it here';
       $('srcName').textContent = 'No source'; $('srcIcon').innerHTML = ICON.music; srcLogo(null);
-      shownKey = ''; showArt(''); lyr = null; linesEl.innerHTML = ''; skel.classList.remove('show');
+      shownKey = ''; showArt(''); lyr = null; lyrAll = null; lyrFrom = 0; linesEl.innerHTML = ''; skel.classList.remove('show');
       setMsg('Nothing playing', 'Play a song in Spotify, YouTube, or any app and its lyrics show up here.');
       curEl.textContent = '0:00'; durEl.textContent = '0:00'; fillEl.style.transform = 'scaleX(0)';
       return;
@@ -2711,24 +2809,36 @@ function updateLyrics(){
     let li = -1;
     const pp = p + lyrOffset + .3;   // land each line with the voice, plus your nudge
     for (let i = 0; i < L.length; i++){ if (L[i][0] <= pp) li = i; else break; }
+    if (lyrAll && lyrAll.length !== L.length){ lyrAll = null; lyrFrom = 0; }
     if (li !== lastLine){
-      const jump = lastLine === -9 || Math.abs(li - lastLine) > 1;   // you seeked (or just arrived)
-      const quiet = lyrQuiet; lyrQuiet = false;
-      lastLine = li; lastWords = -1;
-      for (let i = 0; i < lines.length; i++){ lines[i].classList.toggle('cur', i === li); lines[i].classList.toggle('past', i < li); }
-      const el = lines[Math.max(0, li)];
+      let jump = lastLine === -9 || Math.abs(li - lastLine) > 1;     // you seeked (or just arrived)
+      let quiet = lyrQuiet; lyrQuiet = false;
+      // a long transcript: the lines around where you've landed; or, the kept lines nearly used up by lines coming too
+      // fast to move along between them, moved along now, in place and without the fade
+      if (lyrAll && (jump || li - lyrFrom >= lines.length - 4) && lyrShift(Math.max(0, li), 0) && !jump){ jump = true; quiet = true; }
+      lastLine = li; lastWords = -1; lyrMovedAt = performance.now();
+      const k = li - lyrFrom;
+      for (let i = 0; i < lines.length; i++){ lines[i].classList.toggle('cur', i === k); lines[i].classList.toggle('past', i < k); }
+      const el = lines[Math.max(0, k)];
       let y = li < 0 ? 40 : 34 - (el ? el.offsetTop : 0);
       const room = lyrEl.clientHeight - linesEl.scrollHeight - 14;   // keep the last lines at the bottom of the box
-      if (li >= 0 && room < 0) y = Math.max(y, room);
+      if (li >= 0 && room < 0 && (!lyrAll || lyrFrom + lines.length >= L.length)) y = Math.max(y, room);
       if (jump){
         linesEl.style.transition = 'none'; linesEl.style.transform = `translateY(${y}px)`;
         linesEl.classList.remove('jump'); if (!quiet){ void linesEl.offsetWidth; linesEl.classList.add('jump'); } linesEl.style.transition = '';
       } else linesEl.style.transform = `translateY(${y}px)`;
       if (li < 0) for (const l of lines) for (const w of l.children) w.classList.remove('on');
+    } else if (lyrAll && li >= 0 && performance.now() - lyrMovedAt > 750 && lyrShift(li, Math.max(0, lastWords))){
+      // (the kept lines have moved along, between two lines: everything is put back exactly where it was)
+      const el = lines[li - lyrFrom];
+      let y = 34 - (el ? el.offsetTop : 0);
+      if (lyrFrom + lines.length >= L.length){ const room = lyrEl.clientHeight - linesEl.scrollHeight - 14; if (room < 0) y = Math.max(y, room); }
+      linesEl.style.transition = 'none'; linesEl.style.transform = `translateY(${y}px)`; void linesEl.offsetWidth; linesEl.style.transition = '';
     }
-    if (li >= 0 && lines[li]){
+    const curLine = lines[li - lyrFrom];
+    if (li >= 0 && curLine){
       const start = L[li][0], end = li + 1 < L.length ? L[li + 1][0] : start + 4;
-      const words = lines[li].children, span = Math.min(end - start, 7) * .88;
+      const words = curLine.children, span = Math.min(end - start, 7) * .88;
       const n = Math.min(words.length, Math.ceil((pp - start) / span * words.length));
       if (n !== lastWords){ lastWords = n; for (let i = 0; i < words.length; i++) words[i].classList.toggle('on', i < n); }
     }
@@ -2768,7 +2878,7 @@ paintSleep();
 linesEl.addEventListener('click', e => {
   const ln = e.target.closest('.ln'); if (!ln || !lyr || !lyr.synced || !cur) return;
   e.stopPropagation();
-  const t = (lyr.synced[[...linesEl.children].indexOf(ln)] || [])[0]; if (t == null) return;
+  const t = (lyr.synced[[...linesEl.children].indexOf(ln) + (lyrAll ? lyrFrom : 0)] || [])[0]; if (t == null) return;
   const ms = Math.max(0, t - lyrOffset - .25) * 1000;
   cur.position = ms; cur.updated = Date.now(); lastLine = -9; playHold = Date.now() + 1500;
   invoke('media_control', {action:'seek', value:ms});
@@ -3610,7 +3720,7 @@ function pickStop(keepPanel){
   setTimeout(() => {
     if (Pick.on) return;
     document.body.classList.remove('picking'); pkHl.innerHTML = '';
-    if (winH !== 700){ winH = 700; invoke('set_window_height', {h:700}); }      // back to the usual height
+    { const usual = window.DK && DK.on ? Math.round(screen.height) - 2 : 700; if (winH !== usual){ winH = usual; invoke('set_window_height', {h:usual}); } }   // back to the usual height
     syncHit();
   }, 420);
   if (!keepPanel && aiw.classList.contains('open')) closeAI();
@@ -4246,8 +4356,42 @@ addEventListener('click', e => {
   if (near && [...near.querySelectorAll('button')].some(b => b._edge && performance.now() - b._edge < 60 && !b.contains(e.target))){ e.stopPropagation(); e.preventDefault(); }
 }, true);
 
+/* ---------- dictation ----------
+   "Ultron, start dictation": from then on everything heard is typed where the cursor is, tidied on the way (the
+   marks you say aloud become the marks, the "um"s go, sentences get their capitals: dictate.rs), until "stop
+   dictation" or a minute of quiet. While it's on the recognizer waits out longer pauses, and is given the last
+   words typed so that each piece is heard in the light of the one before. */
+var DICT = {on:false, tail:'', idleT:0, send:(text, after) => invoke('dictate_type', {text, after})};
+const DICT_START = /^(?:please\s+)?(?:start|begin|take)\s+(?:a\s+)?dictat(?:ion|ing)\b|^dictation(?:\s+mode)?[.!]?$|^dictate[.!]?$/i;
+const DICT_STOP = /^(?:(?:hey|ok|okay)\s+)?(?:ultron[\s,.!]*)?(?:stop|end|finish|exit)\s+(?:the\s+)?dictat(?:ion|ing)\b|^(?:ultron[\s,.!]*)?that'?s all[.!]?$/i;
+function dictIdle(){ clearTimeout(DICT.idleT); DICT.idleT = setTimeout(() => dictOff('Dictation ended after a minute of quiet.'), 60000); }
+function dictOn(){
+  DICT.on = true; DICT.tail = '';
+  invoke('voice_config', {patient:true, wake:false, prompt:''}); wakeTold = false;
+  $('micSt').classList.add('ptt');
+  openedAt = 0; setOpen(false);
+  nbShow('<div class="nb-say">Dictating. Say <b>“stop dictation”</b> when you’re done.</div>', 5000);
+  dictIdle();
+}
+function dictOff(why){
+  if (!DICT.on) return;
+  DICT.on = false; clearTimeout(DICT.idleT);
+  invoke('voice_config', {patient:false}); pushPrompt(); wakeTold = null;
+  $('micSt').classList.remove('ptt');
+  nbShow(`<div class="nb-say">${esc(why || 'Dictation off.')}</div>`, 3000);
+}
+async function dictHeard(text){
+  if (DICT_STOP.test(text.trim())) return dictOff();
+  dictIdle();
+  const typed = await DICT.send(text, DICT.tail.slice(-1));
+  if (!typed || !DICT.on) return;
+  DICT.tail = (DICT.tail + typed).slice(-240);
+  invoke('voice_config', {prompt:DICT.tail.replace(/\s+/g, ' ').trim()});
+  nbShow(`<div class="nb-say">${esc(typed.trim())}</div>`, 2600);
+}
 async function onHeard(text){
   if (isEcho(text)) return;                             // that was ULTRON's own voice
+  if (DICT.on) return dictHeard(text);
   if (tourOn && tour.heard){ tour.heard(text); return; }
   if (confirmWords(text.replace(WAKE, ''))) return;
   if (pttUntil) endTalk();
@@ -4271,6 +4415,7 @@ async function onHeard(text){
     scheduleAutoClose();
     return;
   }
+  if (DICT_START.test(cmd)){ dictOn(); return; }
   followUntil = 0;
   await runAssist(cmd);
   followUntil = Date.now() + 8000;
@@ -4280,7 +4425,7 @@ listen('heard', onHeard);
 
 /* ---------- what ULTRON can do: a gallery you can tap, and rotating examples ---------- */
 const SKILLS = [
-  ['Work on your PC', ['Open Notepad and write a poem about rain', 'Make a presentation about black holes', 'Rewrite the selected text to sound formal', 'Summarize this page', 'Create a folder called Projects on the desktop']],
+  ['Work on your PC', ['Start dictation', 'Open Notepad and write a poem about rain', 'Make a presentation about black holes', 'Rewrite the selected text to sound formal', 'Summarize this page', 'Create a folder called Projects on the desktop']],
   ['Music and media', ['Open Spotify and play Billie Jean', 'Play lofi beats on YouTube', 'Next song', 'Set the volume to 40']],
   ['Messages and email', ['Message Priya on WhatsApp saying I’m running late', 'Email boss@company.com about leave saying I need Friday off']],
   ['Shopping and web', ['Find wireless headphones under 2000 on Amazon', 'Show me the cheapest gaming mouse on Flipkart', 'What happened to Nana Patekar?']],
@@ -4452,7 +4597,7 @@ muteBtn.addEventListener('click', e => {
    hears for the name, instead of carefully transcribing every line of the song. */
 var wakeTold = null;
 setInterval(() => {
-  const need = !!S.wake && Date.now() > followUntil + 500 && !pttUntil && !tourOn && !pendingSend && !document.body.classList.contains('intro') && !notch.classList.contains('call');
+  const need = !!S.wake && Date.now() > followUntil + 500 && !pttUntil && !tourOn && !pendingSend && !DICT.on && !document.body.classList.contains('intro') && !notch.classList.contains('call');
   if (need !== wakeTold){ wakeTold = need; invoke('voice_config', {wake:need}); }
 }, 500);
 
@@ -5521,6 +5666,7 @@ async function openStart(){
   $('smHello').textContent = (h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + (userName ? ', ' + userName : '');
   smQ.value = ''; showView('home'); renderPins();
   $('smPins').classList.remove('settled'); clearTimeout(openStart.t); openStart.t = setTimeout(() => $('smPins').classList.add('settled'), 900);
+  startEl.classList.toggle('low', !!(window.DK && DK.low)); if (window.DK) DK.low = false;   // (asked for from the taskbar: it rises from there)
   placeGlass(startEl);
   startEl.classList.remove('open'); void startEl.offsetWidth; startEl.classList.add('open');
   syncHit(); syncBrowser();
@@ -5579,7 +5725,7 @@ let savedName = ''; try { savedName = localStorage.getItem('ultron-name') || '';
 if (savedName) setUserName(savedName);
 else invoke('user_name').then(n => { if (n) setUserName(n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()); });
 
-function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); }
+function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); closeDkw(); }
 
 /* ---------- settings window ---------- */
 const setEl = $('setw'), swHl = $('swHl');
@@ -5846,12 +5992,16 @@ function syncHit(){
   const fl = $('flyr');
   if (fl.classList.contains('on')) rects.push({x:Math.floor(fl.offsetLeft - 4), y:Math.floor(fl.offsetTop - 4), w:fl.offsetWidth + 8, h:fl.offsetHeight + 8});
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
+  if (window.DK && DK.on && !fullscreen){ const W = dock.offsetWidth, x = (innerWidth - W) / 2; rects.push({x:Math.floor(x - 6), y:Math.floor(innerHeight + 2 - DK.strip - 8), w:Math.ceil(W + 12), h:Math.ceil(DK.strip + 6)}); }
   if (nbOn && nbBox) rects.push(nbBox);
-  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')]) if (el.classList.contains('open')){
+  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw')]) if (el.classList.contains('open')){
     // layout size, not the on-screen size: while a panel animates in it's scaled down, which left dead spots
     const w = Math.max(el.offsetWidth, parseFloat(el.style.width) || 0), x = el.id === 'start' || el.id === 'setw' ? (innerWidth - w) / 2 : el.offsetLeft;
     const h = Math.max(el.offsetHeight, parseFloat(el.style.height) || 0);
-    rects.push({x:Math.floor(x - 8), y:0, w:Math.ceil(w + 16), h:Math.ceil(el.offsetTop + h + 10)});
+    // (what opens from the taskbar takes the screen from its own top down to the bottom; the rest, from the top down to their foot)
+    const low = el.id === 'dkw' || el.classList.contains('low');
+    rects.push(low ? {x:Math.floor(x - 8), y:Math.floor(el.offsetTop - 8), w:Math.ceil(w + 16), h:Math.ceil(innerHeight - el.offsetTop + 8)}
+      : {x:Math.floor(x - 8), y:0, w:Math.ceil(w + 16), h:Math.ceil(el.offsetTop + h + 10)});
   }
   const k = JSON.stringify(rects);
   if (k !== hitKey){ hitKey = k; invoke('set_hit_rects', {rects}); }
@@ -5863,7 +6013,7 @@ new ResizeObserver(() => keepMeasuring(300)).observe(notch);
    windows use the whole screen and the bar comes down over them, the way Windows' own taskbar does when it hides. */
 var barHid = false, barT = 0, barUp = 0;
 const barBusy = () => notch.classList.contains('open') || notch.classList.contains('call') || !!ddFor || tourOn || document.body.classList.contains('intro') || nbOn || REC.starting
-  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew')].some(el => el.classList.contains('open'));
+  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw')].some(el => el.classList.contains('open'));
 function barShow(on){
   if (barHid === !on) return;
   barHid = !on; document.body.classList.toggle('barhid', barHid);
@@ -5898,7 +6048,7 @@ function enter(){
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40 || (window.DK && DK.on && p[1] > innerHeight - DK.strip - 12)) glassFresh(); wake(); });
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
@@ -6180,6 +6330,132 @@ async function prewarm(tries = 0){
   } catch(_){} finally { document.documentElement.classList.remove('prewarm'); prewarming = false; syncHit(); }
 }
 if (TAURI) setTimeout(prewarm, 7000);
+
+/* ---------- ULTRON's own taskbar ----------
+   Settings, Look & feel, Taskbar. Turned on, Windows' taskbar leaves (a picture of it slides away: the real one is
+   hidden under the picture first, so nothing jumps) and ULTRON's rises in its place. ULTRON's window reaches down
+   to the taskbar for as long as it's on: two pixels short of the whole screen, because a window that covers all of
+   it is a "full-screen app" to Windows, and ULTRON hides its bars for those. Which windows are open comes from
+   dock.rs, only when something changes. */
+const dock = $('dock'), dkw = $('dkw');
+var DK = {on:false, busy:false, wins:[], strip:48, tiled:false, only:'', low:false};
+const dkWait = ms => new Promise(r => setTimeout(r, ms));
+// the island's glass is lined up with the screen by hand (the island is centred, and its glass is a layer inside it)
+function dockGlass(){
+  const g = dock.querySelector('.dk-bg > .gw'), W = dock.offsetWidth;
+  g.style.left = -((innerWidth - W) / 2) + 'px'; g.style.top = -(innerHeight + 2 - DK.strip + (DK.strip - 44) / 2) + 'px';
+  g.style.width = (screen.width || innerWidth) + 'px'; g.style.height = (screen.height || innerHeight) + 'px';
+  glassDraw(g);
+}
+async function dockOn(quiet){
+  if (DK.on || DK.busy || !TAURI) return;
+  DK.busy = true;
+  try {
+    if (!startApps) startApps = (await invoke('start_apps')) || [];
+    pinnedApps();
+    const old = $('dkOld'), snap = quiet ? null : await invoke('dock_snap');
+    winH = Math.round(screen.height) - 2; await invoke('set_window_height', {h:winH}); await dkWait(160);
+    if (snap){ old.classList.remove('go'); old.style.backgroundImage = `url("${snap}")`; old.classList.add('hold'); await dkWait(60); }
+    const h = await invoke('dock_set', {on:true});          // (Windows' taskbar is hidden from here on)
+    DK.strip = h ? Math.round(h / devicePixelRatio) : 48; document.documentElement.style.setProperty('--strip', DK.strip + 'px');
+    DK.on = true; dockWins((await invoke('dock_list')) || []);
+    await dkWait(50);
+    document.body.classList.add('docked'); dockGlass();
+    if (snap){ old.classList.remove('hold'); old.classList.add('go'); setTimeout(() => { old.classList.remove('go'); old.style.backgroundImage = ''; }, 800); }
+    invoke('backdrop_now'); syncHit(); setTimeout(() => { dockGlass(); syncHit(); }, 1000);
+  } finally { DK.busy = false; }
+}
+async function dockOff(){
+  if (!DK.on || DK.busy) return;
+  DK.busy = true;
+  try {
+    closeDkw(); if (startEl.classList.contains('low')) closeStart();
+    if (DK.tiled){ DK.tiled = false; $('dkTile').setAttribute('aria-pressed', 'false'); $('dkTile').dataset.tip = 'Tile the windows'; }
+    document.body.classList.remove('docked'); DK.on = false; syncHit();
+    await dkWait(480);
+    await invoke('dock_set', {on:false});                    // (Windows' taskbar is back)
+    winH = 700; await invoke('set_window_height', {h:700});
+    setTimeout(() => { invoke('backdrop_now'); syncHit(); }, 200);
+  } finally { DK.busy = false; }
+}
+// One icon an app: the ones pinned in Start first (lit when they're open), then whatever else is open.
+function dockWins(list){
+  DK.wins = list;
+  const open = new Map();
+  for (const w of list){ const g = open.get(w.launch) || {launch:w.launch, name:w.name, wins:[]}; g.wins.push(w); open.set(w.launch, g); }
+  const pinned = (pins || []).slice(0, 6).map(l => { const a = startApps && startApps.find(x => x.launch === l); return a ? {launch:l, name:a.name, wins:(open.get(l) || {wins:[]}).wins} : null; }).filter(Boolean);
+  const want = [...pinned, ...[...open.values()].filter(g => !pinned.some(p => p.launch === g.launch))];
+  const box = $('dkApps'), have = new Map([...box.children].filter(b => !b.classList.contains('bye')).map(b => [b.dataset.k, b]));
+  for (const [k, b] of have) if (!want.some(g => g.launch === k)){ b.classList.add('bye'); setTimeout(() => b.remove(), 300); }
+  let prev = null;
+  for (const g of want){
+    let b = have.get(g.launch);
+    if (!b){
+      b = document.createElement('button'); b.className = 'dk-app'; b.dataset.k = g.launch;
+      b.innerHTML = `<img data-src="${esc(g.launch)}" alt=""><span class="fbk">${esc((g.name || '?').charAt(0).toUpperCase())}</span><i></i>`;
+      const u = iconCache.get(g.launch); if (u){ b.firstChild.src = u; b.firstChild.classList.add('ok'); }
+    }
+    const next = prev ? prev.nextSibling : box.firstChild;
+    if (next !== b) box.insertBefore(b, next);
+    prev = b; b._g = g;
+    b.classList.toggle('run', g.wins.length > 0); b.classList.toggle('act', g.wins.some(w => w.active)); b.classList.toggle('min', g.wins.length > 0 && g.wins.every(w => w.min));
+    b.dataset.tip = g.wins.length > 1 ? `${g.name}, ${g.wins.length} windows` : g.wins[0] ? g.wins[0].title : g.name;
+    b.setAttribute('aria-label', g.name);
+  }
+  loadIcons(box);
+  if (dkw.classList.contains('open')) paintDkw();
+}
+function paintDkw(){
+  const list = DK.wins.filter(w => !DK.only || w.launch === DK.only);
+  if (DK.only && !list.length) return closeDkw();
+  $('dkwIn').innerHTML = `<div class="dkw-h"><span>${DK.only ? esc(list[0].name) : 'Open windows'}</span><span>${list.length}</span></div>`
+    + (list.map((w, i) => `<div class="dkw-row${w.active ? ' act' : ''}" role="button" tabindex="0" data-id="${w.id}" style="--i:${i}"><img data-src="${esc(w.launch)}" ${iconCache.get(w.launch) ? `src="${iconCache.get(w.launch)}" class="ok"` : ''} alt=""><b>${esc(w.title)}</b><span>${esc(w.name)}</span><button class="dkw-x" data-x="${w.id}" aria-label="Close this window">✕</button></div>`).join('')
+      || '<div class="empty-s">Nothing is open.</div>');
+  loadIcons($('dkwIn')); placeGlass(dkw); syncHit();
+}
+function openDkw(only){
+  closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles();
+  DK.only = only || '';
+  dkw.style.left = Math.round((innerWidth - Math.min(440, innerWidth * .92)) / 2) + 'px';
+  dkw.classList.remove('open'); paintDkw(); void dkw.offsetWidth; dkw.classList.add('open');
+  $('dkWinsBtn').setAttribute('aria-expanded', String(!only));
+  syncHit(); setTimeout(syncHit, 460);
+}
+function closeDkw(){
+  if (!dkw.classList.contains('open')) return;
+  dkw.classList.remove('open'); $('dkWinsBtn').setAttribute('aria-expanded', 'false'); setTimeout(syncHit, 280);
+}
+listen('dock-wins', l => { if (DK.on) dockWins(l || []); });
+dock.addEventListener('click', e => {
+  e.stopPropagation();
+  const app = e.target.closest('.dk-app');
+  if (app && app._g){
+    const g = app._g;
+    app.classList.remove('tap'); void app.offsetWidth; app.classList.add('tap');
+    if (!g.wins.length) invoke('launch', {target:g.launch});
+    else if (g.wins.length > 1) dkw.classList.contains('open') && DK.only === g.launch ? closeDkw() : openDkw(g.launch);
+    else invoke('dock_act', {id:g.wins[0].id, what:g.wins[0].active && !g.wins[0].min ? 'min' : 'focus'});
+    return;
+  }
+  if (e.target.closest('#dkStart')){ if (startEl.classList.contains('open')) closeStart(); else { closeDkw(); DK.low = true; openStart(); } }
+  else if (e.target.closest('#dkWinsBtn')) dkw.classList.contains('open') && !DK.only ? closeDkw() : openDkw();
+  else if (e.target.closest('#dkTile')){
+    const b = $('dkTile');
+    (DK.tiled ? invoke('dock_untile').then(() => false) : invoke('dock_tile').then(n => n > 0)).then(on => { DK.tiled = !!on; b.setAttribute('aria-pressed', String(DK.tiled)); b.dataset.tip = DK.tiled ? 'Put the windows back' : 'Tile the windows'; });
+  }
+  else if (e.target.closest('#dkAsk')){ closePanels(); closeDD(); setOpen(true); if (activeTab !== 'assistant') selectTab('assistant'); setTimeout(() => $('askIn').focus({preventScroll:true}), 380); }
+});
+dock.addEventListener('pointerdown', e => e.stopPropagation());
+dkw.addEventListener('click', e => {
+  e.stopPropagation();
+  const x = e.target.closest('.dkw-x'), row = e.target.closest('.dkw-row');
+  if (x){ row.classList.add('bye'); invoke('dock_act', {id:x.dataset.x, what:'close'}); }
+  else if (row){ invoke('dock_act', {id:row.dataset.id, what:'focus'}); closeDkw(); }
+});
+dkw.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('dkw-row')) e.target.click(); });
+addEventListener('pointerdown', e => { if (dkw.classList.contains('open') && !e.target.closest('#dkw') && !e.target.closest('#dock')) closeDkw(); });
+new ResizeObserver(() => { if (DK.on){ dockGlass(); syncHit(); } }).observe(dock);
+if (TAURI) setTimeout(() => { if (S.dock === 'ultron') dockOn(true); else invoke('dock_set', {on:false}); }, 2600);   // (off: Windows' taskbar is made sure of, in case ULTRON was ended while its own was up)
 
 /* ---------- developer tools: only when ULTRON is started with ULTRON_DEV_INBOX=1 ----------
    Frame timings go to the log every few seconds, and lines starting with "!" in the inbox file

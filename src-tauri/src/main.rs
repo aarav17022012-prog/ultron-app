@@ -17,6 +17,8 @@ mod calls;
 mod kids;
 mod rec;
 mod squeeze;
+mod dictate;
+mod dock;
 mod veil;
 mod wall;
 mod icons;
@@ -291,6 +293,7 @@ fn quit(app: &AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(560));
         appbar::remove();
+        dock::taskbar(true);
         app.exit(0);
     });
 }
@@ -303,7 +306,10 @@ fn voice_status(voice: State<Voice>) -> voice::VoiceStatus {
 }
 
 #[tauri::command]
-fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>) {
+fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>) {
+    if let Some(p) = patient {
+        voice.patient.store(p, std::sync::atomic::Ordering::SeqCst);
+    }
     if let Some(w) = wake {
         voice.wake.store(w, std::sync::atomic::Ordering::SeqCst);
     }
@@ -670,8 +676,8 @@ async fn wall_list(app: AppHandle) -> serde_json::Value {
 
 /// Make one of ULTRON's wallpapers ("our:dusk") or a picture of yours (its path) the wallpaper.
 #[tauri::command]
-async fn wall_apply(app: AppHandle, pick: String, dry: Option<bool>) -> Result<serde_json::Value, String> {
-    tauri::async_runtime::spawn_blocking(move || wall::apply(&app, &pick, dry.unwrap_or(false))).await.map_err(|e| e.to_string())?
+async fn wall_apply(app: AppHandle, pick: String, dry: Option<bool>, how: Option<u8>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || wall::apply(&app, &pick, dry.unwrap_or(false), how.unwrap_or(0))).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -709,6 +715,43 @@ fn squeeze_show(app: AppHandle, path: String) {
 #[tauri::command]
 async fn today_weather() -> Option<(String, String, String)> {
     tauri::async_runtime::spawn_blocking(web::weather_now).await.ok().flatten()
+}
+
+/// Dictation: one heard piece, tidied and typed where the cursor is. `after` is the last character typed so far.
+#[tauri::command]
+async fn dictate_type(text: String, after: Option<String>) -> String {
+    tauri::async_runtime::spawn_blocking(move || dictate::piece(&text, after.and_then(|a| a.chars().last()))).await.unwrap_or_default()
+}
+
+/// ULTRON's own taskbar on or off (Windows' is hidden while it's on). Gives the height of its strip of the screen.
+#[tauri::command]
+fn dock_set(app: AppHandle, on: bool) -> i32 {
+    dock::set(&app, on)
+}
+
+#[tauri::command]
+async fn dock_snap() -> Option<String> {
+    tauri::async_runtime::spawn_blocking(dock::snap).await.ok().flatten()
+}
+
+#[tauri::command]
+async fn dock_list(app: AppHandle) -> Vec<apps::OpenWin> {
+    tauri::async_runtime::spawn_blocking(move || dock::list(&app)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+async fn dock_act(id: String, what: String) {
+    let _ = tauri::async_runtime::spawn_blocking(move || dock::act(&id, &what)).await;
+}
+
+#[tauri::command]
+async fn dock_tile(app: AppHandle) -> usize {
+    tauri::async_runtime::spawn_blocking(move || dock::tile(&app)).await.unwrap_or(0)
+}
+
+#[tauri::command]
+async fn dock_untile() -> usize {
+    tauri::async_runtime::spawn_blocking(dock::untile).await.unwrap_or(0)
 }
 
 #[tauri::command]
@@ -908,6 +951,10 @@ async fn read_selection(app: AppHandle) -> Option<String> {
 /* ---------------- setup ---------------- */
 
 fn main() {
+    // (started only to bring Windows' taskbar back when the ULTRON that hid it has gone: see dock.rs)
+    if dock::guard_if_asked() {
+        return;
+    }
     // one ULTRON at a time (two menu bars would each reserve screen space)
     unsafe {
         let _ = CreateMutexW(None, false, &HSTRING::from("Local\\ULTRON-notch-single-instance"));
@@ -934,7 +981,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_tile, dock_untile, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
@@ -1000,6 +1047,7 @@ fn main() {
                 see::shutdown();
                 quick::shutdown();
                 appbar::remove(); // always give the screen space back
+                dock::taskbar(true); // (and Windows its taskbar)
             }
         });
 }

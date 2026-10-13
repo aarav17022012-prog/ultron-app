@@ -92,40 +92,142 @@ fn site_name(key: &str) -> Option<&'static str> {
     SITES.iter().find(|(k, _)| *k == key).map(|(_, n)| *n)
 }
 
-/// "wireless headphones under ₹2,000 cheapest" -> ("wireless headphones", Some(2000), Some("price-asc"))
-fn shopping(q: &str) -> (String, Option<u64>, Option<&'static str>) {
-    let mut l = format!(" {} ", q.to_lowercase());
-    let mut max = None;
-    for w in [" under ", " below ", " less than ", " within ", " upto ", " up to ", " cheaper than ", " max "] {
-        let Some(i) = l.find(w) else { continue };
-        let after = &l[i + w.len()..];
-        let skip = after.len() - after.trim_start_matches(|c: char| c == '₹' || c == ' ' || c == '$').len();
-        let after2 = &after[skip..];
-        let after3 = after2.strip_prefix("rs.").or_else(|| after2.strip_prefix("rs")).or_else(|| after2.strip_prefix("inr")).unwrap_or(after2).trim_start();
-        let lead = after.len() - after3.len();
-        let digits: String = after3.chars().take_while(|c| c.is_ascii_digit() || *c == ',' || *c == '.').collect();
-        let mut used = digits.len();
-        let mut n: f64 = digits.replace(',', "").parse().unwrap_or(0.0);
-        let rest = &after3[used..];
-        if rest.starts_with('k') {
-            n *= 1000.0;
-            used += 1;
-        } else if rest.starts_with(" thousand") {
-            n *= 1000.0;
-            used += 9;
-        } else if rest.starts_with(" lakh") {
-            n *= 100000.0;
-            used += 5;
+/// A number written in words at the start of `s` ("two thousand five hundred", "fifteen hundred", "a lakh"):
+/// the number and how many bytes of `s` it took.
+fn number_words(s: &str) -> Option<(f64, usize)> {
+    const ONES: [&str; 20] = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+    const TENS: [&str; 8] = ["twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+    let (mut total, mut cur, mut used, mut any) = (0.0f64, 0.0f64, 0usize, false);
+    let mut at = 0;
+    for raw in s.split_inclusive(' ') {
+        let start = at;
+        at += raw.len();
+        let w = raw.trim_matches(|c: char| c == ' ' || c == ',');
+        if w.is_empty() {
+            continue;
         }
-        if n >= 1.0 {
-            let mut end = i + w.len() + lead + used;
-            for cur in [" rupees", " rs", " inr", " bucks", " dollars"] {
-                if l[end..].starts_with(cur) {
-                    end += cur.len();
-                }
+        let mut ok = true;
+        for part in w.split('-') {
+            if let Some(i) = ONES.iter().position(|o| *o == part) {
+                cur += i as f64;
+            } else if let Some(i) = TENS.iter().position(|t| *t == part) {
+                cur += (i as f64 + 2.0) * 10.0;
+            } else if part == "hundred" {
+                cur = cur.max(1.0) * 100.0;
+            } else if part == "thousand" {
+                total += cur.max(1.0) * 1000.0;
+                cur = 0.0;
+            } else if part == "lakh" || part == "lakhs" || part == "lac" || part == "lacs" {
+                total += cur.max(1.0) * 100_000.0;
+                cur = 0.0;
+            } else if part == "crore" || part == "crores" {
+                total += cur.max(1.0) * 10_000_000.0;
+                cur = 0.0;
+            } else if (part == "and" && any) || (part == "a" && !any) {
+                continue; // "two thousand and five hundred", "a thousand"
+            } else {
+                ok = false;
+                break;
             }
-            max = Some(n as u64);
-            l = format!("{} {}", &l[..i], &l[end..]);
+            any = true;
+        }
+        if !ok {
+            break;
+        }
+        used = start + raw.trim_end_matches(' ').len();
+    }
+    let n = total + cur;
+    (any && n >= 1.0).then_some((n, used))
+}
+
+/// An amount of money at the start of `s`, however it was said or written: "2000", "₹2,000", "rs. 500",
+/// "30 000", "50k", "1.5 lakh", "two thousand rupees". Gives the amount and how much of `s` it took.
+/// A number that counts something else ("5 gb", "10 minutes") is not an amount.
+fn amount(s: &str) -> Option<(u64, usize)> {
+    let t = s.trim_start();
+    let mut i = s.len() - t.len();
+    for cur in ["₹", "$", "rs.", "rs ", "inr ", "rupees "] {
+        if s[i..].starts_with(cur) {
+            i += cur.len();
+            break;
+        }
+    }
+    i += s[i..].len() - s[i..].trim_start().len();
+    let b = s.as_bytes();
+    let mut j = i;
+    let mut digits = String::new();
+    while j < b.len() && (b[j].is_ascii_digit() || ((b[j] == b',' || b[j] == b'.') && j + 1 < b.len() && b[j + 1].is_ascii_digit() && !digits.is_empty())) {
+        if b[j] != b',' {
+            digits.push(b[j] as char);
+        }
+        j += 1;
+    }
+    let mut n: f64 = if digits.is_empty() {
+        let (v, used) = number_words(&s[i..])?;
+        j = i + used;
+        v
+    } else {
+        // "30 000", "1 50 000": the thousands set apart by spaces (the recognizer writes them so). Only noughts are
+        // taken this way: "under 20000 128 gb" is twenty thousand, and then something else.
+        while !digits.contains('.') && digits.len() <= 4 && j + 4 <= b.len() && b[j] == b' ' && &s[j + 1..j + 4] == "000" && !(j + 4 < b.len() && b[j + 4].is_ascii_digit()) {
+            digits.push_str("000");
+            j += 4;
+        }
+        digits.parse().ok()?
+    };
+    let edge = |k: usize| k >= b.len() || !b[k].is_ascii_alphanumeric();
+    for (suf, mul) in [("k", 1e3), (" k", 1e3), (" thousand", 1e3), (" lakhs", 1e5), (" lakh", 1e5), (" lacs", 1e5), (" lac", 1e5), (" crores", 1e7), (" crore", 1e7)] {
+        if s[j..].starts_with(suf) && edge(j + suf.len()) {
+            n *= mul;
+            j += suf.len();
+            break;
+        }
+    }
+    for cur in [" rupees", " rupee", " rs.", " rs", " inr", " bucks", " dollars", "/-"] {
+        if s[j..].starts_with(cur) && edge(j + cur.len()) {
+            j += cur.len();
+            break;
+        }
+    }
+    let next = s[j..].trim_start().split(|c: char| !c.is_alphanumeric() && c != '%').next().unwrap_or("");
+    const NOT_MONEY: [&str; 40] = [
+        "mb", "gb", "kb", "tb", "minutes", "minute", "mins", "min", "seconds", "second", "secs", "hours", "hour", "hrs", "days", "day", "weeks", "week", "months", "month", "years", "year", "km", "kms", "miles",
+        "kg", "kgs", "grams", "words", "pages", "lines", "percent", "%", "people", "items", "inches", "inch", "cm", "calories", "stars",
+    ];
+    (n >= 1.0 && !NOT_MONEY.contains(&next)).then_some((n.round() as u64, j))
+}
+
+/// "wireless headphones under ₹2,000 cheapest" -> ("wireless headphones", None, Some(2000), Some("price-asc")):
+/// what to look for, the least and the most to pay, and how to sort.
+fn shopping_range(q: &str) -> (String, Option<u64>, Option<u64>, Option<&'static str>) {
+    let mut l = format!(" {} ", q.to_lowercase());
+    let (mut min, mut max) = (None, None);
+    // "between 1000 and 2000", "from 20k to 30k"
+    for (w, joins) in [(" between ", [" and ", " to ", "-"]), (" from ", [" to ", " till ", "-"])] {
+        let Some(i) = l.find(w) else { continue };
+        let Some((lo, u1)) = amount(&l[i + w.len()..]) else { continue };
+        let mid = i + w.len() + u1;
+        let Some(j) = joins.iter().find(|j| l[mid..].starts_with(**j)) else { continue };
+        let Some((hi, u2)) = amount(&l[mid + j.len()..]) else { continue };
+        (min, max) = (Some(lo.min(hi)), Some(lo.max(hi)));
+        l = format!("{} {}", &l[..i], &l[mid + j.len() + u2..]);
+        break;
+    }
+    if max.is_none() {
+        for w in [" under ", " below ", " less than ", " within ", " upto ", " up to ", " cheaper than ", " not more than ", " no more than ", " at most ", " maximum ", " max ", " budget of ", " budget "] {
+            let Some(i) = l.find(w) else { continue };
+            let Some((n, used)) = amount(&l[i + w.len()..]) else { continue };
+            max = Some(n);
+            l = format!("{} {}", &l[..i], &l[i + w.len() + used..]);
+            break;
+        }
+    }
+    if min.is_none() {
+        for w in [" above ", " over ", " more than ", " at least ", " minimum ", " starting from ", " starting at "] {
+            let Some(i) = l.find(w) else { continue };
+            let Some((n, used)) = amount(&l[i + w.len()..]) else { continue };
+            min = Some(n);
+            l = format!("{} {}", &l[..i], &l[i + w.len() + used..]);
             break;
         }
     }
@@ -144,14 +246,19 @@ fn shopping(q: &str) -> (String, Option<u64>, Option<&'static str>) {
             }
         }
     }
-    let q = l.split_whitespace().filter(|w| !matches!(*w, "a" | "an" | "the" | "some" | "me" | "for")).collect::<Vec<_>>().join(" ");
+    let q = l.split_whitespace().map(|w| w.trim_matches(|c: char| c == ',' || c == '.' || c == '?')).filter(|w| !w.is_empty() && !matches!(*w, "a" | "an" | "the" | "some" | "me" | "for" | "priced" | "costing" | "price")).collect::<Vec<_>>().join(" ");
+    (q, min, max, sort)
+}
+
+fn shopping(q: &str) -> (String, Option<u64>, Option<&'static str>) {
+    let (q, _, max, sort) = shopping_range(q);
     (q, max, sort)
 }
 
 /// The search page for a site, with price limits and sorting where the site supports them.
 fn site_url(site: &str, q: &str) -> Option<(String, String)> {
     let name = site_name(site)?.to_string();
-    let (query, max, sort) = shopping(q);
+    let (query, min, max, sort) = shopping_range(q);
     if query.is_empty() {
         return None;
     }
@@ -159,8 +266,10 @@ fn site_url(site: &str, q: &str) -> Option<(String, String)> {
     let url = match site {
         "amazon" => {
             let mut u = format!("https://www.amazon.in/s?k={e}");
-            if let Some(m) = max {
-                u.push_str(&format!("&rh=p_36%3A-{}", m * 100)); // amazon.in prices are in paise
+            if min.is_some() || max.is_some() {
+                // (amazon.in counts in paise; an open end is left empty)
+                let paise = |v: Option<u64>| v.map(|m| (m * 100).to_string()).unwrap_or_default();
+                u.push_str(&format!("&rh=p_36%3A{}-{}", paise(min), paise(max)));
             }
             match sort {
                 Some("price-asc") => u.push_str("&s=price-asc-rank"),
@@ -173,8 +282,9 @@ fn site_url(site: &str, q: &str) -> Option<(String, String)> {
         }
         "flipkart" => {
             let mut u = format!("https://www.flipkart.com/search?q={e}");
-            if let Some(m) = max {
-                u.push_str(&format!("&p%5B%5D=facets.price_range.from%3DMin&p%5B%5D=facets.price_range.to%3D{m}"));
+            if min.is_some() || max.is_some() {
+                let (lo, hi) = (min.map(|m| m.to_string()).unwrap_or_else(|| "Min".into()), max.map(|m| m.to_string()).unwrap_or_else(|| "Max".into()));
+                u.push_str(&format!("&p%5B%5D=facets.price_range.from%3D{lo}&p%5B%5D=facets.price_range.to%3D{hi}"));
             }
             match sort {
                 Some("price-asc") => u.push_str("&sort=price_asc"),
@@ -240,6 +350,11 @@ fn site_search(l: &str) -> Option<(String, String)> {
                 }
             }
         }
+    }
+    // no shop was named, but a price was ("find me a keyboard under 1500"): that's shopping, and Amazon is where
+    let (what, min, max, _) = shopping_range(rest);
+    if (min.is_some() || max.is_some()) && !what.is_empty() {
+        return Some(("amazon".to_string(), rest.to_string()));
     }
     None
 }
@@ -519,6 +634,9 @@ pub fn parse_step(piece: &str) -> Step {
             return Step::TypeIn(field, text);
         }
         let quoted = rest.trim_start().starts_with(['"', '“', '\'']);
+        if !quoted {
+            t = crate::dictate::marks(&t); // ("hello comma how are you question mark")
+        }
         if !quoted && looks_composed(&t) {
             let t = t.strip_prefix("me ").or_else(|| t.strip_prefix("Me ")).unwrap_or(&t).to_string();
             return Step::Compose(t);
@@ -2125,5 +2243,33 @@ pub fn confirm(app: &AppHandle, ok: bool) -> String {
         press(&[VK_CONTROL, VIRTUAL_KEY(b'A' as u16)]);
         press(&[VK_BACK]);
         format!("Okay, I deleted the draft to {}.", p.to)
+    }
+}
+
+#[cfg(test)]
+mod price_tests {
+    use super::*;
+
+    #[test]
+    fn prices_are_read_however_they_are_said() {
+        let r = |q: &str| {
+            let (w, lo, hi, _) = shopping_range(q);
+            (w, lo, hi)
+        };
+        assert_eq!(r("laptops under 30 000"), ("laptops".to_string(), None, Some(30000)));
+        assert_eq!(r("wireless headphones under 2000 rupees"), ("wireless headphones".to_string(), None, Some(2000)));
+        assert_eq!(r("wireless headphones under ₹2,000"), ("wireless headphones".to_string(), None, Some(2000)));
+        assert_eq!(r("a phone below two thousand five hundred"), ("phone".to_string(), None, Some(2500)));
+        assert_eq!(r("laptop below 50k"), ("laptop".to_string(), None, Some(50000)));
+        assert_eq!(r("tv under 1.5 lakh"), ("tv".to_string(), None, Some(150000)));
+        assert_eq!(r("shoes between 1000 and 2,000 rupees"), ("shoes".to_string(), Some(1000), Some(2000)));
+        assert_eq!(r("monitor above 10k"), ("monitor".to_string(), Some(10000), None));
+        assert_eq!(r("phone under 20000 128 gb"), ("phone 128 gb".to_string(), None, Some(20000)));
+        assert_eq!(r("files under 5 mb"), ("files under 5 mb".to_string(), None, None));
+        assert_eq!(r("over ear headphones under 1500."), ("over ear headphones".to_string(), None, Some(1500)));
+        assert_eq!(site_search("find me a keyboard under 1500").map(|s| s.0), Some("amazon".to_string()));
+        assert_eq!(site_search("find files under 5 mb"), None);
+        assert!(site_url("amazon", "laptops under 30 000").unwrap().1.contains("p_36%3A-3000000"));
+        assert!(site_url("flipkart", "shoes between 1000 and 2000").unwrap().1.contains("from%3D1000") );
     }
 }
