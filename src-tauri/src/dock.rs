@@ -1,7 +1,10 @@
 //! ULTRON's own taskbar (Settings, Look & feel, Taskbar).
 //!
-//! While it's on, Windows' taskbar is hidden. Its strip of the screen stays reserved (nothing about
-//! the taskbar's settings is changed), and ULTRON's taskbar, drawn by the page, sits in that strip.
+//! While it's on, Windows' taskbar is out of the way altogether: it's put on "hide automatically" (so
+//! it gives up its strip of the screen and windows reach the bottom edge) and then hidden, so that it
+//! doesn't slide back up when the pointer touches the bottom. ULTRON's taskbar is the wheel that
+//! rolls down from the top, drawn by the page. How Windows' taskbar was set is written down first and
+//! put back exactly when ULTRON's is switched off.
 //! This side supplies what the page can't see for itself: which windows are open and which is in
 //! front, switching to them, and laying them out side by side with gaps.
 //!
@@ -10,7 +13,7 @@
 //! but wait for ULTRON to go and then show it (`--taskbar-guard`).
 
 use std::os::windows::process::CommandExt;
-use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering::SeqCst};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -20,6 +23,7 @@ use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
 use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::System::Threading::{OpenProcess, WaitForSingleObject, INFINITE, PROCESS_SYNCHRONIZE};
+use windows::Win32::UI::Shell::{SHAppBarMessage, ABM_GETSTATE, ABM_SETSTATE, APPBARDATA};
 use windows::Win32::UI::WindowsAndMessaging::{
     FindWindowExW, FindWindowW, GetWindowPlacement, GetWindowRect, IsIconic, IsWindow, IsWindowVisible, IsZoomed, PostMessageW, SetWindowPlacement, SetWindowPos, ShowWindow, SystemParametersInfoW,
     SC_MINIMIZE, SPI_GETWORKAREA, SWP_NOACTIVATE, SWP_NOZORDER, SW_HIDE, SW_RESTORE, SW_SHOWNOACTIVATE, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, WINDOWPLACEMENT, WM_CLOSE, WM_SYSCOMMAND,
@@ -30,6 +34,51 @@ use crate::apps::{Apps, OpenWin};
 static ON: AtomicBool = AtomicBool::new(false);
 static GUARDED: AtomicBool = AtomicBool::new(false);
 static WATCHING: AtomicBool = AtomicBool::new(false);
+/// How Windows' taskbar was set before ULTRON's came on (-1: not known).
+static WAS: AtomicIsize = AtomicIsize::new(-1);
+/// Windows' taskbar isn't hidden before this moment (it's given time to slide away by itself first).
+static HIDE_FROM: AtomicU64 = AtomicU64::new(0);
+const AUTOHIDE: isize = 1;
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+}
+
+/// Whether Windows' taskbar hides automatically, stays on top: its own two settings, as one number.
+fn tray_state() -> Option<isize> {
+    let h = *trays().first()?;
+    let mut d = APPBARDATA { cbSize: std::mem::size_of::<APPBARDATA>() as u32, hWnd: h, ..Default::default() };
+    Some(unsafe { SHAppBarMessage(ABM_GETSTATE, &mut d) } as isize)
+}
+
+fn set_tray_state(state: isize) {
+    if let Some(h) = trays().first() {
+        let mut d = APPBARDATA { cbSize: std::mem::size_of::<APPBARDATA>() as u32, hWnd: *h, lParam: LPARAM(state), ..Default::default() };
+        unsafe { SHAppBarMessage(ABM_SETSTATE, &mut d) };
+    }
+}
+
+fn note(app: &AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|d| d.join("taskbar-was.txt"))
+}
+
+/// Windows' taskbar back as it was: shown, and its "hide automatically" as it had been.
+fn give_back(was: isize) {
+    if was >= 0 {
+        set_tray_state(was);
+    }
+    taskbar(true);
+}
+
+/// ULTRON is closing: Windows gets its taskbar back (ULTRON's comes on again by itself next time, if that's the setting).
+pub fn leave(app: &AppHandle) {
+    if ON.swap(false, SeqCst) {
+        give_back(WAS.load(SeqCst));
+        if let Some(p) = note(app) {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+}
 /// The windows in the order they were first seen (the taskbar's icons don't shuffle as you switch).
 static ORDER: Mutex<Vec<String>> = Mutex::new(Vec::new());
 /// Where the windows were before they were tiled, to put them back.
@@ -97,25 +146,48 @@ pub fn list(app: &AppHandle) -> Vec<OpenWin> {
     wins
 }
 
-/// Turn ULTRON's taskbar on or off. Gives the height of the strip it sits in (screen pixels; 0 when
-/// Windows' taskbar isn't along the bottom, and the page then keeps to its usual height).
+/// Turn ULTRON's taskbar on or off.
 pub fn set(app: &AppHandle, on: bool) -> i32 {
-    let height = strip().map(|r| r.bottom - r.top).unwrap_or(0);
-    ON.store(on, SeqCst);
-    taskbar(!on);
-    if on {
-        guard();
-        if !WATCHING.swap(true, SeqCst) {
-            let app = app.clone();
-            std::thread::spawn(move || {
-                let mut last: Vec<OpenWin> = Vec::new();
-                loop {
-                    if !ON.load(SeqCst) {
-                        last.clear();
-                        std::thread::sleep(Duration::from_millis(1000));
-                        continue;
-                    }
-                    // (Explorer shows its taskbar again now and then: at a notification, when it restarts)
+    let file = note(app);
+    let written = file.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| s.trim().parse::<isize>().ok());
+    if !on {
+        // (also the way back after ULTRON was cut off with its own taskbar up: what was written down is put back)
+        let was = if ON.swap(false, SeqCst) { WAS.load(SeqCst) } else { written.unwrap_or(-1) };
+        if was >= 0 || written.is_some() {
+            give_back(was);
+        } else {
+            taskbar(true);
+        }
+        if let Some(p) = file {
+            let _ = std::fs::remove_file(p);
+        }
+        return 0;
+    }
+    let Some(now) = tray_state() else { return 0 };
+    let was = written.unwrap_or(now); // (written down already: ULTRON was cut off last time, and what's there now is its own doing)
+    if let Some(p) = &file {
+        let _ = std::fs::write(p, was.to_string());
+    }
+    WAS.store(was, SeqCst);
+    ON.store(true, SeqCst);
+    HIDE_FROM.store(now_ms() + 700, SeqCst);
+    if now & AUTOHIDE == 0 {
+        set_tray_state(now | AUTOHIDE); // (it slides away, and windows are given its strip)
+    }
+    guard(was);
+    if !WATCHING.swap(true, SeqCst) {
+        let app = app.clone();
+        std::thread::spawn(move || {
+            let mut last: Vec<OpenWin> = Vec::new();
+            loop {
+                if !ON.load(SeqCst) {
+                    last.clear();
+                    std::thread::sleep(Duration::from_millis(1000));
+                    continue;
+                }
+                // (hidden as well, so it doesn't come up when the pointer touches the bottom edge; and Explorer shows it
+                //  again now and then, at a notification or when it restarts)
+                if now_ms() >= HIDE_FROM.load(SeqCst) {
                     for h in trays() {
                         if unsafe { IsWindowVisible(h) }.as_bool() {
                             unsafe {
@@ -123,17 +195,17 @@ pub fn set(app: &AppHandle, on: bool) -> i32 {
                             }
                         }
                     }
-                    let now = list(&app);
-                    if now != last {
-                        let _ = app.emit_to("main", "dock-wins", &now);
-                        last = now;
-                    }
-                    std::thread::sleep(Duration::from_millis(450));
                 }
-            });
-        }
+                let now = list(&app);
+                if now != last {
+                    let _ = app.emit_to("main", "dock-wins", &now);
+                    last = now;
+                }
+                std::thread::sleep(Duration::from_millis(450));
+            }
+        });
     }
-    height
+    0
 }
 
 /// Switch to a window, send it down to the taskbar, or close it.
@@ -235,19 +307,19 @@ pub fn untile() -> usize {
     before.len()
 }
 
-/// The second copy that only waits: started once, the first time Windows' taskbar is hidden.
-fn guard() {
+/// The second copy that only waits: started once, the first time Windows' taskbar is put away.
+fn guard(was: isize) {
     if GUARDED.swap(true, SeqCst) {
         return;
     }
     if let Ok(me) = std::env::current_exe() {
         const DETACHED: u32 = 0x0000_0008 | 0x0800_0000; // DETACHED_PROCESS, CREATE_NO_WINDOW
-        let _ = std::process::Command::new(me).arg("--taskbar-guard").arg(std::process::id().to_string()).creation_flags(DETACHED).spawn();
+        let _ = std::process::Command::new(me).arg("--taskbar-guard").arg(std::process::id().to_string()).arg(was.to_string()).creation_flags(DETACHED).spawn();
     }
 }
 
 /// Called first thing in `main`: when this copy was started as the guard, it waits for the ULTRON
-/// it was given to end, shows Windows' taskbar, and says so (true: there's nothing else to do).
+/// it was given to end, gives Windows its taskbar back as it was, and says so (true: nothing else to do).
 pub fn guard_if_asked() -> bool {
     let args: Vec<String> = std::env::args().collect();
     let Some(i) = args.iter().position(|a| a == "--taskbar-guard") else { return false };
@@ -258,7 +330,7 @@ pub fn guard_if_asked() -> bool {
             }
         }
     }
-    taskbar(true);
+    give_back(args.get(i + 2).and_then(|s| s.parse::<isize>().ok()).unwrap_or(-1));
     true
 }
 

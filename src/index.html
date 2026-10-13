@@ -844,96 +844,58 @@ body.pk-out #pet{opacity:0; transition:opacity .22s}       /* (the character has
 .nb-dots i{width:5px; height:5px; border-radius:50%; background:#0c0c0e; animation:mlDot 1s ease-in-out infinite}
 .nb-dots i:nth-child(2){animation-delay:.15s} .nb-dots i:nth-child(3){animation-delay:.3s}
 .nb-say{margin-top:6px} .nb-say:first-child{margin-top:0}
-/* ---------- ULTRON's own taskbar ----------
-   Not a bar: a strand of glass beads sitting where Windows' taskbar was, one bead an app. Neighbours run together
-   the way drops of water do, a bead swells toward the pointer, a new app's bead grows in and a closed one's drains
-   away. The beads are drawn on one canvas (the shape, filled with the screen behind it); what's on them (icons,
-   the blob with eyes) are ordinary buttons riding on top. Nothing is drawn while nothing moves. */
-.dock{position:fixed; z-index:6; left:0; right:0; bottom:0; height:120px; pointer-events:none; opacity:0; visibility:hidden; transform:translateY(70px);
-  transition:transform .5s var(--glide), opacity .3s, visibility 0s .5s}
-body.docked .dock{transform:none; opacity:1; visibility:visible; transition:transform .8s cubic-bezier(.2,1.3,.3,1) .16s, opacity .35s .16s, visibility 0s}
-body.docked.fullscreen .dock, body.docked.leaving .dock{transform:translateY(70px); opacity:0}
-.lq-cv{position:absolute; left:0; top:0; width:100%; height:100%; filter:drop-shadow(0 7px 10px rgba(0,0,0,.26))}
-.lq-items{position:absolute; inset:0}
-.lq-b{position:absolute; left:0; top:0; display:grid; place-items:center; width:44px; height:44px; margin:-22px 0 0 -22px; padding:0; border:0; border-radius:50%; background:none; color:#fff; font:inherit; cursor:default;
-  pointer-events:auto; will-change:transform}
-body:not(.docked) .lq-b, body.fullscreen .lq-b{pointer-events:none}
-.lq-b img{width:24px; height:24px; object-fit:contain; opacity:0; transition:opacity .25s} .lq-b img.ok{opacity:1}
-.lq-b .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:13px; font-weight:700; color:rgba(255,255,255,.7)} .lq-b img.ok + .fbk{display:none}
-.lq-b svg{width:17px; height:17px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
-.lq-b > i{position:absolute; left:50%; bottom:6px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s, width .4s var(--spring), margin-left .4s var(--spring)}
-.lq-b.run > i{opacity:.6} .lq-b.act > i{opacity:1; width:12px; margin-left:-6px}
-.lq-b.on svg{stroke-width:2.2}
-.lq-ask{width:96px; margin-left:-48px; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12.5px; font-weight:650; letter-spacing:.01em}
-.lq-ask svg{width:13px; height:13px; fill:#fff; stroke:none}
-/* the blob: ULTRON itself, small, in among the beads. It opens Start. */
-.lq-home{width:54px; height:46px; margin:-23px 0 0 -27px; border-radius:50% 50% 48% 48% / 56% 56% 44% 44%;
-  background:radial-gradient(120% 100% at 50% 22%, #fff 0, #f1f1f5 52%, #d9d9e1 100%); box-shadow:inset 0 -4px 6px rgba(20,20,40,.12), 0 6px 14px rgba(0,0,0,.3)}
-.lq-home .eye{position:absolute; top:42%; width:5.5px; height:7px; margin-top:-3.5px; border-radius:50%; background:#16161a; transform:translate(var(--ex, 0px), var(--ey, 0px)); transition:transform .22s var(--glide), height .1s, margin-top .1s}
-.lq-home .eye.l{left:calc(50% - 10.5px)} .lq-home .eye.r{left:calc(50% + 5px)}
-.lq-home.blink .eye{height:1.5px; margin-top:0}
-.lq-home.open .eye{height:8.5px; margin-top:-4.5px}
-/* what a bead is, said above it while the pointer rests there */
-.lq-tip{position:absolute; left:0; top:0; padding:5px 10px; border-radius:9px; background:rgba(20,20,24,.9); box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 6px 16px rgba(0,0,0,.3); color:#fff; font-size:11.5px; font-weight:600;
-  white-space:nowrap; max-width:280px; overflow:hidden; text-overflow:ellipsis; opacity:0; pointer-events:none; transition:opacity .15s}
-.lq-tip.on{opacity:1; transition:opacity .2s .35s}
-/* Windows' taskbar, as it was, leaving (a picture of it: the real one is already hidden underneath) */
-.dk-old{position:fixed; z-index:5; left:0; right:0; bottom:-2px; height:var(--strip, 48px); background:center / 100% 100% no-repeat; opacity:0; pointer-events:none}
-.dk-old.go{animation:dkOld .7s var(--glide) forwards}
-@keyframes dkOld{0%{opacity:1; transform:none} 100%{opacity:0; transform:translateY(100%)}}
-.dk-old.hold{opacity:1}
-/* Start, from the blob: a half-circle of glass with your apps on rings around where the blob sits. The rings ride
-   out with the glass as it opens (one movement). Type, and the rings fill with what matches. */
-.bloom{position:fixed; z-index:32; left:0; bottom:calc(var(--strip, 48px) + 4px); width:600px; height:320px; border-radius:300px 300px 22px 22px / 300px 300px 22px 22px; color:#fff; --tint:rgba(16,16,22,.5);
-  text-shadow:0 1px 2px rgba(0,0,0,.3); transform-origin:50% 100%; transform:translateY(40px) scale(.16); opacity:0; visibility:hidden;
-  transition:opacity .16s, transform .26s var(--glide), visibility 0s .26s}
-.bloom.open{transform:none; opacity:1; visibility:visible; transition:opacity .22s, transform .62s cubic-bezier(.18,1.18,.3,1), visibility 0s}
-.bl-a{position:absolute; display:grid; place-items:center; width:46px; height:46px; padding:0; border:0; border-radius:15px; background:none; cursor:default;
-  transform:translate(var(--hx), var(--hy)) scale(.2); opacity:0; transition:transform .2s, opacity .12s, background .2s}
-.bloom.open .bl-a{transform:none; opacity:1; transition:transform .6s cubic-bezier(.2,1.25,.3,1) calc(var(--k) * 50ms + 40ms), opacity .25s calc(var(--k) * 50ms + 40ms), background .2s}
-.bloom.now .bl-a{transition:background .2s, transform .25s var(--spring) !important}
-.bloom.open .bl-a:hover, .bloom.open .bl-a.sel{background:rgba(255,255,255,.16); transform:scale(1.14)}
-.bl-a:active{transform:scale(.94) !important}
-.bl-a img{width:30px; height:30px; object-fit:contain; opacity:0; transition:opacity .2s} .bl-a img.ok{opacity:1}
-.bl-a .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:15px; font-weight:700; color:rgba(255,255,255,.55)} .bl-a img.ok + .fbk{display:none}
-.bl-name{position:absolute; left:50%; bottom:64px; width:190px; margin-left:-95px; text-align:center; font-size:13px; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; transition:opacity .2s}
-.bl-name.dim{color:rgba(255,255,255,.45); font-weight:550}
-.bl-q{position:absolute; left:50%; bottom:16px; display:flex; align-items:center; gap:7px; width:150px; height:34px; margin-left:-75px; padding:0 12px; border-radius:17px; background:rgba(255,255,255,.1);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); transition:background .2s, box-shadow .2s}
-.bl-q:focus-within{background:rgba(255,255,255,.15); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
-.bl-q svg{width:13px; height:13px; flex:none; fill:none; stroke:rgba(255,255,255,.6); stroke-width:2; stroke-linecap:round}
-.bl-q input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:13px}
-.bl-q input::placeholder{color:rgba(255,255,255,.4)}
-.bl-s{position:absolute; bottom:12px; display:flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:0; border-radius:15px; background:rgba(255,255,255,.08); color:rgba(255,255,255,.75); font:inherit; font-size:11.5px; font-weight:600;
-  cursor:default; transition:background .2s, color .2s, transform .2s}
-.bl-s:hover{background:rgba(255,255,255,.18); color:#fff} .bl-s:active{transform:scale(.95)}
-.bl-s svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
-#blAll{left:22px} #blPw{right:22px}
-.bl-pw{position:absolute; right:64px; bottom:50px; display:flex; flex-direction:column; gap:4px; padding:5px; border-radius:14px; background:rgba(24,24,30,.92); box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 10px 24px rgba(0,0,0,.35);
-  transform-origin:100% 100%; transform:scale(.8); opacity:0; pointer-events:none; transition:transform .3s var(--spring), opacity .15s}
-.bl-pw.open{transform:none; opacity:1; pointer-events:auto}
-.bl-pw button{height:28px; padding:0 14px; border:0; border-radius:9px; background:none; color:#fff; font:inherit; font-size:12.5px; font-weight:600; text-align:left; cursor:default}
-.bl-pw button:hover{background:rgba(255,255,255,.14)}
-/* the open windows */
-.dkw{position:fixed; z-index:31; left:0; bottom:calc(var(--strip, 48px) + 8px); width:440px; max-width:92vw; border-radius:20px; color:#fff; --tint:rgba(18,18,24,.55); text-shadow:0 1px 2px rgba(0,0,0,.25);
-  transform:translateY(18px) scale(.95); transform-origin:50% 100%; opacity:0; visibility:hidden; transition:opacity .16s, transform .22s var(--glide), visibility 0s .22s}
-.dkw.open{opacity:1; visibility:visible; transform:none; transition:opacity .2s, transform .5s cubic-bezier(.16,1.12,.3,1), visibility 0s}
-.dkw-in{padding:8px; max-height:430px; overflow:auto} .dkw-in::-webkit-scrollbar{display:none}
-.dkw-h{display:flex; justify-content:space-between; margin:4px 6px 8px; font-size:11.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.55)}
-.dkw-row{position:relative; display:flex; align-items:center; gap:11px; height:44px; margin-top:4px; padding:0 44px 0 11px; border-radius:13px; background:rgba(255,255,255,.07); font-size:13px; cursor:default; transition:background .2s}
-.dkw-row:first-of-type{margin-top:0}
-.dkw-row:hover, .dkw-row:focus-visible{background:rgba(255,255,255,.15); outline:0}
-.dkw-row.act{box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
-.dkw-row img{flex:none; width:22px; height:22px; object-fit:contain; opacity:0; transition:opacity .2s} .dkw-row img.ok{opacity:1}
-.dkw-row b{flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.dkw-row span{flex:none; max-width:120px; font-size:11.5px; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.dkw-x{position:absolute; right:9px; top:9px; width:26px; height:26px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:11px; opacity:0; cursor:default; transition:opacity .15s, background .15s, transform .2s}
-.dkw-row:hover .dkw-x{opacity:1} .dkw-x:hover{background:rgba(255,80,80,.75)} .dkw-x:active{transform:scale(.88)}
-.dkw.open .dkw-row{animation:aiIn .4s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 28ms + 50ms)}
-.dkw-row.bye{opacity:0; transform:translateX(26px); transition:opacity .2s, transform .25s var(--glide)}
-/* the list of every app (the older Start), when it's asked for from the taskbar, rises from there */
-body.docked .start.low{top:auto; bottom:calc(var(--strip, 48px) + 8px); transform:translate(-50%, 46px) scale(.94); transform-origin:50% 100%}
-body.docked .start.low.open{transform:translate(-50%, 0)}
+/* ---------- ULTRON's own taskbar: the wheel ----------
+   There is no bar along the bottom. Windows' taskbar is gone and windows have the screen to its bottom edge; the
+   taskbar is a wheel of glass kept above the screen, with only its lowest sliver showing under the notch. Reach for
+   that and the wheel rolls down: your apps ride its rim, and turn with the mouse wheel. ULTRON's blob sits at the
+   hub. The rolling and the turning are worked out in the script (springs); nothing here moves on its own. */
+.wheel{position:fixed; z-index:4; left:50%; top:0; width:0; height:0; --R:250px; --cy:-28px; --k:1; color:#fff; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .3s, visibility 0s .3s}
+body.docked .wheel{opacity:1; visibility:visible; transition:opacity .45s}
+body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .wheel, body.docked .wheel.away{opacity:0; visibility:hidden; transition:opacity .2s, visibility 0s .2s}
+.wh-body{position:absolute; left:0; top:0; will-change:transform}
+.wh-disc{position:absolute; left:calc(-1 * var(--R)); top:calc(var(--cy) - var(--R)); width:calc(2 * var(--R)); height:calc(2 * var(--R)); border-radius:50%; --tint:rgba(16,16,22,.4);
+  box-shadow:0 18px 44px rgba(0,0,0,.36), 0 2px 8px rgba(0,0,0,.2); pointer-events:auto}
+.wh-disc > .gw{will-change:transform}
+.wh-hubbg{position:absolute; inset:calc(70px * var(--k)); border-radius:50%; background:rgba(8,8,12,.36); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.wheel.smoked .wh-disc{--tint:rgba(10,10,14,.66)}
+.wh-rim, .wh-hub{position:absolute; left:0; top:0}
+.wh-b{position:absolute; left:0; top:0; display:grid; place-items:center; width:46px; height:46px; margin:-23px 0 0 -23px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.1);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); color:#fff; font:inherit; cursor:default; pointer-events:auto; will-change:transform, opacity; transition:background .2s, box-shadow .2s}
+.wh-b:hover{background:rgba(255,255,255,.22)}
+.wh-b.sel{background:rgba(255,255,255,.2); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.wh-b.far{display:none}
+.wh-b img{width:26px; height:26px; object-fit:contain; opacity:0; transition:opacity .2s} .wh-b img.ok{opacity:1}
+.wh-b .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:14px; font-weight:700; color:rgba(255,255,255,.7)} .wh-b img.ok + .fbk{display:none}
+.wh-b > i{position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s}
+.wh-b.run > i{opacity:.6} .wh-b.act > i{opacity:1; width:10px; margin-left:-5px; border-radius:2px}
+.wheel:not(.open) .wh-b{pointer-events:none}
+.wh-hub > *{position:absolute; left:0}
+.wh-mode{top:calc(var(--cy) + 74px * var(--k)); transform:translateX(-50%); font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.5); white-space:nowrap; pointer-events:none}
+.wh-name{top:calc(var(--cy) + 92px * var(--k)); width:calc(250px * var(--k)); transform:translateX(-50%); text-align:center; font-size:15px; font-weight:650; letter-spacing:-.01em; white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; text-shadow:0 1px 2px rgba(0,0,0,.3); pointer-events:none}
+.wh-q{top:calc(var(--cy) + 66px * var(--k)); display:none; align-items:center; gap:6px; width:150px; height:26px; margin-left:-75px; padding:0 10px; border-radius:13px; background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); pointer-events:auto}
+.wh-q svg{width:12px; height:12px; flex:none; fill:none; stroke:rgba(255,255,255,.6); stroke-width:2; stroke-linecap:round}
+.wh-q input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:12.5px}
+.wh-q input::placeholder{color:rgba(255,255,255,.4)}
+.wheel.apps .wh-q{display:flex} .wheel.apps .wh-mode{display:none}
+/* the blob at the hub: ULTRON itself. It swaps the rim between what's open and everything you can open. */
+.wh-blob{top:calc(var(--cy) + 146px * var(--k)); width:48px; height:40px; margin:-20px 0 0 -24px; padding:0; border:0; border-radius:50% 50% 48% 48% / 56% 56% 44% 44%; cursor:default; pointer-events:auto;
+  background:radial-gradient(120% 100% at 50% 22%, #fff 0, #f1f1f5 52%, #d9d9e1 100%); box-shadow:inset 0 -4px 6px rgba(20,20,40,.12), 0 5px 12px rgba(0,0,0,.3); transition:transform .4s var(--spring)}
+.wh-blob:hover{transform:scale(1.08)} .wh-blob:active{transform:scale(.92, .86)}
+.wh-blob .eye{position:absolute; top:42%; width:5px; height:6.5px; margin-top:-3px; border-radius:50%; background:#16161a; transform:translate(var(--ex, 0px), var(--ey, 0px)); transition:transform .2s var(--glide), height .1s, margin-top .1s}
+.wh-blob .eye.l{left:calc(50% - 9.5px)} .wh-blob .eye.r{left:calc(50% + 4.5px)}
+.wh-blob.blink .eye{height:1.5px; margin-top:0}
+.wh-t{top:calc(var(--cy) + 148px * var(--k)); display:grid; place-items:center; width:30px; height:30px; margin:-15px 0 0 -15px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.1); color:#fff; cursor:default;
+  pointer-events:auto; transition:background .2s, transform .3s var(--spring)}
+.wh-t:hover{background:rgba(255,255,255,.22)} .wh-t:active{transform:scale(.88)} .wh-t.on{background:#fff}
+.wh-t svg{width:14px; height:14px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round} .wh-t.on svg{stroke:#111}
+#whAsk svg{fill:#fff; stroke:none}
+#whTile{left:calc(-62px * var(--k))} #whAsk{left:calc(62px * var(--k))}
+.wheel:not(.open) .wh-hub > *{pointer-events:none}
+/* the sliver that shows while the wheel is up: three dots to say there is something to pull */
+.wh-grip{top:calc(var(--cy) + var(--R) - 6.5px); display:flex; gap:4px; transform:translateX(-50%); pointer-events:none; transition:opacity .25s}
+.wh-grip i{width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.7)}
+.wheel.open .wh-grip{opacity:0}
 /* ---------- today: the day at a glance ---------- */
 .td-top{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:1px 0 13px}
 .td-day b, .td-wx b{display:block; font-size:25px; line-height:1.1; font-weight:650; letter-spacing:-.022em; font-variant-numeric:tabular-nums}
@@ -1692,10 +1654,15 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button class="st clock" id="clock" aria-label="Calendar"></button>
   </div>
 </header>
-<div class="dk-old" id="dkOld" aria-hidden="true"></div>
-<nav class="dock" id="dock" aria-label="Taskbar"><canvas class="lq-cv" id="lqCv"></canvas><div class="lq-items" id="lqItems"></div><div class="lq-tip" id="lqTip"></div></nav>
-<div class="bloom low glass panel-glass" id="bloom" role="dialog" aria-label="Start"><i class="gw"></i><div class="bl-ring" id="blRing"></div><div class="bl-name dim" id="blName"></div><label class="bl-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="blQ" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label><button class="bl-s" id="blAll"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></svg>All apps</button><button class="bl-s" id="blPw" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 4v8M7.5 6.8a7 7 0 1 0 9 0"/></svg></button><div class="bl-pw" id="blPwRow"><button data-pw="lock">Lock</button><button data-pw="sleep">Sleep</button><button data-pw="restart">Restart</button><button data-pw="shutdown">Shut down</button></div></div>
-<div class="dkw glass panel-glass" id="dkw" role="dialog" aria-label="Open windows"><i class="gw"></i><div class="dkw-in" id="dkwIn"></div></div>
+<div class="wheel" id="wheel" aria-label="Taskbar"><div class="wh-body" id="whBody">
+  <div class="wh-disc glass" id="whDisc"><i class="gw"></i><div class="wh-hubbg"></div></div>
+  <div class="wh-rim" id="whRim"></div>
+  <div class="wh-hub"><div class="wh-mode" id="whMode"></div><label class="wh-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="whQ" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label><div class="wh-name" id="whName"></div>
+    <button class="wh-t" id="whTile" aria-label="Tile the windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg></button>
+    <button class="wh-blob" id="whBlob" aria-label="Everything you can open"><b class="eye l"></b><b class="eye r"></b></button>
+    <button class="wh-t" id="whAsk" aria-label="Ask ULTRON"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg></button>
+    <div class="wh-grip"><i></i><i></i><i></i></div></div>
+</div></div>
 <div class="dd glass panel-glass" id="dd" role="menu"></div>
 <div class="cal glass panel-glass" id="cal" role="dialog" aria-label="Calendar"><i class="gw"></i><div class="ca-in" id="calIn"></div></div>
 <div class="wifi glass panel-glass" id="wifi" role="dialog" aria-label="Wi-Fi"><i class="gw"></i><div class="wf-in" id="wfIn"></div></div>
@@ -1716,7 +1683,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button data-sec="brain"><svg viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3h1V4zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3h-1V4z"/></svg><span>Brain</span></button>
     <button data-sec="tasks"><svg viewBox="0 0 24 24"><path d="M6 3v15l4-3.6 2.6 6 2.6-1.1-2.6-5.9H18z"/></svg><span>Tasks</span></button>
     <button data-sec="look"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10.5" r="1.3"/><circle cx="15" cy="10.5" r="1.3"/><path d="M8.5 15c2 1.8 5 1.8 7 0"/></svg><span>Look &amp; feel</span></button>
-    <button data-sec="taskbar"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="13" r="2.6"/><circle cx="12" cy="13" r="3.4"/><circle cx="18.5" cy="13" r="2.6"/></svg><span>Taskbar</span></button>
+    <button data-sec="taskbar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg><span>Taskbar</span></button>
     <button data-sec="system"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>System</span></button>
     <button data-sec="privacy"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg><span>Privacy</span></button>
     <button data-sec="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>About</span></button>
@@ -1728,7 +1695,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
     <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
-    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own: a strand of glass beads where Windows’ taskbar was, one bead an app.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back the moment you switch, or when ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Beads<small>Joined, neighbours run together like drops of water</small></span><span class="seg" data-set="dkJoin" role="radiogroup"><button data-v="join" role="radio">Joined</button><button data-v="apart" role="radio">Apart</button></span></div><div class="sw-row"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row"><span class="sw-l">Place</span><span class="seg" data-set="dkPlace" role="radiogroup"><button data-v="left" role="radio">Left</button><button data-v="centre" role="radio">Centre</button><button data-v="right" role="radio">Right</button></span></div><div class="sw-row"><span class="sw-l">Glass<small>Smoked is darker, and easier to read on a bright wallpaper</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row"><span class="sw-l">Pinned apps<small>The first six apps pinned in Start, ready to open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row"><span class="sw-l">Window tools<small>Your open windows in a list, and tiling them side by side</small></span><button class="tg" role="switch" data-set="dkTools" aria-label="dkTools"></button></div><div class="sw-row"><span class="sw-l">Ask<small>A bead that opens ULTRON ready for your question</small></span><button class="tg" role="switch" data-set="dkAsk" aria-label="dkAsk"></button></div><div class="sw-row"><span class="sw-l">The blob watches the pointer</span><button class="tg" role="switch" data-set="dkEyes" aria-label="dkEyes"></button></div><div class="sw-row"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
+    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row"><span class="sw-l">The blob watches the pointer</span><button class="tg" role="switch" data-set="dkEyes" aria-label="dkEyes"></button></div><div class="sw-row"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>What the old Clipboard menu had saved. Nothing new is kept.</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
     <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small>Version 0.3 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
@@ -2128,15 +2095,14 @@ listen('backdrop', async url => {
   if (now < glassMixT){ if (!glassMixRaf){ glassMixLast = now; glassMixRaf = requestAnimationFrame(glassMixStep); } }
   else for (const g of glassEls) glassDraw(g);
   document.documentElement.classList.add('live');
-  if (window.DK && DK.on) lqRun();                          // (the taskbar's beads are made of the same picture)
 });
 // glass comes on screen with a transition (a panel opening): it gets the picture on that frame, not a moment later
 document.addEventListener('transitionstart', () => { if (!glassSoon) glassSoon = requestAnimationFrame(() => { glassSoon = 0; glassAim(); }); }, true);
 setInterval(() => {
-  const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw'), $('bloom')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
+  const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('wheel')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on');
   const off = !S.liveGlass || fullscreen || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw'), $('bloom')].some(el => el && el.classList.contains('open'));
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('wheel')].some(el => el && el.classList.contains('open'));
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -2475,7 +2441,7 @@ function applySetting(k){
   if (k === 'reduceMotion') document.body.classList.toggle('calm', !!S.reduceMotion);
   if (k === 'bar') barMode();
   if (k === 'dock') (S.dock === 'ultron' ? dockOn() : dockOff());
-  if (k.startsWith('dk')) lqStyle();
+  if (k.startsWith('dk')) whStyle();
   if (k === 'hearSongs') songReq();
   if (k === 'muted'){ invoke('voice_config', {paused:S.muted}); paintMute(); }
 }
@@ -3740,7 +3706,7 @@ function pickStop(keepPanel){
   setTimeout(() => {
     if (Pick.on) return;
     document.body.classList.remove('picking'); pkHl.innerHTML = '';
-    { const usual = window.DK && DK.on ? Math.round(screen.height) - 2 : 700; if (winH !== usual){ winH = usual; invoke('set_window_height', {h:usual}); } }   // back to the usual height
+    if (winH !== 700){ winH = 700; invoke('set_window_height', {h:700}); }      // back to the usual height
     syncHit();
   }, 420);
   if (!keepPanel && aiw.classList.contains('open')) closeAI();
@@ -5745,7 +5711,7 @@ let savedName = ''; try { savedName = localStorage.getItem('ultron-name') || '';
 if (savedName) setUserName(savedName);
 else invoke('user_name').then(n => { if (n) setUserName(n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()); });
 
-function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); closeDkw(); closeBloom(); }
+function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); whClose(); }
 
 /* ---------- settings window ---------- */
 const setEl = $('setw'), swHl = $('swHl');
@@ -6012,14 +5978,14 @@ function syncHit(){
   const fl = $('flyr');
   if (fl.classList.contains('on')) rects.push({x:Math.floor(fl.offsetLeft - 4), y:Math.floor(fl.offsetTop - 4), w:fl.offsetWidth + 8, h:fl.offsetHeight + 8});
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
-  if (window.DK && DK.on && !fullscreen && LQ.nodes.length){ let a = 1e9, b = -1e9; for (const n of LQ.nodes){ a = Math.min(a, n.tx - n.th - n.tr); b = Math.max(b, n.tx + n.th + n.tr); } rects.push({x:Math.floor(a - 10), y:Math.floor(innerHeight - DK.strip - 14), w:Math.ceil(b - a + 20), h:Math.ceil(DK.strip + 14)}); }
+  if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14)} : {x:Math.floor(cx - 78), y:30, w:156, h:18}); }
   if (nbOn && nbBox) rects.push(nbBox);
-  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw'), $('bloom')]) if (el.classList.contains('open')){
+  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('wheel')]) if (el.classList.contains('open') && el.id !== 'wheel'){
     // layout size, not the on-screen size: while a panel animates in it's scaled down, which left dead spots
     const w = Math.max(el.offsetWidth, parseFloat(el.style.width) || 0), x = el.id === 'start' || el.id === 'setw' ? (innerWidth - w) / 2 : el.offsetLeft;
     const h = Math.max(el.offsetHeight, parseFloat(el.style.height) || 0);
     // (what opens from the taskbar takes the screen from its own top down to the bottom; the rest, from the top down to their foot)
-    const low = el.id === 'dkw' || el.classList.contains('low');
+    const low = el.classList.contains('low');
     rects.push(low ? {x:Math.floor(x - 8), y:Math.floor(el.offsetTop - 8), w:Math.ceil(w + 16), h:Math.ceil(innerHeight - el.offsetTop + 8)}
       : {x:Math.floor(x - 8), y:0, w:Math.ceil(w + 16), h:Math.ceil(el.offsetTop + h + 10)});
   }
@@ -6033,7 +5999,7 @@ new ResizeObserver(() => keepMeasuring(300)).observe(notch);
    windows use the whole screen and the bar comes down over them, the way Windows' own taskbar does when it hides. */
 var barHid = false, barT = 0, barUp = 0;
 const barBusy = () => notch.classList.contains('open') || notch.classList.contains('call') || !!ddFor || tourOn || document.body.classList.contains('intro') || nbOn || REC.starting
-  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('dkw'), $('bloom')].some(el => el.classList.contains('open'));
+  || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('recw'), $('filew'), $('wheel')].some(el => el.classList.contains('open'));
 function barShow(on){
   if (barHid === !on) return;
   barHid = !on; document.body.classList.toggle('barhid', barHid);
@@ -6068,7 +6034,7 @@ function enter(){
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40 || (window.DK && DK.on && p[1] > innerHeight - DK.strip - 12)) glassFresh(); if (window.DK && DK.on) lqEyes(p[0], p[1]); wake(); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
@@ -6351,339 +6317,235 @@ async function prewarm(tries = 0){
 }
 if (TAURI) setTimeout(prewarm, 7000);
 
-/* ---------- ULTRON's own taskbar ----------
-   Settings, Taskbar. Turned on, Windows' taskbar leaves (a picture of it slides away: the real one is hidden under
-   the picture first, so nothing jumps) and ULTRON's grows in its place: a strand of glass beads, one an app, with
-   ULTRON's own blob among them. ULTRON's window reaches down to the taskbar for as long as it's on: two pixels short
-   of the whole screen, because a window that covers all of it is a "full-screen app" to Windows, and ULTRON hides
-   its bars for those. Which windows are open comes from dock.rs, only when something changes. */
-const dock = $('dock'), dkw = $('dkw'), bloom = $('bloom');
-var DK = {on:false, busy:false, wins:[], apps:[], strip:48, tiled:false, only:'', low:false};
+/* ---------- ULTRON's own taskbar: the wheel ----------
+   Settings, Taskbar. Turned on, Windows' taskbar slides away and gives its strip of the screen back (dock.rs), so
+   windows reach the bottom edge, and the taskbar is this: a wheel of glass kept above the screen, its lowest sliver
+   showing under the notch. Reach for the sliver and it rolls down. Your open apps ride the rim (the ones pinned in
+   Start too); the mouse wheel turns it; the blob at the hub swaps the rim for everything you can open, with a place
+   to type a name. Which windows are open comes from dock.rs, only when something changes. Nothing is drawn or
+   worked out while the wheel is still. */
+const wheel = $('wheel'), whBody = $('whBody'), whDisc = $('whDisc');
+var DK = {on:false, busy:false, wins:[], apps:[], tiled:false, asked:new Set()};
+var WH = {open:false, over:false, mode:'open', only:'', items:[], els:[], sel:0, rot:0, vrot:0, ty:0, vty:0, tty:0, raf:0, t:0, R:250, D:190, cy:-28, rest:-180, step:.277, closeT:0, openT:0, blinkT:0, iconT:0, ex:0, ey:0, gw:whDisc.querySelector('.gw')};
 const dkWait = ms => new Promise(r => setTimeout(r, ms));
-for (const [k, v] of Object.entries({dkJoin:'join', dkSize:'m', dkPlace:'centre', dkTint:'clear', dkPins:true, dkTools:true, dkAsk:true, dkEyes:true, dkGap:10})) if (S[k] === undefined) S[k] = v;
+for (const [k, v] of Object.entries({dkSize:'m', dkTint:'clear', dkOpen:'hover', dkPins:true, dkEyes:true, dkGap:10})) if (S[k] === undefined) S[k] = v;
 paintSettings();                                           // (the Taskbar section's switches show what was just filled in)
 
-/* The beads. Each is a little spring-loaded body (where it is, how big, how far it has risen), heading for where
-   the layout wants it. While any of them is still moving the strand is drawn again each frame; then it rests. */
-var LQ = {nodes:[], raf:0, t:0, H:120, W:0, dpr:0, cv:$('lqCv'), cx:null, mx:null, tx:null, mask:document.createElement('canvas'), tmp:document.createElement('canvas'), ring:document.createElement('canvas'), rx:null, wall:null, ex:0, ey:0};
-const LQ_ICON = {
-  wins:'<svg viewBox="0 0 24 24"><rect x="3.5" y="7.5" width="12.5" height="10.5" rx="2.4"/><path d="M8 7.5V7A2.4 2.4 0 0 1 10.4 4.6h7.7A2.4 2.4 0 0 1 20.5 7v6.2a2.4 2.4 0 0 1-2.4 2.4H16"/></svg>',
-  tile:'<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg>',
-  ask:'<svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Ask</span>',
-};
-const LQ_TIP = {home:'Start', wins:'Open windows', tile:'Tile the windows', ask:'Ask ULTRON'};
-const lqHome = () => LQ.nodes.find(n => n.kind === 'home' && !n.dead);
-function lqNode(key, kind, g){
-  let n = LQ.nodes.find(x => x.key === key && !x.dead);
-  if (n) return n;
-  const el = document.createElement('button');
-  el.className = 'lq-b' + (kind === 'home' ? ' lq-home' : kind === 'ask' ? ' lq-ask' : '');
-  el.innerHTML = kind === 'home' ? '<b class="eye l"></b><b class="eye r"></b>'
-    : kind === 'app' ? `<img data-src="${esc(key)}" alt=""><span class="fbk">${esc(((g && g.name) || '?').charAt(0).toUpperCase())}</span><i></i>` : LQ_ICON[kind];
-  if (kind === 'app'){ const u = iconCache.get(key); if (u){ el.firstChild.src = u; el.firstChild.classList.add('ok'); } }
-  n = {key, kind, el, g:g || null, tip:LQ_TIP[kind] || '', x:0, r:0, hw:0, y:0, vx:0, vr:0, vh:0, vy:0, tx:0, tr:0, th:0, ty:0, fresh:true, hover:false, press:false, dead:false, group:0};
-  el._n = n; el.setAttribute('aria-label', n.tip || (g && g.name) || '');
-  el.addEventListener('pointerenter', () => { n.hover = true; lqLayout(); lqTip(n); });
-  el.addEventListener('pointerleave', () => { n.hover = false; lqLayout(); lqTip(null); });
-  $('lqItems').appendChild(el); LQ.nodes.push(n);
-  return n;
+// how big the wheel is and how far it comes down, from the size you chose
+function whGeom(){
+  const R = {s:215, m:250, l:285}[S.dkSize] || 250;
+  WH.R = R; WH.D = Math.round(R * .76); WH.cy = 32 + WH.D - R; WH.rest = -(WH.D - 10); WH.step = 59 / (R - 37);    // (beads 59 px apart along the rim)
+  wheel.style.setProperty('--R', R + 'px'); wheel.style.setProperty('--cy', WH.cy + 'px'); wheel.style.setProperty('--k', (R / 250).toFixed(3));
+  wheel.classList.toggle('smoked', S.dkTint === 'smoked');
+  const g = WH.gw;                                         // (its glass, lined up with the screen for when it's down)
+  g.style.left = -(innerWidth / 2 - R) + 'px'; g.style.top = -(WH.cy - R) + 'px'; g.style.width = (screen.width || innerWidth) + 'px'; g.style.height = (screen.height || innerHeight) + 'px';
+  glassDraw(g);
 }
-// Where every bead should be, and how big: your apps, the blob, the two window tools, Ask. A bead under the pointer
-// swells and its neighbours make room; the app in use is a little larger than the rest.
-function lqLayout(){
-  if (!DK.on) return;
-  const R = {s:16, m:19, l:22}[S.dkSize] || 19, join = S.dkJoin !== 'apart', want = [];
-  for (const g of DK.apps){ const n = lqNode(g.launch, 'app', g); n.g = g; want.push([n, 0, R + (g.wins.some(w => w.active) ? 3.5 : 0), 0]); }
-  want.push([lqNode('home', 'home'), 1, R + 5, 0]);
-  if (S.dkTools){ want.push([lqNode('wins', 'wins'), 2, R - 2, 0]); want.push([lqNode('tile', 'tile'), 2, R - 2, 0]); }
-  if (S.dkAsk) want.push([lqNode('ask', 'ask'), 3, R - 1, 27]);
-  const keep = new Set(want.map(w => w[0]));
-  for (const n of LQ.nodes) if (!keep.has(n) && !n.dead){ n.dead = true; n.tr = 0; n.th = 0; n.el.style.pointerEvents = 'none'; }
-  let x = 0, prev = null, lo = 0, hi = 0;
-  const xs = [];
-  for (const [n, grp, r, hw] of want){
-    const rr = Math.max(4, r + (n.hover ? 3.5 : 0) - (n.press ? 2.5 : 0));
-    if (prev) x += prev.r + prev.hw + rr + hw + (prev.grp !== grp ? (join ? 26 : 18) : (join ? 5 : 11));
-    else lo = -(rr + hw);
-    xs.push(x); hi = x + rr + hw; prev = {r:rr, hw, grp};
-    n.group = grp; n.tr = rr; n.th = hw; n.ty = n.hover ? -3.5 : 0;
+// what rides the rim: what's open (with the apps pinned in Start), one app's windows, or everything you can open
+function whItems(){
+  if (WH.mode === 'apps'){
+    const q = $('whQ').value.trim().toLowerCase(), p = pinnedApps();
+    const list = !q ? [...p, ...startApps.filter(a => !p.includes(a))]
+      : startApps.map(a => { const n = a.name.toLowerCase(); return [n.startsWith(q) ? 0 : n.split(/[\s\-_.]+/).some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : 9, a]; })
+          .filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name)).map(x => x[1]);
+    return list.slice(0, 120).map(a => ({key:'a:' + a.launch, name:a.name, launch:a.launch, kind:'launch'}));
   }
-  const off = S.dkPlace === 'left' ? 26 - lo : S.dkPlace === 'right' ? innerWidth - 26 - hi : (innerWidth - (hi - lo)) / 2 - lo;
-  want.forEach(([n], i) => { n.tx = off + xs[i]; if (n.fresh){ n.fresh = false; n.x = n.tx; } });
-  lqRun();
+  if (WH.mode === 'wins') return DK.wins.filter(w => w.launch === WH.only).map(w => ({key:'w:' + w.id, name:w.title || w.name, short:w.name, launch:w.launch, kind:'win', w, run:true, act:w.active}));
+  return DK.apps.map(g => ({key:'g:' + g.launch, name:g.wins.length > 1 ? `${g.name}, ${g.wins.length} windows` : g.wins[0] ? (g.wins[0].title || g.name) : g.name, short:g.name, launch:g.launch, kind:'app', g,
+    run:g.wins.length > 0, act:g.wins.some(w => w.active)}));
 }
-function lqRun(){ if (!LQ.raf){ LQ.t = performance.now(); LQ.raf = requestAnimationFrame(lqStep); } }
-function lqStep(now){
-  LQ.raf = 0;
-  const dt = Math.min(.032, Math.max(.004, (now - LQ.t) / 1000)); LQ.t = now;
+// The rim is threaded again. `to`: 'active' turns the app in use to the bottom, 'first' the first one; nothing keeps what was there.
+function whRender(to){
+  const keep = WH.items[WH.sel] && WH.items[WH.sel].key;
+  WH.items = whItems();
+  if (WH.mode === 'wins' && !WH.items.length){ WH.mode = 'open'; WH.items = whItems(); to = to || 'active'; }
+  const n = WH.items.length;
+  let i = to === 'first' ? 0 : to === 'active' ? WH.items.findIndex(x => x.act) : WH.items.findIndex(x => x.key === keep);
+  if (i < 0) i = to === 'active' ? Math.floor((n - 1) / 2) : Math.min(WH.sel, n - 1);
+  WH.sel = Math.max(0, i);
+  if (to){ WH.rot = WH.sel - 2.4; WH.vrot = 0; }             // (a fresh rim swings into place)
+  $('whRim').innerHTML = WH.items.map((it, k) => { const u = iconCache.get(it.launch);
+    return `<button class="wh-b far${it.run ? ' run' : ''}${it.act ? ' act' : ''}" data-i="${k}" aria-label="${esc(it.name)}"><img data-src="${esc(it.launch)}" ${u ? `src="${u}" class="ok"` : ''} alt=""><span class="fbk">${esc((it.short || it.name || '?').charAt(0).toUpperCase())}</span><i></i></button>`; }).join('');
+  WH.els = [...$('whRim').children];
+  wheel.classList.toggle('apps', WH.mode === 'apps');
+  $('whMode').textContent = WH.mode === 'wins' ? ((DK.apps.find(g => g.launch === WH.only) || {}).name || 'Windows') : 'Open';
+  whName(); whDraw(); whRun(); whIcons();
+}
+// pictures for the beads that can be seen (and a few either side), asked for once things have stopped
+function whIcons(){
+  clearTimeout(WH.iconT);
+  WH.iconT = setTimeout(async () => {
+    const want = [];
+    for (let i = Math.max(0, WH.sel - 9); i < Math.min(WH.els.length, WH.sel + 10); i++){ const im = WH.els[i].firstChild; if (!im.classList.contains('ok') && !want.some(x => x.dataset.src === im.dataset.src)) want.push(im); }
+    for (let i = 0; i < want.length; i += 10){
+      const part = want.slice(i, i + 10), urls = (await invoke('app_icons', {sources:part.map(m => m.dataset.src)})) || [];
+      part.forEach((m, j) => { if (!urls[j]) return; iconCache.set(m.dataset.src, urls[j]); for (const el of WH.els){ const im = el.firstChild; if (im.dataset.src === m.dataset.src && !im.classList.contains('ok')){ im.src = urls[j]; im.classList.add('ok'); } } });
+    }
+  }, 90);
+}
+function whName(i){
+  const it = WH.items[i == null ? WH.sel : i];
+  $('whName').textContent = it ? it.name : WH.mode === 'apps' ? ($('whQ').value.trim() ? 'Nothing by that name' : '') : 'Nothing is open';
+}
+// Where everything is this instant: how far down the wheel has rolled, and each bead's place on the rim (it turns
+// as it comes down, so it rolls; the bead at the bottom is the one picked, and a little larger).
+function whDraw(){
+  const Rb = WH.R - 37, cy = WH.cy, phi = (WH.ty / WH.rest) * .95;
+  whBody.style.transform = `translate3d(0, ${WH.ty.toFixed(2)}px, 0)`;
+  WH.gw.style.transform = `translate3d(0, ${(-WH.ty).toFixed(2)}px, 0)`;     // (the glass's picture stays put while the glass moves)
+  for (let i = 0; i < WH.els.length; i++){
+    const el = WH.els[i], a = (i - WH.rot) * WH.step + phi, far = Math.abs(a) > 1.5;
+    if (far !== el._far){ el._far = far; el.classList.toggle('far', far); }
+    if (far) continue;
+    const s = 1 + .2 * Math.max(0, 1 - Math.abs(a) / WH.step);
+    el.style.transform = `translate3d(${(Rb * Math.sin(a)).toFixed(2)}px, ${(cy + Rb * Math.cos(a)).toFixed(2)}px, 0) scale(${s.toFixed(3)})`;
+    el.style.opacity = Math.max(0, Math.min(1, (1.4 - Math.abs(a)) / .2)).toFixed(2);
+    const sel = i === WH.sel; if (sel !== el._sel){ el._sel = sel; el.classList.toggle('sel', sel); }
+  }
+}
+function whRun(){ if (!WH.raf){ WH.t = performance.now(); WH.raf = requestAnimationFrame(whStep); } }
+function whStep(now){
+  WH.raf = 0;
+  const dt = Math.min(.032, Math.max(.004, (now - WH.t) / 1000)); WH.t = now;
   let moving = false;
-  // (a spring a little short of fully damped: things arrive, go a touch past, and settle, the way water does)
-  const go = (n, p, v, t) => { const d = n[t] - n[p]; n[v] += (d * 230 - n[v] * 21) * dt; n[p] += n[v] * dt; if (Math.abs(d) > .04 || Math.abs(n[v]) > .6) moving = true; else { n[p] = n[t]; n[v] = 0; } };
-  for (let i = LQ.nodes.length - 1; i >= 0; i--){
-    const n = LQ.nodes[i];
-    go(n, 'x', 'vx', 'tx'); go(n, 'r', 'vr', 'tr'); go(n, 'hw', 'vh', 'th'); go(n, 'y', 'vy', 'ty');
-    if (n.r < 0) n.r = 0;
-    if (n.dead && n.r < .6){ n.el.remove(); LQ.nodes.splice(i, 1); }
-  }
-  lqDraw();
-  if (moving) LQ.raf = requestAnimationFrame(lqStep);
+  // (springs a little short of fully damped: it comes down, goes a touch past, and settles)
+  let d = WH.tty - WH.ty; WH.vty += (d * 190 - WH.vty * 22) * dt; WH.ty += WH.vty * dt;
+  if (Math.abs(d) > .05 || Math.abs(WH.vty) > .8) moving = true; else { WH.ty = WH.tty; WH.vty = 0; }
+  d = WH.sel - WH.rot; WH.vrot += (d * 150 - WH.vrot * 19) * dt; WH.rot += WH.vrot * dt;
+  if (Math.abs(d) > .002 || Math.abs(WH.vrot) > .02) moving = true; else { WH.rot = WH.sel; WH.vrot = 0; }
+  whDraw();
+  if (moving) WH.raf = requestAnimationFrame(whStep);
 }
-// the neck of glass between two beads that are close (the standard construction for two merging circles)
-function lqBridge(c, x1, y1, r1, x2, y2, r2){
-  const d = Math.hypot(x2 - x1, y2 - y1), far = r1 + r2 * 2.5;
-  if (r1 < 1 || r2 < 1 || d > far || d <= Math.abs(r1 - r2)) return;
-  let u1 = 0, u2 = 0;
-  if (d < r1 + r2){ u1 = Math.acos((r1 * r1 + d * d - r2 * r2) / (2 * r1 * d)); u2 = Math.acos((r2 * r2 + d * d - r1 * r1) / (2 * r2 * d)); }
-  const v = .5 * Math.min(1, Math.max(0, (far - d) / Math.max(1, far - (r1 + r2)))) ** .5;   // (thinner as they part, gone at arm's length)
-  const a = Math.atan2(y2 - y1, x2 - x1), spread = Math.acos((r1 - r2) / d), Q = Math.PI / 2;
-  const a1 = a + u1 + (spread - u1) * v, a2 = a - u1 - (spread - u1) * v, a3 = a + Math.PI - u2 - (Math.PI - u2 - spread) * v, a4 = a - Math.PI + u2 + (Math.PI - u2 - spread) * v;
-  const P = (x, y, t, r) => [x + r * Math.cos(t), y + r * Math.sin(t)];
-  const p1 = P(x1, y1, a1, r1), p2 = P(x1, y1, a2, r1), p3 = P(x2, y2, a3, r2), p4 = P(x2, y2, a4, r2);
-  const k = Math.min(v * 2.4, Math.hypot(p1[0] - p3[0], p1[1] - p3[1]) / (r1 + r2)) * Math.min(1, d * 2 / (r1 + r2));
-  const h1 = P(p1[0], p1[1], a1 - Q, r1 * k), h2 = P(p2[0], p2[1], a2 + Q, r1 * k), h3 = P(p3[0], p3[1], a3 + Q, r2 * k), h4 = P(p4[0], p4[1], a4 - Q, r2 * k);
-  c.beginPath(); c.moveTo(p1[0], p1[1]); c.bezierCurveTo(h1[0], h1[1], h3[0], h3[1], p3[0], p3[1]); c.lineTo(p4[0], p4[1]); c.bezierCurveTo(h4[0], h4[1], h2[0], h2[1], p2[0], p2[1]); c.closePath(); c.fill();
+function whOpen(){
+  clearTimeout(WH.openT); clearTimeout(WH.closeT);
+  if (WH.open || !DK.on || wheel.classList.contains('away')) return;
+  closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles();
+  WH.open = true; wheel.classList.add('open'); WH.mode = 'open'; $('whQ').value = '';
+  whRender('active'); WH.tty = 0; whRun();
+  clearInterval(WH.blinkT); WH.blinkT = setInterval(() => { const b = $('whBlob'); b.classList.add('blink'); setTimeout(() => b.classList.remove('blink'), 130); }, 4600);
+  syncHit(); setTimeout(syncHit, 520);
 }
-function lqDraw(){
-  const cv = LQ.cv, W = innerWidth, H = LQ.H, dpr = Math.min(2, devicePixelRatio || 1);
-  if (LQ.W !== W || LQ.dpr !== dpr){
-    LQ.W = W; LQ.dpr = dpr;
-    for (const c of [cv, LQ.mask, LQ.tmp, LQ.ring]){ c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
-    LQ.cx = cv.getContext('2d'); LQ.mx = LQ.mask.getContext('2d'); LQ.tx = LQ.tmp.getContext('2d'); LQ.rx = LQ.ring.getContext('2d');
-  }
-  const cx = LQ.cx, mx = LQ.mx, tx = LQ.tx, rx = LQ.rx, y0 = H - DK.strip / 2, join = S.dkJoin !== 'apart', pw = cv.width, ph = cv.height;
-  // the shape: every bead, and the necks between neighbours of a kind
-  mx.setTransform(dpr, 0, 0, dpr, 0, 0); mx.clearRect(0, 0, W, H); mx.fillStyle = '#fff';
-  const beads = LQ.nodes.filter(n => n.kind !== 'home' && n.r > .4).sort((a, b) => a.x - b.x);
-  for (let i = 0; i < beads.length; i++){
-    const n = beads[i], y = y0 + n.y, m = beads[i + 1];
-    mx.beginPath(); mx.roundRect(n.x - n.hw - n.r, y - n.r, 2 * (n.hw + n.r), 2 * n.r, n.r); mx.fill();
-    if (join && m && m.group === n.group) lqBridge(mx, n.x + n.hw, y, n.r, m.x - m.hw, y0 + m.y, m.r);
-  }
-  // filled with what's behind it on the screen (the same picture the rest of ULTRON's glass is made of), then toned
-  cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over'; cx.clearRect(0, 0, pw, ph);
-  cx.drawImage(LQ.mask, 0, 0);
-  cx.globalCompositeOperation = 'source-in';
-  const top = innerHeight - H, live = glassBmp && document.documentElement.classList.contains('live');
-  if (!live && !LQ.wall && wallUrl){ LQ.wall = new Image(); LQ.wall.onload = lqRun; LQ.wall.src = wallUrl; }
-  if (live) cx.drawImage(glassBmp, 0, top / innerHeight * glassBmp.height, glassBmp.width, H / innerHeight * glassBmp.height, 0, 0, pw, ph);
-  else if (LQ.wall && LQ.wall.complete && LQ.wall.naturalWidth){ const sh = screen.height || innerHeight; cx.drawImage(LQ.wall, 0, top / sh * LQ.wall.naturalHeight, LQ.wall.naturalWidth, H / sh * LQ.wall.naturalHeight, 0, 0, pw, ph); }
-  else { cx.fillStyle = '#2b2f3c'; cx.fillRect(0, 0, pw, ph); }
-  cx.globalCompositeOperation = 'source-atop';
-  // (clear glass is a touch lighter than what's behind it, so it has a body on a dark wallpaper too; smoked is darker)
-  cx.fillStyle = S.dkTint === 'smoked' ? 'rgba(10,10,14,.6)' : 'rgba(255,255,255,.12)'; cx.fillRect(0, 0, pw, ph);
-  const g = cx.createLinearGradient(0, (y0 - 24) * dpr, 0, (y0 + 24) * dpr);
-  g.addColorStop(0, 'rgba(255,255,255,.2)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.22)');
-  cx.fillStyle = g; cx.fillRect(0, 0, pw, ph);
-  // its edge, all the way round: the shape, less the same shape drawn a hair smaller
-  const e = 1.1 * dpr;
-  tx.setTransform(1, 0, 0, 1, 0, 0); tx.globalCompositeOperation = 'source-over'; tx.clearRect(0, 0, pw, ph); tx.drawImage(LQ.mask, 0, 0);
-  tx.globalCompositeOperation = 'destination-in'; tx.drawImage(LQ.mask, e, 0); tx.drawImage(LQ.mask, -e, 0); tx.drawImage(LQ.mask, 0, e); tx.drawImage(LQ.mask, 0, -e);
-  rx.setTransform(1, 0, 0, 1, 0, 0); rx.globalCompositeOperation = 'source-over'; rx.clearRect(0, 0, pw, ph); rx.drawImage(LQ.mask, 0, 0);
-  rx.globalCompositeOperation = 'destination-out'; rx.drawImage(LQ.tmp, 0, 0);
-  cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = .3; cx.drawImage(LQ.ring, 0, 0);
-  // and a brighter light along its upper edge (the shape, less the same shape a hair lower)
-  tx.globalCompositeOperation = 'source-over'; tx.clearRect(0, 0, pw, ph); tx.drawImage(LQ.mask, 0, 0);
-  tx.globalCompositeOperation = 'destination-out'; tx.drawImage(LQ.mask, 0, 1.4 * dpr);
-  cx.globalAlpha = .5; cx.drawImage(LQ.tmp, 0, 0); cx.globalAlpha = 1;
-  // what rides on the beads
-  for (const n of LQ.nodes){
-    const base = n.kind === 'home' ? 24 : n.kind === 'ask' ? 18 : 19;
-    n.el.style.transform = `translate3d(${n.x.toFixed(2)}px, ${(y0 + n.y).toFixed(2)}px, 0) scale(${Math.max(0, Math.min(1.4, n.r / base)).toFixed(3)})`;
-  }
+function whClose(){
+  clearTimeout(WH.openT); clearTimeout(WH.closeT);
+  if (!WH.open) return;
+  WH.open = false; wheel.classList.remove('open'); clearInterval(WH.blinkT);
+  if (document.activeElement === $('whQ')) $('whQ').blur();
+  WH.tty = WH.rest; whRun(); setTimeout(syncHit, 380);
 }
-function lqTip(n){
-  const t = $('lqTip');
-  if (!n || !n.tip){ t.classList.remove('on'); return; }
-  t.textContent = n.tip;
-  const w = t.offsetWidth, x = Math.max(8, Math.min(innerWidth - w - 8, n.tx - w / 2));
-  t.style.transform = `translate3d(${x.toFixed(1)}px, ${(LQ.H - DK.strip - 38).toFixed(1)}px, 0)`; t.classList.add('on');
+function whSpin(by){
+  const n = WH.items.length; if (!n) return;
+  WH.sel = Math.max(0, Math.min(n - 1, WH.sel + by)); whName(); whRun(); whIcons();
 }
-// the blob looks at the pointer (two style values, and only when they'd change by something you could see)
-function lqEyes(x, y){
-  const h = lqHome(); if (!h || !S.dkEyes) return;
-  const dx = x - h.x, dy = y - (innerHeight - DK.strip / 2), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 200);
-  const ex = dx / d * 2.8 * k, ey = dy / d * 2.4 * k;
-  if (Math.abs(ex - LQ.ex) + Math.abs(ey - LQ.ey) < .12) return;
-  LQ.ex = ex; LQ.ey = ey; h.el.style.setProperty('--ex', ex.toFixed(2) + 'px'); h.el.style.setProperty('--ey', ey.toFixed(2) + 'px');
+// a bead is pressed: go to that window; an app with several shows them on the rim; an app that isn't open, opens
+function whAct(i){
+  const it = WH.items[i]; if (!it) return;
+  WH.sel = i; whName(); whRun();
+  const done = () => setTimeout(whClose, 240);
+  if (it.kind === 'launch'){ invoke('launch', {target:it.launch}); done(); }
+  else if (it.kind === 'win'){ invoke('dock_act', {id:it.w.id, what:'focus'}); done(); }
+  else if (!it.g.wins.length){ invoke('launch', {target:it.launch}); done(); }
+  else if (it.g.wins.length > 1){ WH.mode = 'wins'; WH.only = it.launch; whRender('first'); }
+  else { const w = it.g.wins[0]; invoke('dock_act', {id:w.id, what:w.active && !w.min ? 'min' : 'focus'}); done(); }
 }
-setInterval(() => { const h = DK.on && lqHome(); if (h && !bloom.classList.contains('open')){ h.el.classList.add('blink'); setTimeout(() => h.el.classList.remove('blink'), 130); } }, 5600);
+// the blob: the rim swaps between what's open and everything you can open (or comes back from one app's windows)
+function whSwap(){
+  if (WH.mode === 'open'){ WH.mode = 'apps'; $('whQ').value = ''; whRender('first'); setTimeout(() => $('whQ').focus({preventScroll:true}), 80); }
+  else { WH.mode = 'open'; $('whQ').blur(); whRender('active'); }
+}
+function whTile(){
+  const b = $('whTile');
+  (DK.tiled ? invoke('dock_untile').then(() => false) : invoke('dock_tile', {gap:Math.round(S.dkGap)}).then(c => c > 0)).then(on => {
+    DK.tiled = !!on; b.classList.toggle('on', DK.tiled); b.setAttribute('aria-label', DK.tiled ? 'Put the windows back' : 'Tile the windows');
+    $('whName').textContent = DK.tiled ? 'Tiled. Press again to put them back.' : 'Windows put back'; setTimeout(() => whName(), 1900);
+  });
+}
 // One bead an app: the ones pinned in Start first (when that's wanted), then whatever else is open.
 function dockWins(list){
   DK.wins = list;
   const open = new Map();
   for (const w of list){ const g = open.get(w.launch) || {launch:w.launch, name:w.name, wins:[]}; g.wins.push(w); open.set(w.launch, g); }
-  const pinned = !S.dkPins ? [] : (pins || []).slice(0, 6).map(l => { const a = startApps && startApps.find(x => x.launch === l); return a ? {launch:l, name:a.name, wins:(open.get(l) || {wins:[]}).wins} : null; }).filter(Boolean);
+  const pinned = !S.dkPins ? [] : (pins || []).slice(0, 8).map(l => { const a = startApps && startApps.find(x => x.launch === l); return a ? {launch:l, name:a.name, wins:(open.get(l) || {wins:[]}).wins} : null; }).filter(Boolean);
   DK.apps = [...pinned, ...[...open.values()].filter(g => !pinned.some(p => p.launch === g.launch))];
-  lqLayout();
-  for (const n of LQ.nodes) if (n.kind === 'app' && !n.dead && n.g){
-    const g = n.g;
-    n.el.classList.toggle('run', g.wins.length > 0); n.el.classList.toggle('act', g.wins.some(w => w.active));
-    n.tip = g.wins.length > 1 ? `${g.name}, ${g.wins.length} windows` : g.wins[0] ? g.wins[0].title : g.name;
-    n.el.setAttribute('aria-label', g.name);
-  }
-  loadIcons($('lqItems'));
-  if (dkw.classList.contains('open')) paintDkw();
-  syncHit();
+  if (WH.open && WH.mode !== 'apps') whRender();
+  // (their pictures are fetched as they turn up, so the wheel's first roll down already has them)
+  const need = DK.apps.map(g => g.launch).filter(l => !iconCache.has(l) && !DK.asked.has(l));
+  if (need.length){ need.forEach(l => DK.asked.add(l)); invoke('app_icons', {sources:need}).then(urls => (urls || []).forEach((u, i) => { if (u) iconCache.set(need[i], u); })); }
 }
-function lqStyle(){ if (DK.on){ dockWins(DK.wins); lqRun(); } }
+function whStyle(){ if (!DK.on) return; whGeom(); if (!WH.open) WH.ty = WH.tty = WH.rest; dockWins(DK.wins); whDraw(); whRun(); syncHit(); }
 async function dockOn(quiet){
   if (DK.on || DK.busy || !TAURI) return;
   DK.busy = true;
   try {
     if (!startApps) startApps = (await invoke('start_apps')) || [];
     pinnedApps();
-    const old = $('dkOld'), snap = quiet ? null : await invoke('dock_snap');
-    winH = Math.round(screen.height) - 2; await invoke('set_window_height', {h:winH}); await dkWait(160);
-    if (snap){ old.classList.remove('go'); old.style.backgroundImage = `url("${snap}")`; old.classList.add('hold'); await dkWait(60); }
-    const h = await invoke('dock_set', {on:true});          // (Windows' taskbar is hidden from here on)
-    DK.strip = h ? Math.round(h / devicePixelRatio) : 48; document.documentElement.style.setProperty('--strip', DK.strip + 'px');
-    DK.on = true;
-    const list = (await invoke('dock_list')) || [];
-    await dkWait(50);
-    document.body.classList.add('docked');
-    if (snap){ old.classList.remove('hold'); old.classList.add('go'); setTimeout(() => { old.classList.remove('go'); old.style.backgroundImage = ''; }, 800); }
-    setTimeout(() => dockWins(list), snap ? 240 : 0);        // (the beads grow in as the old taskbar clears)
-    setTimeout(async () => {                                 // (and the pictures for Start's rings are fetched now, so its first opening has them)
-      const p = pinnedApps(), want = [...p, ...startApps.filter(a => !p.includes(a))].slice(0, BL_SLOTS.length).map(a => a.launch).filter(l => !iconCache.has(l));
-      for (let i = 0; i < want.length; i += 9){ const part = want.slice(i, i + 9), urls = (await invoke('app_icons', {sources:part})) || []; part.forEach((l, j) => { if (urls[j]) iconCache.set(l, urls[j]); }); }
-    }, 1800);
-    invoke('backdrop_now'); setTimeout(syncHit, 1100);
+    await invoke('dock_set', {on:true});                    // (Windows' taskbar slides away, and its strip of the screen goes to your windows)
+    DK.on = true; whGeom();
+    WH.open = false; wheel.classList.remove('open'); WH.ty = WH.rest - 26; WH.tty = WH.rest; WH.vty = 0;
+    dockWins((await invoke('dock_list')) || []);
+    document.body.classList.add('docked'); whDraw(); whRun(); syncHit();
+    if (!quiet){ setTimeout(whOpen, 800); setTimeout(() => { if (!WH.over) whClose(); }, 3600); }      // (switched on by you: it shows itself once)
   } finally { DK.busy = false; }
 }
 async function dockOff(){
   if (!DK.on || DK.busy) return;
   DK.busy = true;
   try {
-    closeDkw(); closeBloom(); if (startEl.classList.contains('low')) closeStart();
-    if (DK.tiled){ DK.tiled = false; const t = LQ.nodes.find(n => n.kind === 'tile'); if (t){ t.el.classList.remove('on'); t.tip = LQ_TIP.tile; } }
-    document.body.classList.remove('docked'); DK.on = false; lqTip(null); syncHit();
-    await dkWait(480);
-    for (const n of LQ.nodes){ n.el.remove(); } LQ.nodes = []; if (LQ.cx) LQ.cx.clearRect(0, 0, LQ.cv.width, LQ.cv.height);
-    await invoke('dock_set', {on:false});                    // (Windows' taskbar is back)
-    winH = 700; await invoke('set_window_height', {h:700});
-    setTimeout(() => { invoke('backdrop_now'); syncHit(); }, 200);
+    whClose();
+    if (DK.tiled){ DK.tiled = false; $('whTile').classList.remove('on'); }
+    document.body.classList.remove('docked'); DK.on = false; syncHit();
+    await dkWait(320);
+    await invoke('dock_set', {on:false});                    // (Windows' taskbar is back, as it was)
   } finally { DK.busy = false; }
 }
-function lqClick(n){
-  n.vy -= 190; lqRun();                                      // (a little jump: it felt the press)
-  if (n.kind === 'app'){
-    const g = n.g;
-    if (!g.wins.length) invoke('launch', {target:g.launch});
-    else if (g.wins.length > 1) dkw.classList.contains('open') && DK.only === g.launch ? closeDkw() : openDkw(g.launch, n);
-    else invoke('dock_act', {id:g.wins[0].id, what:g.wins[0].active && !g.wins[0].min ? 'min' : 'focus'});
-  }
-  else if (n.kind === 'home') bloom.classList.contains('open') ? closeBloom() : openBloom();
-  else if (n.kind === 'wins') dkw.classList.contains('open') && !DK.only ? closeDkw() : openDkw('', n);
-  else if (n.kind === 'tile') (DK.tiled ? invoke('dock_untile').then(() => false) : invoke('dock_tile', {gap:Math.round(S.dkGap)}).then(c => c > 0)).then(on => { DK.tiled = !!on; n.el.classList.toggle('on', DK.tiled); n.tip = DK.tiled ? 'Put the windows back' : LQ_TIP.tile; });
-  else if (n.kind === 'ask'){ closePanels(); closeDD(); setOpen(true); if (activeTab !== 'assistant') selectTab('assistant'); setTimeout(() => $('askIn').focus({preventScroll:true}), 380); }
-}
-$('lqItems').addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('.lq-b'); if (b && b._n && !b._n.dead) lqClick(b._n); });
-$('lqItems').addEventListener('pointerdown', e => { e.stopPropagation(); const b = e.target.closest('.lq-b'); if (b && b._n){ b._n.press = true; lqLayout(); } });
-addEventListener('pointerup', () => { let any = false; for (const n of LQ.nodes) if (n.press){ n.press = false; any = true; } if (any) lqLayout(); });
-addEventListener('resize', () => { if (DK.on) lqLayout(); });
-
-/* the open windows */
-function paintDkw(){
-  const list = DK.wins.filter(w => !DK.only || w.launch === DK.only);
-  if (DK.only && !list.length) return closeDkw();
-  $('dkwIn').innerHTML = `<div class="dkw-h"><span>${DK.only ? esc(list[0].name) : 'Open windows'}</span><span>${list.length}</span></div>`
-    + (list.map((w, i) => `<div class="dkw-row${w.active ? ' act' : ''}" role="button" tabindex="0" data-id="${w.id}" style="--i:${i}"><img data-src="${esc(w.launch)}" ${iconCache.get(w.launch) ? `src="${iconCache.get(w.launch)}" class="ok"` : ''} alt=""><b>${esc(w.title)}</b><span>${esc(w.name)}</span><button class="dkw-x" data-x="${w.id}" aria-label="Close this window">✕</button></div>`).join('')
-      || '<div class="empty-s">Nothing is open.</div>');
-  loadIcons($('dkwIn')); placeGlass(dkw); syncHit();
-}
-function openDkw(only, from){
-  closeDD(); closeBloom(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles();
-  DK.only = only || '';
-  const w = Math.min(440, innerWidth * .92), at = from ? from.tx : innerWidth / 2;
-  dkw.style.left = Math.round(Math.max(8, Math.min(innerWidth - w - 8, at - w / 2))) + 'px';
-  dkw.classList.remove('open'); paintDkw(); void dkw.offsetWidth; dkw.classList.add('open');
-  syncHit(); setTimeout(syncHit, 460);
-}
-function closeDkw(){
-  if (!dkw.classList.contains('open')) return;
-  dkw.classList.remove('open'); setTimeout(syncHit, 280);
-}
 listen('dock-wins', l => { if (DK.on) dockWins(l || []); });
-dkw.addEventListener('click', e => {
+whDisc.addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'click'){ clearTimeout(WH.openT); WH.openT = setTimeout(whOpen, 80); } });
+whBody.addEventListener('pointerenter', () => { WH.over = true; clearTimeout(WH.closeT); });
+whBody.addEventListener('pointerleave', () => {
+  WH.over = false; clearTimeout(WH.openT);
+  if (WH.open && document.activeElement !== $('whQ')){ clearTimeout(WH.closeT); WH.closeT = setTimeout(whClose, 420); }
+  whName();
+});
+whBody.addEventListener('pointermove', e => {                // (the blob looks at the pointer)
+  if (!WH.open || !S.dkEyes) return;
+  const dx = e.clientX - innerWidth / 2, dy = e.clientY - (WH.cy + 146 * WH.R / 250), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 110), ex = dx / d * 2.6 * k, ey = dy / d * 2.2 * k;
+  if (Math.abs(ex - WH.ex) + Math.abs(ey - WH.ey) < .15) return;
+  WH.ex = ex; WH.ey = ey; const b = $('whBlob'); b.style.setProperty('--ex', ex.toFixed(2) + 'px'); b.style.setProperty('--ey', ey.toFixed(2) + 'px');
+});
+whBody.addEventListener('wheel', e => { e.preventDefault(); if (WH.open) whSpin(e.deltaY > 0 || e.deltaX > 0 ? 1 : -1); }, {passive:false});
+wheel.addEventListener('pointerdown', e => e.stopPropagation());
+wheel.addEventListener('click', e => {
   e.stopPropagation();
-  const x = e.target.closest('.dkw-x'), row = e.target.closest('.dkw-row');
-  if (x){ row.classList.add('bye'); invoke('dock_act', {id:x.dataset.x, what:'close'}); }
-  else if (row){ invoke('dock_act', {id:row.dataset.id, what:'focus'}); closeDkw(); }
+  if (!WH.open) return whOpen();
+  const b = e.target.closest('.wh-b');
+  if (b) whAct(+b.dataset.i);
+  else if (e.target.closest('#whBlob')) whSwap();
+  else if (e.target.closest('#whTile')) whTile();
+  else if (e.target.closest('#whAsk')){ whClose(); closeDD(); setOpen(true); if (activeTab !== 'assistant') selectTab('assistant'); setTimeout(() => $('askIn').focus({preventScroll:true}), 380); }
 });
-dkw.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('dkw-row')) e.target.click(); });
-
-/* Start, from the blob. Your apps sit on three rings around where the blob is: the ones you pinned nearest, in the
-   middle of each ring first. Rest the pointer on one and its name is said at the centre; type, and the rings fill
-   with what matches (Enter opens the first). Every app, in a list, is one press away at the left. */
-var BL = {items:[], sel:0};
-const BL_SLOTS = (() => {
-  const out = [];
-  [[112, 5, 24], [186, 9, 14], [260, 13, 12]].forEach(([r, n, pad], k) => {
-    const order = [...Array(n).keys()].sort((a, b) => Math.abs(a - (n - 1) / 2) - Math.abs(b - (n - 1) / 2));
-    for (const i of order){ const t = Math.PI - (pad + i * (180 - 2 * pad) / (n - 1)) * Math.PI / 180; out.push({x:300 + r * Math.cos(t), y:306 - r * Math.sin(t), k}); }
-  });
-  return out;
-})();
-function bloomHello(){ const h = new Date().getHours(); return (h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + (userName ? ', ' + userName : ''); }
-function bloomName(t, dim){ const n = $('blName'); n.textContent = t; n.classList.toggle('dim', !!dim); }
-function bloomList(q){
-  q = q.trim().toLowerCase();
-  let list;
-  if (!q){ const p = pinnedApps(); list = [...p, ...startApps.filter(a => !p.includes(a))]; }
-  else {
-    const rank = a => { const n = a.name.toLowerCase(); return n.startsWith(q) ? 0 : n.split(/[\s\-_.]+/).some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : 9; };
-    list = startApps.map(a => [rank(a), a]).filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name)).map(x => x[1]);
-  }
-  BL.items = list.slice(0, BL_SLOTS.length); BL.sel = 0;
-  $('blRing').innerHTML = BL.items.map((a, i) => { const s = BL_SLOTS[i], u = iconCache.get(a.launch);
-    return `<button class="bl-a${q && !i ? ' sel' : ''}" data-i="${i}" aria-label="${esc(a.name)}" style="left:${(s.x - 23).toFixed(1)}px; top:${(s.y - 23).toFixed(1)}px; --hx:${(300 - s.x).toFixed(1)}px; --hy:${(306 - s.y).toFixed(1)}px; --k:${s.k}"><img data-src="${esc(a.launch)}" ${u ? `src="${u}" class="ok"` : ''} alt=""><span class="fbk">${esc(a.name.charAt(0).toUpperCase())}</span></button>`; }).join('');
-  loadIcons($('blRing'));
-  if (q) bloomName(BL.items.length ? BL.items[0].name : `Nothing called “${q}”`, !BL.items.length); else bloomName(bloomHello(), true);
-}
-function bloomPick(i){ BL.sel = (i + BL.items.length) % Math.max(1, BL.items.length); $('blRing').querySelectorAll('.bl-a').forEach((b, k) => b.classList.toggle('sel', k === BL.sel)); if (BL.items[BL.sel]) bloomName(BL.items[BL.sel].name); }
-function bloomGo(a){ if (!a) return; closeBloom(); invoke('launch', {target:a.launch}); const h = lqHome(); if (h){ h.vy -= 260; lqRun(); } }
-async function openBloom(){
-  if (!startApps) startApps = (await invoke('start_apps')) || [];
-  closeDD(); closeDkw(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles();
-  const h = lqHome(), at = Math.max(308, Math.min(innerWidth - 308, h ? h.tx : innerWidth / 2));
-  bloom.style.left = Math.round(at - 300) + 'px';
-  $('blQ').value = ''; $('blPwRow').classList.remove('open'); bloomList('');
-  placeGlass(bloom);
-  bloom.classList.remove('now', 'open'); void bloom.offsetWidth; bloom.classList.add('open');
-  if (h){ h.el.classList.add('open'); h.vy -= 230; lqRun(); }
-  clearTimeout(BL.t); BL.t = setTimeout(() => { if (bloom.classList.contains('open')) bloom.classList.add('now'); }, 900);   // (once it has opened, the apps answer the pointer at once)
-  syncHit(); setTimeout(syncHit, 520); setTimeout(() => $('blQ').focus({preventScroll:true}), 90);
-}
-function closeBloom(){
-  if (!bloom.classList.contains('open')) return;
-  bloom.classList.remove('open', 'now'); $('blPwRow').classList.remove('open');
-  const h = lqHome(); if (h) h.el.classList.remove('open');
-  setTimeout(syncHit, 300);
-}
-$('blQ').addEventListener('input', () => { bloom.classList.add('now'); bloomList($('blQ').value); });
-$('blQ').addEventListener('keydown', e => {
+wheel.addEventListener('auxclick', e => {                    // (the middle button on a bead closes its window, or all of that app's)
+  const b = e.target.closest('.wh-b'); if (!b || e.button !== 1) return;
+  e.preventDefault(); e.stopPropagation();
+  const it = WH.items[+b.dataset.i], ids = !it ? [] : it.kind === 'win' ? [it.w.id] : it.kind === 'app' ? it.g.wins.map(w => w.id) : [];
+  ids.forEach(id => invoke('dock_act', {id, what:'close'}));
+});
+$('whRim').addEventListener('pointerover', e => { const b = e.target.closest('.wh-b'); if (b) whName(+b.dataset.i); });
+$('whQ').addEventListener('input', () => whRender('first'));
+$('whQ').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.key === 'Enter') bloomGo(BL.items[BL.sel]);
-  else if (e.key === 'Escape') closeBloom();
-  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); bloom.classList.add('now'); bloomPick(BL.sel + 1); }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); bloom.classList.add('now'); bloomPick(BL.sel - 1); }
+  if (e.key === 'Enter') whAct(WH.sel);
+  else if (e.key === 'Escape'){ if ($('whQ').value){ $('whQ').value = ''; whRender('first'); } else whClose(); }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); whSpin(1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); whSpin(-1); }
 });
-bloom.addEventListener('click', e => {
-  e.stopPropagation();
-  const a = e.target.closest('.bl-a'), pw = e.target.closest('[data-pw]');
-  if (a) bloomGo(BL.items[+a.dataset.i]);
-  else if (pw){ const act = pw.dataset.pw; closeBloom(); setTimeout(() => invoke('power', {action:act}), 300); }
-  else if (e.target.closest('#blPw')) $('blPwRow').classList.toggle('open');
-  else if (e.target.closest('#blAll')){ closeBloom(); DK.low = true; openStart(); }
-  else { $('blPwRow').classList.remove('open'); $('blQ').focus({preventScroll:true}); }
-});
-$('blRing').addEventListener('pointerover', e => { const a = e.target.closest('.bl-a'); if (a && BL.items[+a.dataset.i]) bloomName(BL.items[+a.dataset.i].name); });
-$('blRing').addEventListener('pointerleave', () => { const q = $('blQ').value.trim(); if (q && BL.items[BL.sel]) bloomName(BL.items[BL.sel].name); else if (!q) bloomName(bloomHello(), true); });
-addEventListener('pointerdown', e => {
-  const inDock = e.target.closest('#dock');
-  if (dkw.classList.contains('open') && !e.target.closest('#dkw') && !inDock) closeDkw();
-  if (bloom.classList.contains('open') && !e.target.closest('#bloom') && !inDock) closeBloom();
-});
+addEventListener('pointerdown', e => { if (WH.open && !e.target.closest('#wheel')) whClose(); });
+addEventListener('resize', () => { if (DK.on){ whGeom(); whDraw(); } });
+// while the notch is open (it comes down over the same place), the wheel stands aside
+new MutationObserver(() => {
+  const away = notch.classList.contains('open') || notch.classList.contains('call');
+  if (away === wheel.classList.contains('away')) return;
+  if (away) whClose();
+  wheel.classList.toggle('away', away); syncHit();
+}).observe(notch, {attributes:true, attributeFilter:['class']});
 if (TAURI) setTimeout(() => { if (S.dock === 'ultron') dockOn(true); else invoke('dock_set', {on:false}); }, 2600);   // (off: Windows' taskbar is made sure of, in case ULTRON was ended while its own was up)
 
 /* ---------- developer tools: only when ULTRON is started with ULTRON_DEV_INBOX=1 ----------

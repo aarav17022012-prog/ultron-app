@@ -293,7 +293,7 @@ fn quit(app: &AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(560));
         appbar::remove();
-        dock::taskbar(true);
+        dock::leave(&app);
         app.exit(0);
     });
 }
@@ -1047,7 +1047,7 @@ fn main() {
                 see::shutdown();
                 quick::shutdown();
                 appbar::remove(); // always give the screen space back
-                dock::taskbar(true); // (and Windows its taskbar)
+                dock::leave(app); // (and Windows its taskbar)
             }
         });
 }
