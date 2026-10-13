@@ -17,6 +17,7 @@ mod calls;
 mod kids;
 mod rec;
 mod squeeze;
+mod veil;
 mod wall;
 mod icons;
 mod cloud;
@@ -669,8 +670,8 @@ async fn wall_list(app: AppHandle) -> serde_json::Value {
 
 /// Make one of ULTRON's wallpapers ("our:dusk") or a picture of yours (its path) the wallpaper.
 #[tauri::command]
-async fn wall_apply(app: AppHandle, pick: String) -> Result<serde_json::Value, String> {
-    tauri::async_runtime::spawn_blocking(move || wall::apply(&app, &pick)).await.map_err(|e| e.to_string())?
+async fn wall_apply(app: AppHandle, pick: String, dry: Option<bool>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || wall::apply(&app, &pick, dry.unwrap_or(false))).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
