@@ -302,7 +302,10 @@ fn voice_status(voice: State<Voice>) -> voice::VoiceStatus {
 }
 
 #[tauri::command]
-fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>) {
+fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>) {
+    if let Some(w) = wake {
+        voice.wake.store(w, std::sync::atomic::Ordering::SeqCst);
+    }
     if let Some(p) = paused {
         voice.set_paused(p);
     }

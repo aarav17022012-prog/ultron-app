@@ -31,6 +31,8 @@ pub struct VoiceStatus {
 pub struct Voice {
     paused: AtomicBool,
     ready: AtomicBool,
+    /// Only speech that starts with "Ultron" would be acted on just now (the page says so).
+    pub wake: AtomicBool,
     sens: AtomicU32, // f32 bits
     prompt: Mutex<String>,
     status: Mutex<VoiceStatus>,
@@ -42,6 +44,7 @@ impl Default for Voice {
         Voice {
             paused: AtomicBool::new(false),
             ready: AtomicBool::new(false),
+            wake: AtomicBool::new(false),
             sens: AtomicU32::new(1.0f32.to_bits()),
             prompt: Mutex::new(String::new()),
             status: Mutex::new(VoiceStatus { state: "loading".into(), ..Default::default() }),
@@ -267,6 +270,13 @@ pub fn params<'a>(prompt: &'a str, threads: i32, samples: usize) -> FullParams<'
     p
 }
 
+/// "Ultron", or one of the ways the recognizer writes it, somewhere in this.
+fn has_wake(text: &str) -> bool {
+    let l = text.to_lowercase();
+    let squashed: String = l.chars().filter(|c| c.is_alphanumeric()).collect();
+    squashed.contains("ultron") || l.split(|c: char| !c.is_alphanumeric()).any(|w| ["ultra", "altron", "ultran", "ultrum", "ultrom", "alltron"].contains(&w))
+}
+
 fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
     let path = match model_path(&app) {
         Ok(p) => p,
@@ -302,6 +312,38 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
         let music = app.state::<crate::media::Media>().state.lock().unwrap().sessions.iter().any(|s| s.playing);
         let seg = if music && seg.len() > RATE * 9 { seg[..RATE * 5].to_vec() } else { seg };
         let wake_only = music && seg.len() == RATE * 5;
+        // A song with words in it is "speech" phrase after phrase, and each was transcribed in full (about a second on
+        // half the processor's cores) to find that it wasn't for ULTRON. While a song plays and only "Ultron ..." would
+        // be acted on, the first three seconds are checked for the name the quick way, and the careful transcription
+        // is kept for when it's there.
+        if music && !wake_only && voice.wake.load(Ordering::SeqCst) {
+            let t0 = std::time::Instant::now();
+            let head = prepare(&seg[..seg.len().min(RATE * 3)]);
+            let mut q = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+            q.set_language(Some("en"));
+            q.set_n_threads(threads.min(4));
+            q.set_no_context(true);
+            q.set_single_segment(true);
+            q.set_no_timestamps(true);
+            q.set_print_special(false);
+            q.set_print_progress(false);
+            q.set_print_realtime(false);
+            q.set_print_timestamps(false);
+            q.set_audio_ctx(384);
+            let mut start = String::new();
+            if state.full(q, &head).is_ok() {
+                for s in state.as_iter() {
+                    if let Ok(t) = s.to_str_lossy() {
+                        start.push_str(&t);
+                    }
+                }
+            }
+            if !has_wake(&start) {
+                crate::log_line(&format!("heard {:.1}s while a song played: no \"Ultron\" at its start (checked in {} ms)", seg.len() as f32 / RATE as f32, t0.elapsed().as_millis()));
+                set_status(&app, if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" }, "", 0.0);
+                continue;
+            }
+        }
         set_status(&app, "transcribing", "", 0.0);
         let audio = prepare(&seg);
         let prompt = voice.prompt.lock().unwrap().clone();
@@ -329,7 +371,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
         let text = text.trim().to_string();
         crate::log_line(&format!("heard {:.1}s in {} ms: {text:?} (no-speech {no_speech:.2})", seg.len() as f32 / RATE as f32, t0.elapsed().as_millis()));
         let back = if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" };
-        let woke = text.to_lowercase().split(|c: char| !c.is_alphanumeric()).any(|w| ["ultron", "ultra", "altron", "ultran", "ultrum", "ultrom", "alltron"].contains(&w));
+        let woke = has_wake(&text);
         if no_speech < 0.6 && !is_noise(&text) && (!wake_only || woke) {
             let _ = app.emit_to("main", "heard", &text);
         }
@@ -585,6 +627,19 @@ mod tests {
             state.full(p, &audio).unwrap();
             let text: String = state.as_iter().filter_map(|s| s.to_str_lossy().ok().map(|t| t.to_string())).collect();
             println!("{:>5} ms  {:?}  <- {}", t0.elapsed().as_millis(), text.trim(), f.file_name().unwrap().to_string_lossy());
+        }
+    }
+}
+
+#[cfg(test)]
+mod wake_tests {
+    #[test]
+    fn the_name_is_found_however_it_is_written() {
+        for t in ["Ultron, pause the music.", " ultron open spotify", "Hey Ul tron!", "Ultra, next song", "OK, Alltron."] {
+            assert!(super::has_wake(t), "{t}");
+        }
+        for t in ["and I will always love you", "ultrasound of the heart", "we are the champions", ""] {
+            assert!(!super::has_wake(t), "{t}");
         }
     }
 }

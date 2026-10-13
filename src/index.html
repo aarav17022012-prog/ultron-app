@@ -4447,6 +4447,15 @@ muteBtn.addEventListener('click', e => {
   if (S.muted) micTarget = 0;
 });
 
+/* The recognizer is told when only "Ultron ..." would be acted on (the wake word is on, and no follow-up, tap on the mic,
+   yes-or-no, call or tour is waiting for plain speech). While a song plays it then checks just the start of what it
+   hears for the name, instead of carefully transcribing every line of the song. */
+var wakeTold = null;
+setInterval(() => {
+  const need = !!S.wake && Date.now() > followUntil + 500 && !pttUntil && !tourOn && !pendingSend && !document.body.classList.contains('intro') && !notch.classList.contains('call');
+  if (need !== wakeTold){ wakeTold = need; invoke('voice_config', {wake:need}); }
+}, 500);
+
 /* teach the recognizer the words you're likely to say (app names especially) */
 async function pushPrompt(){
   const names = (await invoke('app_names')) || [];
