@@ -237,6 +237,38 @@ pub fn act(id: &str, what: &str) {
     }
 }
 
+/// What an app's jump list shows as recent: Windows' own list for that app (the one its taskbar button offers),
+/// as (name, where it is). `aumid` is the app's id in shell:AppsFolder.
+pub fn recent(aumid: &str, n: u32) -> Vec<(String, String)> {
+    use windows::core::HSTRING;
+    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED};
+    use windows::Win32::UI::Shell::Common::IObjectArray;
+    use windows::Win32::UI::Shell::{ApplicationDocumentLists, IApplicationDocumentLists, IShellItem, ADLT_RECENT, SIGDN_DESKTOPABSOLUTEPARSING, SIGDN_NORMALDISPLAY};
+    let mut out = Vec::new();
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        let Ok(dl) = CoCreateInstance::<_, IApplicationDocumentLists>(&ApplicationDocumentLists, None, CLSCTX_INPROC_SERVER) else { return out };
+        if dl.SetAppID(&HSTRING::from(aumid)).is_err() {
+            return out;
+        }
+        let Ok(list) = dl.GetList::<IObjectArray>(ADLT_RECENT, n) else { return out };
+        let take = |p: windows::core::PWSTR| {
+            let s = p.to_string().unwrap_or_default();
+            CoTaskMemFree(Some(p.0 as _));
+            s
+        };
+        for i in 0..list.GetCount().unwrap_or(0) {
+            let Ok(item) = list.GetAt::<IShellItem>(i) else { continue };
+            let name = item.GetDisplayName(SIGDN_NORMALDISPLAY).map(take).unwrap_or_default();
+            let path = item.GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING).map(take).unwrap_or_default();
+            if !name.is_empty() && !path.is_empty() {
+                out.push((name, path));
+            }
+        }
+    }
+    out
+}
+
 /// Where `n` windows go in `area`, with `gap` between them and around them: one fills it, two share it,
 /// more put the first on the left (a little over half) and stack the rest on the right; past six, a grid.
 pub fn layout(n: usize, area: RECT, gap: i32) -> Vec<RECT> {

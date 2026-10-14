@@ -1499,16 +1499,16 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
 @keyframes clHum{50%{transform:translateY(-1.5px)}}
 .cl-stage.run .cl-mach{animation:clShake .12s linear infinite}
 @keyframes clShake{25%{transform:translate(.6px, -.5px)} 75%{transform:translate(-.6px, .5px)}}
-.cl-card{position:absolute; top:0; left:50%; width:48px; height:60px; margin-left:-24px; padding:9px 7px 0; border-radius:8px; overflow:hidden;
-  background:linear-gradient(160deg, rgba(255,255,255,.36), rgba(255,255,255,.12)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.38), 0 6px 14px rgba(0,0,0,.25);
+.cl-card{position:absolute; top:0; left:50%; width:48px; height:60px; margin-left:-24px; padding:10px 7px 0; border-radius:3px; overflow:hidden;
+  background:#f6f6f8; box-shadow:0 6px 14px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2); text-shadow:none;
   animation:clDrop .95s cubic-bezier(.45,0,.6,1) forwards}
-.cl-card::before{content:""; position:absolute; right:0; top:0; width:12px; height:12px; background:linear-gradient(225deg, rgba(10,10,14,.55) 50%, rgba(255,255,255,.5) 50%)}
-.cl-card i{display:block; height:3px; margin-bottom:5px; border-radius:2px; background:rgba(255,255,255,.55)}
+.cl-card::before{content:""; position:absolute; right:0; top:0; width:11px; height:11px; background:linear-gradient(225deg, #23232b 50%, #d9d9df 50%)}
+.cl-card i{display:block; height:3px; margin-bottom:5px; border-radius:2px; background:#c9c9d0}
 .cl-card i:nth-child(2){width:70%} .cl-card i:nth-child(3){width:85%}
-.cl-card span{position:absolute; left:4px; right:4px; bottom:5px; font-size:6.5px; font-weight:700; color:rgba(255,255,255,.85); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center}
+.cl-card span{position:absolute; left:4px; right:4px; bottom:5px; font-size:6.5px; font-weight:700; color:#5a5a63; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center}
 @keyframes clDrop{0%{transform:translate(var(--x), -72px) rotate(var(--r)); opacity:0} 16%{opacity:1} 55%{transform:translate(calc(var(--x) * .25), 8px) rotate(calc(var(--r) * .2))} 100%{transform:translate(0, 100px) rotate(0)}}
 .cl-strip{position:absolute; top:0; left:50%; width:5px; height:var(--h, 44px); margin-left:var(--x, 0); border-radius:2px;
-  background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.16)); animation:clStrip 1.25s cubic-bezier(.35,0,.7,1) forwards; animation-delay:var(--d, 0ms)}
+  background:linear-gradient(180deg, #f6f6f8, #e2e2e7); box-shadow:0 2px 4px rgba(0,0,0,.25); animation:clStrip 1.25s cubic-bezier(.35,0,.7,1) forwards; animation-delay:var(--d, 0ms)}
 @keyframes clStrip{0%{transform:translateY(calc(-1 * var(--h, 44px))); opacity:1} 100%{transform:translate(var(--dx, 0), 96px) rotate(var(--rot, 0)); opacity:0}}
 .cl-ok{position:absolute; z-index:3; left:50%; top:46px; width:38px; height:38px; margin-left:-19px; display:grid; place-items:center; border-radius:50%; background:#30d158;
   box-shadow:0 0 0 6px rgba(48,209,88,.16); opacity:0; transform:scale(.3)}
@@ -1581,6 +1581,71 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
 .reply .md .caret{height:.95em}
 @keyframes mdIn{from{opacity:0; transform:translateY(5px)}}
 @keyframes mdBadge{from{opacity:0; transform:scale(.4)}}
+
+/* ---------- no notch: ULTRON sits in the bar itself, and the bar pours down into a sheet of its own glass ----------
+   Closed, there's only the character, its name and its listening bars on the bar (a faint glow under them at a
+   touch). Opened, the sheet's top is the bar exactly (the same tint, the same light along the top, no line between),
+   deepening below so what's in it reads; the bar's own hairline runs into its sides. It widens along the bar first,
+   then pours down; closing, it draws back up into the bar before it narrows away. No outline anywhere. (All of it is
+   .notch.glass: the old notch rules come later in the file and won at equal weight.) */
+.notch.glass{background:transparent; box-shadow:none}
+.notch.glass::after{display:none}
+.notch.glass:not(.open):not(.call){border-radius:0 0 14px 14px}
+.notch.glass.hover:not(.open):not(.call){background:radial-gradient(70% 120% at 50% 0%, rgba(255,255,255,.1), transparent 70%)}
+.notch.glass > .gw, .notch.glass::before{opacity:0; transition:opacity .26s ease .16s}
+html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
+.notch.glass.open > .gw, .notch.glass.open::before, .notch.glass.call > .gw, .notch.glass.call::before, html.live .notch.glass.open > .gw, html.live .notch.glass.call > .gw{opacity:1; transition:opacity .16s ease}
+.notch.glass.open::before, .notch.glass.call::before{
+  background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 13.5px),
+    linear-gradient(180deg, rgba(16,16,20,.34) 0, rgba(16,16,20,.34) var(--bar), rgba(14,14,20,.58) calc(var(--bar) + 80px))}
+.notch.glass.open, .notch.glass.call:not(.open){box-shadow:0 26px 60px -8px rgba(0,0,0,.45), 0 10px 20px -10px rgba(0,0,0,.3)}
+.notch.glass.open{transition:width .34s cubic-bezier(.3,.7,.2,1), height .56s cubic-bezier(.22,1,.36,1) .06s, border-radius .5s var(--glide), box-shadow .5s var(--glide), margin-left .34s cubic-bezier(.3,.7,.2,1)}
+.notch.glass.open.flow{transition:width .34s cubic-bezier(.3,.7,.2,1), border-radius .5s var(--glide), box-shadow .5s var(--glide), margin-left .34s cubic-bezier(.3,.7,.2,1)}
+.notch.glass:not(.open){transition:height .34s cubic-bezier(.5,0,.7,.4), width .3s var(--glide) .2s, border-radius .4s var(--glide), box-shadow .3s ease, margin-left .3s var(--glide) .2s, translate .5s var(--glide), opacity .3s}
+.ears{display:none !important}
+
+/* ---------- the wheel: right-click an app for what Windows' taskbar offers, in glass ---------- */
+.wm{position:fixed; z-index:46; top:0; left:0; width:268px; border-radius:16px; color:#fff; --tint:rgba(16,16,22,.55); text-shadow:0 1px 2px rgba(0,0,0,.25);
+  opacity:0; visibility:hidden; pointer-events:none; transform:scale(.72); transform-origin:var(--ox, 50%) var(--oy, 0); filter:blur(3px);
+  transition:opacity .2s, transform .28s cubic-bezier(.5,0,.75,0), filter .2s, visibility 0s .28s}
+.wm.open{opacity:1; visibility:visible; pointer-events:auto; transform:none; filter:none; transition:opacity .16s, transform .5s cubic-bezier(.22,1,.36,1), filter .25s, visibility 0s}
+.wm-in{padding:6px}
+.wm-h{padding:7px 10px 4px; font-size:11.5px; font-weight:650; color:rgba(255,255,255,.55)}
+.wm-o{display:flex; align-items:center; gap:10px; width:100%; height:36px; padding:0 10px; border:0; border-radius:10px; background:none; color:#fff; font:inherit; font-size:13px; text-align:left; cursor:default;
+  transition:background .15s, transform .25s var(--spring)}
+.wm-o:hover{background:rgba(255,255,255,.14)} .wm-o:active{transform:scale(.97)}
+.wm-o svg{width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; opacity:.85}
+.wm-o img{width:18px; height:18px; flex:none; object-fit:contain}
+.wm-o span{min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.wm-app{font-weight:650}
+.wm-x{color:#ff9d94}
+.wm-sep{height:1px; margin:5px 8px; background:rgba(255,255,255,.1)}
+.wm.open .wm-o, .wm.open .wm-h, .wm.open .wm-sep{animation:wmIn .42s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 32ms + 50ms)}
+.wm-rec .wm-o, .wm-rec .wm-h, .wm-rec .wm-sep{animation:wmIn .42s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 32ms)}
+@keyframes wmIn{from{opacity:0; transform:translateY(-5px)}}
+
+/* ---------- floating lyrics: the line lights up as it's sung, left to right in time with the song (a soft edge going
+   across it), and when it's done it lifts away while the next one, waiting small underneath, rises into its place.
+   Flat and calm: no drum, no tilt, no blur. */
+.fl-txt{perspective:none}
+.fl-ln.next{transform:none}
+.fl-sing{background:linear-gradient(90deg, #fff 0%, #fff 45%, rgba(255,255,255,.38) 55%, rgba(255,255,255,.38) 100%); background-size:220% 100%; background-position:100% 0;
+  -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
+  animation:flSing var(--dur, 4s) linear forwards; animation-delay:calc(-1 * var(--at, 0s))}
+@keyframes flSing{to{background-position:0 0}}
+.flyr:not(.playing) .fl-sing{animation-play-state:paused}
+.fl-ln.cur.still .fl-sing{animation:none; background-position:0 0}
+.fl-ln.cur{text-shadow:none}
+.fl-ln.cur.up{animation:flUp .62s cubic-bezier(.22,1,.36,1) both}
+@keyframes flUp{from{transform:translateY(35px) scale(var(--from, .62)); opacity:.55}}
+.fl-ln.cur.fresh{animation:flIn .5s cubic-bezier(.22,1,.36,1) both}
+@keyframes flIn{from{transform:translateY(10px); opacity:0}}
+.fl-ln.gone{animation:flLeave .4s cubic-bezier(.4,0,.6,1) forwards}
+@keyframes flLeave{35%{opacity:.2} to{transform:translateY(-22px); opacity:0}}   /* (it's mostly gone before the next line reaches it) */
+.fl-ln.next.gone{animation:flLeaveNext .22s ease-in forwards}
+@keyframes flLeaveNext{to{opacity:0}}
+.fl-ln.next.rise{animation:flNext .55s cubic-bezier(.22,1,.36,1) .14s both}
+@keyframes flNext{from{transform:translateY(12px); opacity:0}}
 
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
@@ -2311,6 +2376,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 <div class="mlw glass panel-glass" id="mailw" role="dialog" aria-label="Email"><i class="gw"></i><div class="ml-in" id="mlIn"></div></div>
 <div class="nfw glass panel-glass" id="nfw" role="dialog" aria-label="Notifications"><i class="gw"></i><div class="nf-in" id="nfIn"></div></div>
 <div class="cp glass panel-glass" id="cp" role="listbox" aria-label="Country"><i class="gw"></i><div class="cp-in"></div></div>
+<div class="wm glass panel-glass" id="whMenu" role="menu" aria-label="App"><i class="gw"></i><div class="wm-in"></div></div>
 <div class="nf-stack" id="nfStack" aria-live="polite"></div>
 <div class="mlw glass panel-glass" id="recw" role="dialog" aria-label="Recording"><i class="gw"></i><div class="ml-in"><button class="ml-sum rc-b" id="rcGo" style="--i:0"><i class="rc-ic"></i><span>Record</span><span class="rc-k" data-k="R"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>R</kbd></span></button><button class="ml-sum rc-b" id="rcStop" style="--i:1"><i class="rc-ic sq"></i><span>Stop</span><span class="rc-k" data-k="S"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>S</kbd></span></button><div class="ai-ft"><span><i></i><span id="rcNote">Documents › ULTRON Files › Recordings</span></span><button class="ml-link" type="button" id="rcOpen">Open folder</button></div></div></div>
 <div class="mlw glass panel-glass" id="filew" role="dialog" aria-label="Make files smaller"><i class="gw"></i><div class="ml-in"><button class="ml-sum rc-b" id="fzPick"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Choose photos, videos or files</span></button><div class="fz-lv"><span class="fz-seg" id="fzLv" role="radiogroup" aria-label="How small"><button data-v="small" role="radio">Smaller</button><button data-v="tiny" role="radio">Smallest</button></span><span class="fz-say" id="fzSay"></span></div><div class="fz-list" id="fzList"></div><div class="ai-ft"><span><i></i><span id="fzNote">Documents › ULTRON Files › Compressed</span></span><span class="fz-r"><button class="ml-link" type="button" id="fzStop" hidden>Stop</button><button class="ml-link" type="button" id="fzOpen">Open folder</button></span></div></div></div>
@@ -2377,7 +2443,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     </div>
   </div>
 </div>
-<div class="notch" id="notch" role="button" tabindex="0" aria-expanded="false" aria-label="ULTRON assistant">
+<div class="notch glass" id="notch" role="button" tabindex="0" aria-expanded="false" aria-label="ULTRON assistant"><i class="gw"></i>
   <canvas id="pet" aria-hidden="true"></canvas>
   <div class="label" id="label">ULTRON</div>
   <canvas id="mini" aria-hidden="true"></canvas>
@@ -2537,6 +2603,10 @@ let S = {...DEFAULTS};
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
 // ULTRON speaks again (14 Oct 2026), with a woman's voice to start with, as it is (not made deeper). Once; after that
 // what's chosen in Settings, Voice stays as chosen.
+// (live glass had been saved off by a test's switch: it's put back on once. The test switch, devNoGlass, is never saved.)
+if (!S.glass2){ S.glass2 = true; S.liveGlass = true; try { localStorage.setItem('ultron-notch', JSON.stringify(S)); } catch(_){} }
+var devNoGlass = false;
+const glassOn = () => S.liveGlass && !devNoGlass;
 if (!S.voice2){ S.voice2 = true; S.speak = true; S.voiceName = 'lessac'; S.voiceStyle = 'natural'; try { localStorage.setItem('ultron-notch', JSON.stringify(S)); } catch(_){} }
 if (S.bar !== 'hide') S.bar = 'show';
 if (S.dock !== 'ultron') S.dock = 'win';                    // the taskbar: Windows' own, unless ULTRON's has been chosen                      // the menu bar: always there, unless it's been set to hide away
@@ -2544,13 +2614,13 @@ const save = () => { try { localStorage.setItem('ultron-notch', JSON.stringify(S
 
 /* ---------- renderer ---------- */
 const canvas = $('pet');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'low-power'});
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true, powerPreference:'low-power'});   // (see-through: the character stands on the bar's glass)
 renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+scene.background = null; renderer.setClearColor(0x000000, 0);
 const camera = new THREE.PerspectiveCamera(32, 1, .1, 50);
 camera.position.set(0, .02, 1.8);
 (() => {
@@ -2735,7 +2805,7 @@ function glassAim(){
   glassEls = now;
 }
 listen('backdrop', async url => {
-  if (!S.liveGlass) return;
+  if (!glassOn()) return;
   const n = ++glassSeq, bin = atob(url.slice(url.indexOf(',') + 1)), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   let bmp; try { bmp = await createImageBitmap(new Blob([bytes], {type:'image/jpeg'})); } catch(_){ return; }
@@ -2753,9 +2823,9 @@ setInterval(() => {
   const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('recw'), $('filew'), $('spot'), $('wheel')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on') || !!(window.NF && NF.shown.length);
   // (Spotlight opened over a full-screen app kept the picture from before it: its glass stays live there too)
   const spotOn = $('spot').classList.contains('open');
-  const off = !S.liveGlass || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
+  const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('recw'), $('filew'), $('spot'), $('wheel')].some(el => el && el.classList.contains('open'));
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), notch].some(el => el && el.classList.contains('open'));
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -3570,7 +3640,7 @@ const flGap = text => !text || /^[\s♪♫]*$/.test(text);
 function flFront(text){
   const el = document.createElement('div'); el.className = 'fl-ln cur';
   if (flGap(text)) el.innerHTML = '<span class="fl-dots"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span>';
-  else el.innerHTML = text.split(/\s+/).filter(Boolean).map((w, k) => `<span class="fl-wd" style="--k:${k}">${esc(w)}</span>`).join(' ');
+  else el.innerHTML = `<span class="fl-sing">${esc(text.replace(/\s+/g, ' ').trim())}</span>`;
   return el;
 }
 function flFit(el){                                                   // (a long line is made just small enough to fit)
@@ -3598,6 +3668,9 @@ function renderFloat(m){
   const fs = flFit(cur1);
   cur1.style.setProperty('--from', (13.5 / fs).toFixed(3));
   if (cur1.firstElementChild && cur1.firstElementChild.classList.contains('fl-dots')){ cur1.style.setProperty('--seg', (m.dur / 3).toFixed(3) + 's'); cur1.style.setProperty('--at', m.at.toFixed(3) + 's'); }
+  // (sung across in the line's own time, from where the song is in it now; words without timing are shown lit)
+  else if (String(m.listKey).startsWith('plain')) cur1.classList.add('still');
+  else { cur1.style.setProperty('--dur', Math.max(.8, m.dur * .94).toFixed(3) + 's'); cur1.style.setProperty('--at', m.at.toFixed(3) + 's'); }
   if (after != null){
     const n = document.createElement('div'); n.className = 'fl-ln next rise'; n.textContent = flGap(after) ? '♪' : after;
     flTxt.appendChild(n);
@@ -6784,7 +6857,7 @@ function syncHit(){
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 78), y:30, w:156, h:18}); }
   if (nbOn && nbBox) rects.push(nbBox);
   if (window.NF && NF.shown.length) rects.push({x:Math.floor(innerWidth - 10 - NF_W - 8), y:32, w:NF_W + 16, h:Math.ceil(NF.h + 18)});
-  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('recw'), $('filew'), $('spot'), $('wheel')]) if (el.classList.contains('open') && el.id !== 'wheel'){
+  for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel')]) if (el.classList.contains('open') && el.id !== 'wheel'){
     // layout size, not the on-screen size: while a panel animates in it's scaled down, which left dead spots
     const w = Math.max(el.offsetWidth, parseFloat(el.style.width) || 0), x = el.id === 'start' || el.id === 'setw' ? (innerWidth - w) / 2 : el.offsetLeft;
     const h = Math.max(el.offsetHeight, parseFloat(el.style.height) || 0);
@@ -7342,6 +7415,7 @@ function whOpen(focus){
 function whClose(){
   clearTimeout(WH.openT); clearTimeout(WH.closeT);
   if (!WH.open) return;
+  if (window.WM && WM.on) wmClose();
   WH.open = false; wheel.classList.remove('open'); whDragEnd(true);
   if (document.activeElement === $('whQ')) $('whQ').blur();
   setTimeout(syncHit, 380);
@@ -7463,7 +7537,7 @@ whDisc.addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'cl
 whBody.addEventListener('pointerenter', () => { WH.over = true; clearTimeout(WH.closeT); });
 whBody.addEventListener('pointerleave', () => {
   WH.over = false; clearTimeout(WH.openT);
-  if (WH.open && !WH.drag && document.activeElement !== $('whQ')){ clearTimeout(WH.closeT); WH.closeT = setTimeout(whClose, 420); }
+  if (WH.open && !WH.drag && !(window.WM && WM.on) && document.activeElement !== $('whQ')){ clearTimeout(WH.closeT); WH.closeT = setTimeout(whClose, 420); }
   WH.dir = 0; whName();
 });
 whBody.addEventListener('wheel', e => { e.preventDefault(); if (WH.open) whSpin(e.deltaY > 0 || e.deltaX > 0 ? 1 : -1); }, {passive:false});
@@ -7493,8 +7567,10 @@ wheel.addEventListener('auxclick', e => {                    // (the middle butt
   const it = WH.items[+b.dataset.i], ids = !it ? [] : it.kind === 'win' ? [it.w.id] : it.kind === 'app' ? it.g.wins.map(w => w.id) : [];
   ids.forEach(id => invoke('dock_act', {id, what:'close'}));
 });
-wheel.addEventListener('contextmenu', e => {                 // (the right button on a pod takes the group away)
-  e.preventDefault(); const pod = e.target.closest('.wh-pod'); if (!pod || pod.dataset.g === 'new') return;
+wheel.addEventListener('contextmenu', e => {                 // (the right button on a pod takes the group away; on an app, its menu)
+  e.preventDefault();
+  const bead = e.target.closest('.wh-b'); if (bead && WH.open && !bead.classList.contains('out')) return whMenu(bead);
+  const pod = e.target.closest('.wh-pod'); if (!pod || pod.dataset.g === 'new') return;
   pod.classList.add('bye'); const k = +pod.dataset.g; setTimeout(() => { S.groups.splice(k, 1); save(); whPods(); }, 240);
 });
 $('whRim').addEventListener('pointerover', e => { const b = e.target.closest('.wh-b'); if (b && !WH.drag && !b.classList.contains('out')){ const i = +b.dataset.i; WH.dir = Math.sign(i - WH.sel); whName(i); } });
@@ -7507,7 +7583,7 @@ $('whQ').addEventListener('keydown', e => {
   else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); whSpin(1); }
   else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); whSpin(-1); }
 });
-addEventListener('pointerdown', e => { if (WH.open && !e.target.closest('#wheel')) whClose(); });
+addEventListener('pointerdown', e => { if (WH.open && !e.target.closest('#wheel') && !e.target.closest('#whMenu')) whClose(); });
 addEventListener('resize', () => { if (DK.on) whGeom(); });
 // while the notch is open (it comes down over the same place), the wheel stands aside
 new MutationObserver(() => {
@@ -7555,7 +7631,7 @@ function spGo(it){
 async function openSpot(){
   if (spot.classList.contains('open') || LK.on || LK.busy) return;
   // (what's behind starts streaming now, not at the next quarter-second look: it opened on an old picture before)
-  if (S.liveGlass && glassRate !== 16){ glassRate = 16; invoke('backdrop_rate', {ms:16}); }
+  if (glassOn() && glassRate !== 16){ glassRate = 16; invoke('backdrop_rate', {ms:16}); }
   if (!startApps) startApps = (await invoke('start_apps')) || [];
   closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); whClose();
   closeNotes();
@@ -7577,6 +7653,79 @@ function closeSpot(away){
 listen('win-key', () => { spot.classList.contains('open') ? closeSpot() : openSpot(); });
 listen('spot-key', () => { spot.classList.contains('open') ? closeSpot() : openSpot(); });
 listen('spot-key-state', ok => { $('spkTaken').hidden = !!ok; });
+
+/* ---------- no notch: its glass lines up with the bar's (screen-sized, centred, so it follows as the sheet grows) ---------- */
+(() => { const g = notch.querySelector(':scope > .gw'), sw = screen.width || innerWidth, sh = screen.height || innerHeight;
+  g.style.width = sw + 'px'; g.style.height = sh + 'px'; g.style.left = `calc(50% - ${sw / 2}px)`; g.style.top = '0px'; })();
+
+/* ---------- the wheel: right-click an app ----------
+   What Windows' taskbar offers for it: its recent files (Windows' own jump list for the app), the app itself (a new
+   window), pin or unpin, and close its window or all of them. The menu opens out of the bead in glass and folds back
+   into it when it goes. */
+var WM = {on:false, it:null, bead:null};
+const wmEl = $('whMenu');
+const WM_IC = {
+  doc:'<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg>',
+  pin:'<svg viewBox="0 0 24 24"><path d="M9 4h6l-1 5 4 4H6l4-4z"/><path d="M12 13v7"/></svg>',
+  unpin:'<svg viewBox="0 0 24 24"><path d="M9 4h6l-1 5 4 4H6l4-4z"/><path d="M12 13v7M4 4l16 16"/></svg>',
+  x:'<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+};
+function wmPlace(){
+  const b = WM.bead.getBoundingClientRect(), W = wmEl.offsetWidth || 268, H = wmEl.offsetHeight;
+  const left = Math.round(Math.max(8, Math.min(innerWidth - W - 8, b.left + b.width / 2 - W / 2)));
+  const below = b.bottom + 10 + H <= innerHeight - 8, top = Math.round(below ? b.bottom + 10 : Math.max(40, b.top - 10 - H));
+  wmEl.style.left = left + 'px'; wmEl.style.top = top + 'px';
+  wmEl.style.setProperty('--ox', (b.left + b.width / 2 - left) + 'px'); wmEl.style.setProperty('--oy', (below ? b.top + b.height / 2 - top : b.top + b.height / 2 - top) + 'px');
+  placeGlass(wmEl);
+}
+async function whMenu(bead){
+  const it = WH.items[+bead.dataset.i]; if (!it) return;
+  if (WM.on) wmClose();
+  WM.on = true; WM.it = it; WM.bead = bead; clearTimeout(WH.closeT);
+  const wins = it.kind === 'win' ? [it.w] : it.g ? it.g.wins : [], pinned = (pins || []).includes(it.launch), icon = bead.querySelector('img.ok')?.src || '';
+  let i = 0;
+  wmEl.querySelector('.wm-in').innerHTML = '<div class="wm-rec"></div>'
+    + `<button class="wm-o wm-app" data-wm="open" style="--i:${i++}">${icon ? `<img src="${esc(icon)}" alt="">` : WM_IC.doc}<span>${esc(it.short || it.name)}</span></button>`
+    + `<button class="wm-o" data-wm="pin" style="--i:${i++}">${pinned ? WM_IC.unpin : WM_IC.pin}<span>${pinned ? 'Unpin from Start and the wheel' : 'Pin to Start and the wheel'}</span></button>`
+    + (wins.length ? `<i class="wm-sep" style="--i:${i++}"></i><button class="wm-o wm-x" data-wm="close" style="--i:${i++}">${WM_IC.x}<span>${wins.length > 1 ? `Close all ${wins.length} windows` : 'Close window'}</span></button>` : '');
+  wmPlace(); void wmEl.offsetWidth;
+  wmEl.classList.add('open'); syncHit(); setTimeout(syncHit, 520);
+  // the app's recent files, from Windows' jump list for it, come in above as soon as they're read
+  const id = /^shell:AppsFolder\\/i.test(it.launch || '') ? it.launch.replace(/^shell:AppsFolder\\/i, '') : '';
+  if (!id || !TAURI) return;
+  const rec = await invoke('dock_recent', {aumid:id});
+  if (!WM.on || WM.it !== it || !rec || !rec.length) return;
+  const h0 = wmEl.offsetHeight, box = wmEl.querySelector('.wm-rec');
+  box.innerHTML = `<div class="wm-h" style="--i:0">Recent</div>` + rec.slice(0, 6).map(([n, path], k) => `<button class="wm-o" data-wm="recent" data-path="${esc(path)}" title="${esc(path)}" style="--i:${k + 1}">${WM_IC.doc}<span>${esc(n)}</span></button>`).join('') + `<i class="wm-sep" style="--i:${rec.length + 1}"></i>`;
+  wmPlace();
+  const h1 = wmEl.offsetHeight; if (h1 > h0) wmEl.animate([{height:h0 + 'px'}, {height:h1 + 'px'}], {duration:380, easing:'cubic-bezier(.22,1,.36,1)'});
+  setTimeout(syncHit, 400);
+}
+function wmClose(){
+  if (!WM.on) return;
+  WM.on = false; wmEl.classList.remove('open');
+  setTimeout(syncHit, 320);
+  if (WH.open && !WH.over && S.dkOpen !== 'click'){ clearTimeout(WH.closeT); WH.closeT = setTimeout(whClose, 420); }
+}
+wmEl.addEventListener('click', e => {
+  e.stopPropagation();
+  const b = e.target.closest('[data-wm]'); if (!b || !WM.it) return;
+  const it = WM.it, k = b.dataset.wm;
+  if (k === 'open') invoke('launch', {target:it.launch});
+  else if (k === 'recent') invoke('launch', {target:b.dataset.path});
+  else if (k === 'pin'){
+    pins = pins || []; const i = pins.indexOf(it.launch);
+    if (i >= 0){ pins.splice(i, 1); unpinTile(it.launch); } else { pins.push(it.launch); if (startApps) pinTile(it.launch); }
+    savePins(); if (typeof markPinned === 'function') markPinned(); dockWins(DK.wins);
+  }
+  else if (k === 'close') (it.kind === 'win' ? [it.w] : it.g.wins).forEach(w => invoke('dock_act', {id:w.id, what:'close'}));
+  wmClose();
+  if (k !== 'pin') setTimeout(whClose, 160);
+});
+wmEl.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); });
+wmEl.addEventListener('pointerenter', () => clearTimeout(WH.closeT));
+addEventListener('pointerdown', e => { if (WM.on && !e.target.closest('#whMenu')) wmClose(); }, true);
+addEventListener('keydown', e => { if (WM.on && e.key === 'Escape'){ e.stopPropagation(); wmClose(); } }, true);
 /* ---------- answers, formatted ----------
    What the brain writes as steps, bullet points, labels ("Ingredients:"), **bold** words, code or a small table is
    shown as such. While it streams, each finished block stays put, new blocks ease in and only the last one grows;
@@ -8531,7 +8680,7 @@ if (TAURI) invoke('dev_mode').then(on => {
     else if (cmd === 'ask'){ setOpen(true); setTimeout(() => { askIn.value = arg; sendTyped(); }, 700); }
     else if (cmd === 'menu'){ const b = mbar.querySelector(`.mt[data-menu="${arg}"]`); if (b) openDD(b); }
     else if (cmd === 'closemenu'){ closeDD(); closePanels(); }
-    else if (cmd === 'glass'){ S.liveGlass = arg !== 'off'; if (!S.liveGlass) document.documentElement.classList.remove('live'); }
+    else if (cmd === 'glass'){ devNoGlass = arg === 'off'; if (devNoGlass) document.documentElement.classList.remove('live'); }   // (for screen captures only: never saved)
     else if (cmd === 'tab') selectTab(arg);
     else if (cmd === 'note') note = arg;
     else if (cmd === 'tour' && typeof startTour === 'function') startTour();
