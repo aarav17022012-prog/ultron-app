@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 
 /// ULTRON's own, as the page knows them ("our:dusk") and as they're named once written out.
-const OURS: [(&str, &str); 3] = [("dusk", "Dusk"), ("tide", "Tide"), ("graphite", "Graphite")];
+const OURS: [(&str, &str); 4] = [("dusk", "Dusk"), ("tide", "Tide"), ("graphite", "Graphite"), ("town", "Town")];
 
 pub fn folder(app: &AppHandle) -> PathBuf {
     let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("ULTRON Files").join("Wallpapers");
@@ -126,6 +126,30 @@ fn thumb(p: &Path) -> Option<String> {
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 80).encode_image(&small).ok()?;
     let url = format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out));
     MADE.lock().unwrap().get_or_insert_with(HashMap::new).insert(key, url.clone());
+    Some(url)
+}
+
+/// The wallpaper as it is now, as a picture `w` by `h` (it fills that shape, cut to fit): for ULTRON's
+/// search and its lock screen. Made once for each wallpaper and size.
+pub fn picture(w: u32, h: u32) -> Option<String> {
+    static MADE: Mutex<Option<HashMap<(PathBuf, u64, u32, u32), String>>> = Mutex::new(None);
+    let mut p = PathBuf::from(current());
+    if !p.is_file() {
+        p = crate::sys::wallpaper_path()?; // (a slideshow, or one picture a screen: what Windows has on show)
+    }
+    let key = (p.clone(), std::fs::metadata(&p).ok()?.len(), w, h);
+    if let Some(u) = MADE.lock().unwrap().get_or_insert_with(HashMap::new).get(&key) {
+        return Some(u.clone());
+    }
+    let img = image::ImageReader::open(&p).ok()?.with_guessed_format().ok()?.decode().ok()?;
+    let fit = img.resize_to_fill(w.clamp(64, 3840), h.clamp(64, 2400), image::imageops::FilterType::Triangle).to_rgb8();
+    let mut out = Vec::new();
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 86).encode_image(&fit).ok()?;
+    let url = format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out));
+    let mut made = MADE.lock().unwrap();
+    let made = made.get_or_insert_with(HashMap::new);
+    made.retain(|k, _| k.0 == key.0 && k.1 == key.1); // (only the wallpaper that's up is worth keeping)
+    made.insert(key, url.clone());
     Some(url)
 }
 

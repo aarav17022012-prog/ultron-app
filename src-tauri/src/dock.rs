@@ -257,13 +257,10 @@ pub fn layout(n: usize, area: RECT, gap: i32) -> Vec<RECT> {
     }
 }
 
-/// Lay the open windows on the main screen out side by side, the one in front first. Gives how many.
-pub fn tile(app: &AppHandle, gap: i32) -> usize {
+/// Put these windows side by side on the main screen, in this order (minimized or maximized ones are
+/// brought back to ordinary windows first). Where they were is kept for `untile`. Gives how many.
+fn arrange(wins: &[OpenWin], gap: i32) -> usize {
     unsafe {
-        let main = MonitorFromWindow(HWND::default(), MONITOR_DEFAULTTOPRIMARY);
-        let mut wins: Vec<OpenWin> = app.state::<Apps>().open_windows().into_iter().filter(|w| !w.min).collect();
-        wins.retain(|w| w.id.parse::<isize>().is_ok_and(|n| MonitorFromWindow(HWND(n as _), MONITOR_DEFAULTTONEAREST) == main));
-        wins.sort_by_key(|w| !w.active); // (they come front to back; the one in use leads)
         let mut area = RECT::default();
         if wins.is_empty() || SystemParametersInfoW(SPI_GETWORKAREA, 0, Some(&mut area as *mut _ as _), SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0)).is_err() {
             return 0;
@@ -271,14 +268,19 @@ pub fn tile(app: &AppHandle, gap: i32) -> usize {
         let gap = (gap.clamp(0, 40) as f64 * crate::hit::scale_of(HWND::default()).max(1.0)) as i32;
         let spots = layout(wins.len(), area, gap);
         let mut before = Vec::new();
+        let mut done = 0;
         for (w, to) in wins.iter().zip(spots) {
             let h = HWND(w.id.parse::<isize>().unwrap_or(0) as _);
+            if !IsWindow(Some(h)).as_bool() {
+                continue;
+            }
             let mut was = WINDOWPLACEMENT { length: std::mem::size_of::<WINDOWPLACEMENT>() as u32, ..Default::default() };
             if GetWindowPlacement(h, &mut was).is_ok() {
                 before.push((h.0 as isize, was));
             }
             if IsZoomed(h).as_bool() || IsIconic(h).as_bool() {
                 let _ = ShowWindow(h, SW_RESTORE);
+                std::thread::sleep(Duration::from_millis(40)); // (it has to be an ordinary window before it can be sized)
             }
             // (a window's own edges include an unseen border for resizing: the seen edges are what's lined up)
             let (mut out, mut seen) = (RECT::default(), RECT::default());
@@ -286,11 +288,92 @@ pub fn tile(app: &AppHandle, gap: i32) -> usize {
             if DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, &mut seen as *mut _ as _, std::mem::size_of::<RECT>() as u32).is_err() {
                 seen = out;
             }
-            let (l, t, r, b) = (seen.left - out.left, seen.top - out.top, out.right - seen.right, out.bottom - seen.bottom);
-            let _ = SetWindowPos(h, None, to.left - l, to.top - t, to.right - to.left + l + r, to.bottom - to.top + t + b, SWP_NOZORDER | SWP_NOACTIVATE);
+            let (l, tp, r, b) = ((seen.left - out.left).clamp(0, 30), (seen.top - out.top).clamp(0, 30), (out.right - seen.right).clamp(0, 30), (out.bottom - seen.bottom).clamp(0, 30));
+            if SetWindowPos(h, None, to.left - l, to.top - tp, to.right - to.left + l + r, to.bottom - to.top + tp + b, SWP_NOZORDER | SWP_NOACTIVATE).is_ok() {
+                done += 1;
+            }
         }
-        *BEFORE.lock().unwrap() = before;
-        wins.len()
+        if done > 0 {
+            *BEFORE.lock().unwrap() = before;
+        }
+        crate::log_line(&format!("tile: {} of {} windows placed", done, wins.len()));
+        done
+    }
+}
+
+/// Lay the windows on the main screen out side by side: the ones that are showing, the one in use
+/// first (six at most). When fewer than two are showing, the ones down on the taskbar are brought up
+/// too (four at most), so that asking for tiles with everything minimized still gives tiles.
+pub fn tile(app: &AppHandle, gap: i32) -> usize {
+    let main = unsafe { MonitorFromWindow(HWND::default(), MONITOR_DEFAULTTOPRIMARY) };
+    let mut all: Vec<OpenWin> = app.state::<Apps>().open_windows();
+    all.retain(|w| w.id.parse::<isize>().is_ok_and(|n| unsafe { MonitorFromWindow(HWND(n as _), MONITOR_DEFAULTTONEAREST) } == main));
+    let mut wins: Vec<OpenWin> = all.iter().filter(|w| !w.min).cloned().collect();
+    wins.sort_by_key(|w| !w.active); // (they come front to back; the one in use leads)
+    if wins.len() < 2 {
+        wins.extend(all.iter().filter(|w| w.min).cloned());
+        wins.truncate(4);
+    }
+    wins.truncate(6);
+    arrange(&wins, gap)
+}
+
+/// A group's apps side by side: the windows of these apps (one each, in the group's order).
+pub fn tile_apps(app: &AppHandle, launches: &[String], gap: i32) -> usize {
+    let all = app.state::<Apps>().open_windows();
+    let wins: Vec<OpenWin> = launches.iter().filter_map(|l| all.iter().find(|w| &w.launch == l).cloned()).collect();
+    if wins.len() < 2 {
+        return wins.len();
+    }
+    arrange(&wins, gap)
+}
+
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn PrintWindow(hwnd: HWND, hdc: windows::Win32::Graphics::Gdi::HDC, flags: u32) -> windows::core::BOOL;
+}
+
+/// A small picture of a window as it is now, for the wheel to show beside its bead (None when it's
+/// minimized, or won't be drawn).
+pub fn peek(id: &str) -> Option<String> {
+    use base64::Engine;
+    use windows::Win32::Graphics::Gdi::*;
+    let h = HWND(id.parse::<isize>().ok()? as _);
+    unsafe {
+        if !IsWindow(Some(h)).as_bool() || IsIconic(h).as_bool() {
+            return None;
+        }
+        let mut r = RECT::default();
+        GetWindowRect(h, &mut r).ok()?;
+        let (w, hh) = (r.right - r.left, r.bottom - r.top);
+        if w < 60 || hh < 60 || w > 8000 || hh > 5000 {
+            return None;
+        }
+        let sdc = GetDC(None);
+        let mdc = CreateCompatibleDC(Some(sdc));
+        let bmp = CreateCompatibleBitmap(sdc, w, hh);
+        let old = SelectObject(mdc, bmp.into());
+        let ok = PrintWindow(h, mdc, 2).as_bool(); // (2: as the screen draws it, so apps that draw with the graphics card are there too)
+        let mut bi = BITMAPINFO::default();
+        bi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+        bi.bmiHeader.biWidth = w;
+        bi.bmiHeader.biHeight = -hh;
+        bi.bmiHeader.biPlanes = 1;
+        bi.bmiHeader.biBitCount = 32;
+        let mut buf = vec![0u8; (w * hh * 4) as usize];
+        let lines = GetDIBits(mdc, bmp, 0, hh as u32, Some(buf.as_mut_ptr() as _), &mut bi, DIB_RGB_COLORS);
+        SelectObject(mdc, old);
+        let _ = DeleteObject(bmp.into());
+        let _ = DeleteDC(mdc);
+        ReleaseDC(None, sdc);
+        if !ok || lines == 0 {
+            return None;
+        }
+        let rgb: Vec<u8> = buf.chunks_exact(4).flat_map(|p| [p[2], p[1], p[0]]).collect();
+        let small = image::DynamicImage::ImageRgb8(image::RgbImage::from_raw(w as u32, hh as u32, rgb)?).thumbnail(400, 260).to_rgb8();
+        let mut out = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 80).encode_image(&small).ok()?;
+        Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out)))
     }
 }
 

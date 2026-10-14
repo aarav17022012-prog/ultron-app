@@ -28,7 +28,7 @@ fn b64(bytes: &[u8]) -> String {
 
 /* ---------------- wallpaper (pre-blurred, small) ---------------- */
 
-fn wallpaper_path() -> Option<std::path::PathBuf> {
+pub(crate) fn wallpaper_path() -> Option<std::path::PathBuf> {
     let transcoded = std::env::var("APPDATA").ok().map(|a| std::path::PathBuf::from(a).join(r"Microsoft\Windows\Themes\TranscodedWallpaper"));
     if let Some(p) = transcoded.filter(|p| p.exists()) {
         return Some(p);
