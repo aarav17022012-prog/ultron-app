@@ -850,76 +850,107 @@ body.pk-out #pet{opacity:0; transition:opacity .22s}       /* (the character has
    There is no bar along the bottom. Windows' taskbar is gone and windows have the screen to its bottom edge; the
    taskbar is a wheel of glass kept above the screen, with only its lowest sliver showing under the notch. Reach for
    that and the wheel rolls down: your apps ride its rim, and turn with the mouse wheel. ULTRON itself sits at the
-   hub. The rolling and the turning are worked out in the script (springs); nothing here moves on its own. */
-.wheel{position:fixed; z-index:4; left:50%; top:0; width:0; height:0; --R:250px; --cy:-28px; --k:1; color:#fff; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .3s, visibility 0s .3s}
+   hub. Every movement here is a transition: the script only says where things should end up, and the drawing of
+   the in-between is not its work. (It used to place each bead on every frame; that cost the page about six
+   thousandths of a second a frame, more than a 144 Hz screen allows, and the wheel stuttered as it turned.) */
+.wheel{position:fixed; z-index:4; left:50%; top:0; width:0; height:0; --R:250px; --rb:213px; --cy:-28px; --rest:-180px; --k:1; --turn:cubic-bezier(.2,1.12,.34,1); color:#fff; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .3s, visibility 0s .3s}
 body.docked .wheel{opacity:1; visibility:visible; transition:opacity .45s}
 body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .wheel, body.docked .wheel.away{opacity:0; visibility:hidden; transition:opacity .2s, visibility 0s .2s}
-.wh-body{position:absolute; left:0; top:0; will-change:transform}
+/* up: all but a sliver is above the screen. Down: it has rolled into view (a touch past, and back). Its glass keeps
+   the picture still by moving the other way by the same amount, in the same time. */
+.wh-body{position:absolute; left:0; top:0; will-change:transform; transform:translate3d(0, var(--rest), 0); transition:transform .46s cubic-bezier(.4,0,.2,1)}
+.wheel.open .wh-body{transform:none; transition:transform .66s cubic-bezier(.2,1.14,.32,1)}
+#wheel .wh-disc > .gw, #wheel .wh-tray > .gw{will-change:transform; transform:translate3d(0, calc(-1 * var(--rest)), 0); transition:transform .46s cubic-bezier(.4,0,.2,1)}
+#wheel.open .wh-disc > .gw, #wheel.open .wh-tray > .gw{transform:none; transition:transform .66s cubic-bezier(.2,1.14,.32,1)}
 .wh-disc{position:absolute; left:calc(-1 * var(--R)); top:calc(var(--cy) - var(--R)); width:calc(2 * var(--R)); height:calc(2 * var(--R)); border-radius:50%; --tint:rgba(16,16,22,.4);
   box-shadow:0 18px 44px rgba(0,0,0,.36), 0 2px 8px rgba(0,0,0,.2); pointer-events:auto}
-.wh-disc > .gw, .wh-tray > .gw{will-change:transform}
-.wh-hubbg{position:absolute; inset:calc(70px * var(--k)); border-radius:50%; background:rgba(8,8,12,.36); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.wh-hubbg{position:absolute; inset:calc(70px * var(--k)); border-radius:50%; background:rgba(8,8,12,.34); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .wheel.smoked .wh-disc, .wheel.smoked .wh-tray{--tint:rgba(10,10,14,.66)}
-.wh-rim, .wh-hub{position:absolute; left:0; top:0}
-.wh-b{position:absolute; left:0; top:0; display:grid; place-items:center; width:46px; height:46px; margin:-23px 0 0 -23px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.1);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); color:#fff; font:inherit; cursor:default; pointer-events:auto; touch-action:none; will-change:transform, opacity; transition:background .2s, box-shadow .2s}
-.wh-b:hover{background:rgba(255,255,255,.22)}
-.wh-b.sel{background:rgba(255,255,255,.2); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
-.wh-b.far{display:none}
+/* (the hub is laid out for the middle size and scaled as one for the others) */
+.wh-hub{position:absolute; left:0; top:0; transform-origin:0 var(--cy); transform:scale(var(--k))}
+/* the rim turns as the wheel rolls: up, it is turned most of a quarter away, and it comes round as the wheel comes down */
+.wh-rim{position:absolute; left:0; top:0; transform-origin:0 var(--cy); will-change:transform; transform:rotate(-.9rad); transition:transform .46s cubic-bezier(.4,0,.2,1)}
+.wheel.open .wh-rim{transform:none; transition:transform .8s cubic-bezier(.2,1.1,.3,1)}
+/* A bead starts at the wheel's middle and is given one transform: turned to its spoke, sent out along it to the
+   rim, and turned back by as much, so it stays upright. Going from one place to another, the two turns change
+   together and the bead travels the rim itself, not a short cut across it. */
+.wh-b{position:absolute; left:0; top:var(--cy); width:46px; height:46px; margin:-23px 0 0 -23px; padding:0; border:0; border-radius:50%; background:none; color:#fff; font:inherit; cursor:default; pointer-events:auto; touch-action:none;
+  will-change:transform, opacity; transition:transform .46s var(--turn), opacity .3s}
+.wh-bi{position:absolute; inset:0; display:grid; place-items:center; border-radius:50%; background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); transition:background .2s, box-shadow .2s}
+.wh-b:hover .wh-bi{background:rgba(255,255,255,.22)}
+.wh-b.sel .wh-bi{background:rgba(255,255,255,.2); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.wh-b.edge{pointer-events:none}
 .wh-b.lift{opacity:.35 !important}
-.wh-b img{width:26px; height:26px; object-fit:contain; opacity:0; transition:opacity .2s; pointer-events:none} .wh-b img.ok{opacity:1}
-.wh-b .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:14px; font-weight:700; color:rgba(255,255,255,.7)} .wh-b img.ok + .fbk{display:none}
-.wh-b > i{position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s}
-.wh-b.run > i{opacity:.6} .wh-b.act > i{opacity:1; width:10px; margin-left:-5px; border-radius:2px}
+/* a bead that has just turned up (a search finding it, an app opening) grows into its place, the middle ones first;
+   one that is gone shrinks away */
+.wh-b.in .wh-bi{animation:whIn .46s var(--spring) backwards; animation-delay:var(--d, 0ms)}
+@keyframes whIn{from{scale:.2; opacity:0}}
+.wh-b.out{opacity:0 !important; pointer-events:none; transition:opacity .2s}
+.wh-b.out .wh-bi{scale:.4; transition:scale .22s ease-in}
+.wh-bi img{width:26px; height:26px; object-fit:contain; opacity:0; transition:opacity .2s; pointer-events:none} .wh-bi img.ok{opacity:1}
+.wh-bi .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:14px; font-weight:700; color:rgba(255,255,255,.7)} .wh-bi img.ok + .fbk{display:none}
+.wh-bi > i{position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s, width .25s, margin .25s}
+.wh-b.run .wh-bi > i{opacity:.6} .wh-b.act .wh-bi > i{opacity:1; width:10px; margin-left:-5px; border-radius:2px}
 .wheel:not(.open) .wh-b{pointer-events:none}
 .wh-hub > *{position:absolute; left:0}
+/* the hub, from the top: the name of what's picked; a row with the search between Tile and Groups; ULTRON */
+/* the name: as the wheel turns, the old name leaves the way the wheel is going and the new one follows it in */
+.wh-name{top:calc(var(--cy) + 71px); width:240px; height:22px; margin-left:-120px; overflow:hidden; pointer-events:none;
+  -webkit-mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)}
+.wh-name span{position:absolute; left:0; right:0; top:0; text-align:center; font-size:15px; font-weight:650; letter-spacing:-.01em; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 1px 2px rgba(0,0,0,.3); animation:whNmIn .3s var(--glide) both}
+.wh-name span.out{animation:whNmOut .2s ease-in both}
+@keyframes whNmIn{from{opacity:0; transform:translateX(var(--from, 0px)) scale(.94)}}
+@keyframes whNmOut{to{opacity:0; transform:translateX(var(--to, 0px)) scale(.94)}}
+.wh-row{top:calc(var(--cy) + 98px); display:flex; align-items:center; gap:6px; width:max-content; transform:translateX(-50%)}
 /* searching is always there: type a name and the rim fills with what matches */
-.wh-q{top:calc(var(--cy) + 62px * var(--k)); display:flex; align-items:center; gap:6px; width:150px; height:26px; margin-left:-75px; padding:0 10px; border-radius:13px; background:rgba(255,255,255,.1);
+.wh-q{display:flex; align-items:center; gap:6px; width:146px; height:28px; padding:0 11px; border-radius:14px; background:rgba(255,255,255,.1);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); pointer-events:auto; transition:background .2s, box-shadow .2s}
 .wh-q:focus-within{background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
 .wh-q svg{width:12px; height:12px; flex:none; fill:none; stroke:rgba(255,255,255,.6); stroke-width:2; stroke-linecap:round}
 .wh-q input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:12.5px}
 .wh-q input::placeholder{color:rgba(255,255,255,.4)}
-.wh-back{top:calc(var(--cy) + 62px * var(--k)); display:none; align-items:center; gap:4px; height:26px; max-width:170px; padding:0 12px 0 8px; border:0; border-radius:13px; background:rgba(255,255,255,.14); color:#fff; font:inherit; font-size:12px; font-weight:600;
-  transform:translateX(-50%); cursor:default; pointer-events:auto}
+.wh-back{display:none; align-items:center; gap:4px; width:146px; height:28px; padding:0 12px 0 8px; border:0; border-radius:14px; background:rgba(255,255,255,.14); color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:default; pointer-events:auto}
 .wh-back svg{width:13px; height:13px; flex:none; fill:none; stroke:#fff; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
 .wh-back span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .wheel.wins .wh-back{display:flex} .wheel.wins .wh-q{display:none}
-/* the name of what's picked: as the wheel turns, the old name leaves the way the wheel is going and the new one follows it in */
-.wh-name{top:calc(var(--cy) + 95px * var(--k)); width:calc(250px * var(--k)); height:21px; margin-left:calc(-125px * var(--k)); overflow:hidden; pointer-events:none;
-  -webkit-mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)}
-.wh-name span{position:absolute; left:0; right:0; top:0; text-align:center; font-size:15px; font-weight:650; letter-spacing:-.01em; line-height:21px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  text-shadow:0 1px 2px rgba(0,0,0,.3); animation:whNmIn .3s var(--glide) both}
-.wh-name span.out{animation:whNmOut .2s ease-in both}
-@keyframes whNmIn{from{opacity:0; transform:translateX(var(--from, 0px)) scale(.94)}}
-@keyframes whNmOut{to{opacity:0; transform:translateX(var(--to, 0px)) scale(.94)}}
-/* ULTRON at the hub: the same character as in the notch, drawn from the same picture, in a round window as black
-   as the notch. Press it to ask something. */
-.wh-mas{top:calc(var(--cy) + 147px * var(--k)); width:62px; height:62px; margin:-31px 0 0 -31px; padding:0; border:0; border-radius:50%; overflow:hidden; background:#000; box-shadow:0 0 0 1.5px rgba(255,255,255,.16), 0 6px 14px rgba(0,0,0,.32);
-  cursor:default; pointer-events:auto; transition:transform .4s var(--spring)}
-.wh-mas:hover{transform:scale(1.1)} .wh-mas:active{transform:scale(.92)}
-.wh-mas canvas{display:block; width:100%; height:100%; pointer-events:none}
-.wh-t{top:calc(var(--cy) + 148px * var(--k)); display:grid; place-items:center; width:30px; height:30px; margin:-15px 0 0 -15px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.1); color:#fff; cursor:default;
+.wh-t{flex:none; display:grid; place-items:center; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); color:#fff; cursor:default;
   pointer-events:auto; transition:background .2s, transform .3s var(--spring)}
 .wh-t:hover{background:rgba(255,255,255,.22)} .wh-t:active{transform:scale(.88)} .wh-t.on, .wh-t[aria-expanded="true"]{background:#fff}
 .wh-t svg{width:14px; height:14px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round} .wh-t.on svg, .wh-t[aria-expanded="true"] svg{stroke:#111}
-#whTile{left:calc(-66px * var(--k))} #whGroups{left:calc(66px * var(--k))}
-.wheel:not(.open) .wh-hub > *{pointer-events:none}
+/* ULTRON at the hub: the character itself, drawn a second time on a see-through canvas (nothing behind it but the
+   wheel). Press it to ask something. */
+.wh-mas{top:calc(var(--cy) + 157px); width:60px; height:60px; margin:-30px 0 0 -30px; padding:0; border:0; background:none; cursor:default; pointer-events:auto;
+  filter:drop-shadow(0 5px 8px rgba(0,0,0,.34)); transition:transform .4s var(--spring)}
+.wh-mas:hover{transform:scale(1.1)} .wh-mas:active{transform:scale(.92)}
+.wh-mas canvas{display:block; width:100%; height:100%; pointer-events:none}
+.wheel:not(.open) .wh-hub > *, .wheel:not(.open) .wh-row > *{pointer-events:none}
 /* the sliver that shows while the wheel is up: a small handle, which widens when the pointer comes near */
-.wh-grip{top:calc(var(--cy) + var(--R) - 6.5px); width:26px; height:3px; margin-left:-13px; border-radius:2px; background:rgba(255,255,255,.55); pointer-events:none; transition:width .35s var(--spring), margin-left .35s var(--spring), background .2s, opacity .2s}
+.wh-grip{top:calc(var(--cy) + 250px - 6.5px); width:26px; height:3px; margin-left:-13px; border-radius:2px; background:rgba(255,255,255,.55); pointer-events:none; transition:width .35s var(--spring), margin-left .35s var(--spring), background .2s, opacity .2s}
 .wh-disc:hover ~ .wh-hub .wh-grip{width:44px; margin-left:-22px; background:#fff}
 .wheel.open .wh-grip{opacity:0}
-/* a window, shown beside its bead while the pointer rests there: it comes out of the bead, leaning the way that part of the wheel leans */
-.wh-peek{position:absolute; left:0; top:0; width:204px; margin:-74px 0 0 -102px; padding:6px 6px 0; border-radius:14px; background:rgba(22,22,28,.92); box-shadow:0 0 0 1px rgba(255,255,255,.14), 0 16px 34px rgba(0,0,0,.42);
-  transform:translate3d(var(--bx, 0px), var(--by, 0px), 0) rotate(var(--rot, 0deg)) scale(.2); opacity:0; pointer-events:none; transition:transform .18s ease-in, opacity .14s}
-.wh-peek.on{transform:translate3d(var(--px, 0px), var(--py, 0px), 0) rotate(var(--rot, 0deg)); opacity:1; transition:transform .5s cubic-bezier(.2,1.25,.3,1), opacity .2s}
-.wh-peek-in{position:relative; height:118px; border-radius:9px; overflow:hidden; background:rgba(255,255,255,.06)}
-.wh-peek-in > img{display:block; width:100%; height:100%; object-fit:cover; object-position:50% 0}
-.wh-peek-in > img[src=""], .wh-peek-in > img:not([src]){display:none}
-.wh-peek-ic{position:absolute; inset:0; display:grid; place-items:center}
-.wh-peek-ic img{width:44px; height:44px; object-fit:contain}
-.wh-peek.shot .wh-peek-ic{display:none}
-.wh-peek > span{display:block; padding:6px 4px 7px; font-size:11.5px; font-weight:600; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* A window, shown while the pointer rests on its bead. It comes out of the bead to a place a little way off the
+   wheel and lies the way the wheel curves there (square to a spoke of its own), held to its bead by a thin stem. */
+.wh-stem{position:absolute; left:0; top:0; width:2px; height:0; margin-left:-1px; border-radius:1px; transform-origin:1px 0; background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.12)); opacity:0; scale:1 0; pointer-events:none; transition:opacity .12s, scale .14s ease-in}
+.wh-stem.on{opacity:1; scale:1 1; transition:opacity .2s .05s, scale .4s var(--glide) .05s}
+.wh-stem::before{content:""; position:absolute; left:-2px; top:-3px; width:6px; height:6px; border-radius:50%; background:#fff}
+.wh-peek{position:absolute; left:0; top:0; width:216px; height:164px; margin:-82px 0 0 -108px; padding:6px 6px 0; border-radius:16px; background:rgba(24,24,30,.94); box-shadow:0 0 0 1px rgba(255,255,255,.14), 0 18px 38px rgba(0,0,0,.44);
+  transform:translate3d(var(--bx, 0px), var(--by, 0px), 0) rotate(var(--rot, 0rad)) scale(.14); opacity:0; pointer-events:none; transition:transform .2s ease-in, opacity .14s}
+.wh-peek.on{transform:translate3d(var(--px, 0px), var(--py, 0px), 0) rotate(var(--rot, 0rad)); opacity:1; transition:transform .52s cubic-bezier(.2,1.22,.3,1), opacity .2s}
+/* an app with several windows: the corners of the others show behind the one in front */
+.wh-peek::before, .wh-peek::after{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit; background:rgba(44,44,54,.92); box-shadow:0 0 0 1px rgba(255,255,255,.1); opacity:0; transition:transform .5s var(--spring) .1s, opacity .2s .1s}
+.wh-peek.many.on::before{opacity:1; transform:rotate(-4.5deg) translate(-7px, 3px)} .wh-peek.many.on::after{opacity:1; transform:rotate(4deg) translate(7px, 4px)}
+.wh-peek-in{position:relative; height:122px; border-radius:11px; overflow:hidden; background:rgba(255,255,255,.06)}
+.wh-peek-in > img{display:block; width:100%; height:100%; object-fit:cover; object-position:50% 0; opacity:0; transition:opacity .3s}
+.wh-peek.shot .wh-peek-in > img{opacity:1}
+.wh-peek-in > img[src=""], .wh-peek-in > img:not([src]){visibility:hidden}
+.wh-peek-ic{position:absolute; inset:0; display:grid; place-items:center; transition:opacity .25s}
+.wh-peek-ic img{width:46px; height:46px; object-fit:contain}
+.wh-peek.shot .wh-peek-ic{opacity:0}
+.wh-peek-ft{display:flex; align-items:center; gap:7px; height:36px; padding:0 5px}
+.wh-peek-ft img{flex:none; width:16px; height:16px; object-fit:contain} .wh-peek-ft img:not([src]), .wh-peek-ft img[src=""]{display:none}
+.wh-peek-ft span{flex:1; min-width:0; font-size:11.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.wh-peek-ft em{flex:none; font-style:normal; font-size:10.5px; color:rgba(255,255,255,.5)} .wh-peek-ft em:empty{display:none}
 /* groups: a tray that comes out from under the wheel. Drag a bead onto a pod (four apps to a pod, four pods);
    press a pod and its apps open together, side by side. */
 .wh-tray{position:absolute; left:0; top:calc(var(--cy) + var(--R) + 10px); width:max-content; height:62px; padding:7px; display:flex; align-items:center; border-radius:20px; --tint:rgba(16,16,22,.46);
@@ -932,7 +963,7 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 @keyframes whPod{from{opacity:0; transform:scale(.5)}}
 .wh-pod:hover{background:rgba(255,255,255,.18)} .wh-pod:active{transform:scale(.93)}
 .wh-pod img{width:18px; height:18px; object-fit:contain}
-.wh-pod.new{display:flex; align-items:center; justify-content:center; width:auto; min-width:56px; gap:7px; padding:0 14px; background:none; box-shadow:none; outline:1.5px dashed rgba(255,255,255,.3); outline-offset:-1.5px; font:inherit; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.6)}
+.wh-pod.new{display:flex; align-items:center; justify-content:center; width:auto; min-width:56px; gap:7px; padding:0 14px; background:none; box-shadow:none; outline:1.5px dashed rgba(255,255,255,.3); outline-offset:-1.5px; font:inherit; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.6); white-space:nowrap}
 .wh-pod.new svg{width:14px; height:14px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round}
 .wh-pod.take{background:rgba(255,255,255,.3); box-shadow:inset 0 0 0 1.5px #fff; outline-color:#fff; color:#fff; transform:scale(1.1)}
 .wh-pod.full{opacity:.45}
@@ -977,17 +1008,21 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .sp-foot{flex:none; display:flex; gap:16px; padding:8px 6px 0; font-size:11px; color:rgba(255,255,255,.42)}
 .sp-foot kbd{font:inherit; font-weight:700; margin-right:5px; padding:1px 5px; border-radius:5px; background:rgba(255,255,255,.12); color:rgba(255,255,255,.75)}
 /* ---------- ULTRON's lock screen ----------
-   Your wallpaper, the time in thin light, and two small pieces of glass. A click or a key takes it away. (It is a
-   cover, not a lock: Windows' own sign-in can be asked for afterwards, in Settings.) */
+   Your wallpaper, the time in thin light, and a few small pieces of glass. With no passcode, a click or a key takes
+   it away. With one, the time draws back and a glass field comes forward to type it into. (It is a cover, not
+   Windows' lock: Windows' own sign-in can be asked for afterwards, in Settings.) */
 .lock{position:fixed; inset:0; z-index:90; overflow:hidden; background:#06070a; color:#fff; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .45s, visibility 0s .45s}
 .lock.on{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .6s}
 .lock.on.bye{opacity:0; transition:opacity .45s}
 .lk-bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:scale(1.09); transition:transform 1.8s var(--glide)}
 .lock.on .lk-bg{transform:scale(1)}
+.lock.on.ask .lk-bg{transform:scale(1.045); transition:transform 1.1s var(--glide)}
 .lock.on.bye .lk-bg{transform:scale(1.06); transition:transform .5s ease-in}
 .lk-bg:not([src]){visibility:hidden}
-.lk-dim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.04) 42%, rgba(0,0,0,.36))}
-.lk-mid{position:absolute; left:0; right:0; top:17%; display:flex; flex-direction:column; align-items:center; gap:16px}
+.lk-dim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.04) 42%, rgba(0,0,0,.36)); transition:background-color .5s}
+.lock.ask .lk-dim{background-color:rgba(0,0,0,.2)}
+.lk-mid{position:absolute; left:0; right:0; top:17%; display:flex; flex-direction:column; align-items:center; gap:16px; transform-origin:50% 0; transition:transform .8s var(--glide)}
+.lock.ask .lk-mid{transform:translateY(-5vh) scale(.56)}
 .lk-time{display:flex; font-size:160px; line-height:1; font-weight:200; letter-spacing:-.045em; font-variant-numeric:tabular-nums}
 .lk-time span{display:block; color:transparent; background:linear-gradient(180deg, #fff 18%, rgba(255,255,255,.6)); -webkit-background-clip:text; background-clip:text; opacity:0; transform:translateY(36px); filter:blur(14px) drop-shadow(0 6px 22px rgba(0,0,0,.22))}
 .lock.on .lk-time span{opacity:1; transform:none; filter:blur(0) drop-shadow(0 6px 22px rgba(0,0,0,.22)); transition:opacity .7s calc(var(--i) * 70ms + .25s), transform .95s var(--glide) calc(var(--i) * 70ms + .25s), filter .8s calc(var(--i) * 70ms + .25s)}
@@ -997,6 +1032,27 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .lock.on .lk-date{opacity:1; transform:none; transition:opacity .6s .8s, transform .85s var(--glide) .8s}
 .lk-hint{position:absolute; left:50%; bottom:8.5%; font-size:13px; color:rgba(255,255,255,.88); transform:translate(-50%, 14px)}
 .lock.on .lk-hint{opacity:1; transform:translate(-50%, 0); transition:opacity .6s 1.15s, transform .85s var(--glide) 1.15s}
+.lock.on.ask .lk-date, .lock.on.ask .lk-hint{opacity:0; transition:opacity .22s}
+/* the passcode: a glass field with a dot for each character typed. Wrong, it shakes its head; right, it swells and lets go */
+.lk-ask{position:absolute; left:0; right:0; top:45%; display:flex; flex-direction:column; align-items:center; gap:14px; opacity:0; transform:translateY(28px) scale(.92); pointer-events:none; transition:opacity .2s, transform .35s var(--glide)}
+.lock.on.ask .lk-ask{opacity:1; transform:none; pointer-events:auto; transition:opacity .35s .12s, transform .75s var(--spring) .12s}
+.lk-code{position:relative; display:flex; align-items:center; justify-content:center; min-width:264px; height:60px; padding:0 30px; border-radius:30px; opacity:1; transition:transform .35s var(--spring), background .3s, box-shadow .3s}
+.lk-ph{position:absolute; inset:0; display:grid; place-items:center; font-size:15px; font-weight:500; color:rgba(255,255,255,.58); transition:opacity .2s}
+.lk-code.has .lk-ph{opacity:0}
+.lk-dots{display:flex; gap:10px}
+.lk-dots i{width:11px; height:11px; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.25); animation:lkDot .3s var(--spring)}
+@keyframes lkDot{from{transform:scale(0)}}
+.lk-code.no{animation:lkNo .46s cubic-bezier(.36,.07,.19,.97)}
+@keyframes lkNo{10%, 90%{transform:translateX(-2px)} 20%, 80%{transform:translateX(5px)} 30%, 50%, 70%{transform:translateX(-9px)} 40%, 60%{transform:translateX(9px)}}
+.lk-code.yes{transform:scale(1.08); background:rgba(255,255,255,.34); box-shadow:inset 0 0 0 1px rgba(255,255,255,.55), 0 12px 32px rgba(0,0,0,.2)}
+.lk-say{min-height:18px; font-size:13.5px; font-weight:500; color:rgba(255,255,255,.84); text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.lk-win{margin-top:4px; padding:7px 14px; border:0; border-radius:14px; background:none; color:rgba(255,255,255,.62); font:inherit; font-size:12.5px; cursor:default; transition:background .2s, color .2s}
+.lk-win:hover{background:rgba(255,255,255,.14); color:#fff}
+/* (in Settings: where a passcode is set) */
+.lk-set{display:flex; align-items:center; gap:8px} .lk-set [hidden]{display:none}
+.lk-set input{width:150px; height:30px; padding:0 12px; border:0; border-radius:10px; outline:0; background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); color:#fff; font:inherit; font-size:13px; transition:box-shadow .2s, background .2s}
+.lk-set input:focus{background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.lk-set input::placeholder{color:rgba(255,255,255,.4)}
 /* ---------- today: the day at a glance ---------- */
 .td-top{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:1px 0 13px}
 .td-day b, .td-wx b{display:block; font-size:25px; line-height:1.1; font-weight:650; letter-spacing:-.022em; font-variant-numeric:tabular-nums}
@@ -1759,14 +1815,15 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
   <div class="wh-tray glass" id="whTray"><i class="gw"></i><div class="wh-pods" id="whPods"></div></div>
   <div class="wh-disc glass" id="whDisc"><i class="gw"></i><div class="wh-hubbg"></div></div>
   <div class="wh-rim" id="whRim"></div>
-  <div class="wh-hub"><label class="wh-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="whQ" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label>
-    <button class="wh-back" id="whBack" aria-label="Back to every app"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg><span id="whBackName"></span></button>
-    <div class="wh-name" id="whName"></div>
-    <button class="wh-t" id="whTile" aria-label="Tile the windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg></button>
-    <button class="wh-mas" id="whMas" aria-label="Ask ULTRON"><canvas id="whMasCv" width="124" height="124"></canvas></button>
-    <button class="wh-t" id="whGroups" aria-label="Groups" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="2"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="2"/></svg></button>
+  <div class="wh-hub"><div class="wh-name" id="whName"></div>
+    <div class="wh-row"><button class="wh-t" id="whTile" aria-label="Tile the windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg></button>
+      <label class="wh-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="whQ" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label>
+      <button class="wh-back" id="whBack" aria-label="Back to every app"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg><span id="whBackName"></span></button>
+      <button class="wh-t" id="whGroups" aria-label="Groups" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="2"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="2"/></svg></button></div>
+    <button class="wh-mas" id="whMas" aria-label="Ask ULTRON"><canvas id="whMasCv" width="90" height="90"></canvas></button>
     <div class="wh-grip"></div></div>
-  <div class="wh-peek" id="whPeek"><div class="wh-peek-in"><img id="whPeekImg" alt=""><div class="wh-peek-ic"><img id="whPeekIc" alt=""></div></div><span id="whPeekT"></span></div>
+  <div class="wh-stem" id="whStem"></div>
+  <div class="wh-peek" id="whPeek"><div class="wh-peek-in"><img id="whPeekImg" alt=""><div class="wh-peek-ic"><img id="whPeekIc" alt=""></div></div><div class="wh-peek-ft"><img id="whPeekBadge" alt=""><span id="whPeekT"></span><em id="whPeekN"></em></div></div>
   <div class="wh-drag" id="whDrag"><img alt=""></div>
 </div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
@@ -1777,7 +1834,8 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 </div>
 <div class="lock" id="lock" aria-label="Lock screen"><img class="lk-bg" id="lkBg" alt=""><div class="lk-dim"></div>
   <div class="lk-mid"><div class="lk-time" id="lkTime"></div><div class="lk-glass lk-date" id="lkDate"></div></div>
-  <div class="lk-glass lk-hint">Click, or press any key</div>
+  <div class="lk-ask"><div class="lk-glass lk-code" id="lkBox"><span class="lk-dots" id="lkDots"></span><span class="lk-ph">Passcode</span></div><div class="lk-say" id="lkSay"></div><button class="lk-win" id="lkWin">Use Windows sign-in instead</button></div>
+  <div class="lk-glass lk-hint" id="lkHint">Click, or press any key</div>
 </div>
 <div class="dd glass panel-glass" id="dd" role="menu"></div>
 <div class="cal glass panel-glass" id="cal" role="dialog" aria-label="Calendar"><i class="gw"></i><div class="ca-in" id="calIn"></div></div>
@@ -1810,7 +1868,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only"><span class="sw-l">Ask for my Windows password after it<small>Off, ULTRON’s lock screen is a cover: a click takes it away. On, Windows’ sign-in follows it.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only"><span class="sw-l">Passcode<small>Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><span class="lk-set"><input id="lkNew" type="password" maxlength="32" placeholder="New passcode" autocomplete="new-password" spellcheck="false" aria-label="New passcode"><button class="chipb" data-sx="lkset">Set</button><button class="chipb" data-sx="lkclear" id="lkClear" hidden>Remove</button></span></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Show a window when the pointer rests on its app<small>A small picture of it comes out of the wheel, beside the app</small></span><button class="tg" role="switch" data-set="dkPeek" aria-label="dkPeek"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>What the old Clipboard menu had saved. Nothing new is kept.</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
@@ -2335,7 +2393,7 @@ function pump(now){
 function wake(){ if (loopT){ clearTimeout(loopT); loopT = 0; requestAnimationFrame(pump); } }
 requestAnimationFrame(pump);
 function frame(now){
-  const open_ = notch.classList.contains('open'), whUp = !!(window.WH && WH.open);   // (the wheel is down: the character is at its hub too)
+  const open_ = notch.classList.contains('open'), whUp = !!(window.WH && WH.open);   // (the wheel is down: the character is drawn at its hub too)
   if (Math.abs(shine.tx - shine.x) > .5 || Math.abs(shine.ts - shine.s) > .004){
     shine.x += (shine.tx - shine.x) * .16; shine.s += (shine.ts - shine.s) * .14;
     mbar.style.setProperty('--hx', shine.x.toFixed(1) + 'px'); mbar.style.setProperty('--hs', shine.s.toFixed(3));
@@ -2348,11 +2406,11 @@ function frame(now){
   // The drawing buffer isn't re-made on every frame while the character's box animates (that stalled the
   // opening): growing, it jumps once to the size it's heading for; shrinking, it drops once things settle.
   if (w !== lastW || h !== lastH){ lastW = w; lastH = h; sizeAt = now; camera.aspect = w / h; camera.updateProjectionMatrix(); }
-  if (w > bufW + .5 || h > bufH + .5 || (whUp && bufW < 149)){
-    const big = open_ || whUp ? 150 : 0;
+  if (w > bufW + .5 || h > bufH + .5){
+    const big = open_ ? 150 : 0;
     bufW = Math.max(w, big); bufH = Math.max(h, big * (h / (w || 1)));
     renderer.setSize(bufW, bufH, false); resized = true;
-  } else if ((w < bufW - .5 || h < bufH - .5) && now - sizeAt > 160 && !whUp){
+  } else if ((w < bufW - .5 || h < bufH - .5) && now - sizeAt > 160){
     bufW = w; bufH = h; renderer.setSize(w, h, false); resized = true;
   }
   camera.position.z += ((w < 60 ? 1.6 : 1.8) - camera.position.z) * .12;
@@ -2366,16 +2424,17 @@ function frame(now){
   // Collapsed, the character is drawn again only when it would look different: while it just breathes that's about
   // half as often (a pose a fraction of a pixel off the last one isn't drawn). Each drawing costs a frame of the
   // whole overlay, and that was most of what ULTRON used while sitting idle (18% of a core, measured).
-  if (isOpen || resized || whUp || t - lastRender > 1 / 30){
-    let draw = isOpen || resized || whUp || faceCur || faceK > .01, fine = '', big = '';
+  if (isOpen || resized || t - lastRender > 1 / 30){
+    let draw = isOpen || resized || faceCur || faceK > .01, fine = '', big = '';
     if (!draw){
       // A change you could see (a third of a pixel or more: a blink, a look, a hop) is drawn at once. The slow drift of
       // breathing moves the character less than that from one frame to the next, and is caught up on five times a second.
       big = poseKey(4); fine = poseKey(1);
       draw = big !== lastBig || (fine !== lastPose && t - lastRender > .2);
     }
-    if (draw){ lastPose = fine; lastBig = big; lastRender = t; renderer.render(scene, camera); if (whUp) whMascot(); }
+    if (draw){ lastPose = fine; lastBig = big; lastRender = t; renderer.render(scene, camera); }
   }
+  if (whUp) whMascot();                                      // (and at the wheel's hub, on a canvas of its own, while the wheel is down)
   const tt = reduce ? 0 : t;
   const miniLive = micLevel > .08 || voiceState === 'transcribing' || voiceState === 'hearing';   // (.08: above a quiet room's hum)
   if (!isOpen && (miniLive || !miniStill)){ drawWave(miniCv, tt, 5, 2.5, .9); miniStill = !miniLive; }
@@ -2543,6 +2602,7 @@ function paintSettings(){
   bodyMat.color.set(S.tint);
   // (what only matters with ULTRON's taskbar, or its lock screen, folds away without them)
   document.querySelectorAll('.sw-rows').forEach(r => { r.classList.toggle('dk-off', S.dock !== 'ultron'); r.classList.toggle('lk-off', S.lock !== 'ultron'); });
+  $('lkClear').hidden = !S.lockHash; $('lkNew').placeholder = S.lockHash ? 'Change passcode' : 'New passcode';
 }
 let sensTimer = 0;
 const pushSens = () => { clearTimeout(sensTimer); sensTimer = setTimeout(() => invoke('voice_config', {sens:S.sens}), 120); };
@@ -5798,7 +5858,7 @@ function activateRow(btn){
   if (btn.dataset.ask) return askUltron(q);
   if (btn.dataset.web){ invoke('launch', {target:'https://www.google.com/search?q=' + encodeURIComponent(q)}); closeStart(); }
 }
-$('searchBtn').addEventListener('click', e => { e.stopPropagation(); startEl.classList.contains('open') ? closeStart() : openStart(); });
+$('searchBtn').addEventListener('click', e => { e.stopPropagation(); spot.classList.contains('open') ? closeSpot() : openSpot(); });
 startEl.addEventListener('click', e => {
   e.stopPropagation();
   if (!e.target.closest('.sm-pw-wrap')) $('smPwm').classList.remove('open');
@@ -5913,6 +5973,10 @@ setEl.addEventListener('click', e => {
     case 'clearlyr': try { localStorage.removeItem('ultron-lyr-offsets'); } catch(_){} lyrOffset = 0; paintNudge(); done('Reset'); break;
     case 'taskmgr': invoke('menu_action', {action:'task-manager'}); break;
     case 'lockshow': closeSettings(); setTimeout(lockShow, 380); break;
+    case 'lkset': { const v = $('lkNew').value; if ([...v].length < 4){ done('4 or more'); break; }
+      const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join('');
+      lkHash(salt, v).then(h => { S.lockSalt = salt; S.lockHash = h; save(); $('lkNew').value = ''; paintSettings(); }); done('Saved'); break; }
+    case 'lkclear': delete S.lockSalt; delete S.lockHash; save(); $('lkNew').value = ''; paintSettings(); break;
     case 'quit': invoke('quit_app'); break;
     case 'memall': invoke('memory_forget', {index:null}); $('swMem').querySelectorAll('div').forEach(d => d.classList.add('gone')); setTimeout(paintMemory, 380); done('Forgotten'); break;
     case 'intro': closeSettings(); setTimeout(() => invoke('intro_play'), 300); break;
@@ -6458,11 +6522,12 @@ if (TAURI) setTimeout(prewarm, 7000);
    Start too) and the mouse wheel turns it; type in the box at the hub and the rim fills with every app that
    matches. Rest the pointer on a bead and its window is shown beside it. Beads can be dragged into groups, kept in
    a tray that comes out from under the wheel. ULTRON itself sits at the hub. Which windows are open comes from
-   dock.rs, only when something changes. Nothing is drawn or worked out while the wheel is still. */
+   dock.rs, only when something changes. Nothing here runs frame by frame: the script says where each thing should
+   end up, and the moving is done by transitions. */
 const wheel = $('wheel'), whBody = $('whBody'), whDisc = $('whDisc'), whTray = $('whTray');
 var DK = {on:false, busy:false, wins:[], apps:[], tiled:false, asked:new Set()};
-var WH = {open:false, over:false, mode:'open', only:'', items:[], els:[], sel:0, rot:0, vrot:0, ty:0, vty:0, tty:0, raf:0, t:0, R:250, D:190, cy:-28, rest:-180, step:.277, closeT:0, openT:0, iconT:0, peekT:0, peekFor:'', dir:0,
-  tray:false, drag:null, dragged:0, gw:whDisc.querySelector('.gw'), gwT:whTray.querySelector('.gw')};
+var WH = {open:false, over:false, mode:'open', only:'', items:[], live:new Map(), sel:0, mid:0, R:250, D:190, cy:-28, rest:-180, step:.277, closeT:0, openT:0, iconT:0, peekT:0, peekFor:'', dir:0,
+  tray:false, drag:null, dragged:0, gl:null, gw:whDisc.querySelector('.gw'), gwT:whTray.querySelector('.gw')};
 const dkWait = ms => new Promise(r => setTimeout(r, ms));
 for (const [k, v] of Object.entries({dkSize:'m', dkTint:'clear', dkOpen:'hover', dkPins:true, dkPeek:true, dkGap:10, dkStart:'win', lock:'win', lockPass:false})) if (S[k] === undefined) S[k] = v;
 if (!Array.isArray(S.groups)) S.groups = [];
@@ -6472,7 +6537,8 @@ paintSettings();                                           // (the Taskbar secti
 function whGeom(){
   const R = {s:215, m:250, l:285}[S.dkSize] || 250;
   WH.R = R; WH.D = Math.round(R * .76); WH.cy = 32 + WH.D - R; WH.rest = -(WH.D - 10); WH.step = 59 / (R - 37);    // (beads 59 px apart along the rim)
-  wheel.style.setProperty('--R', R + 'px'); wheel.style.setProperty('--cy', WH.cy + 'px'); wheel.style.setProperty('--k', (R / 250).toFixed(3));
+  const set = (k, v) => wheel.style.setProperty(k, v);
+  set('--R', R + 'px'); set('--rb', (R - 37) + 'px'); set('--cy', WH.cy + 'px'); set('--rest', WH.rest + 'px'); set('--k', (R / 250).toFixed(3));
   wheel.classList.toggle('smoked', S.dkTint === 'smoked');
   const g = WH.gw;                                         // (its glass, lined up with the screen for when it's down)
   g.style.left = -(innerWidth / 2 - R) + 'px'; g.style.top = -(WH.cy - R) + 'px'; g.style.width = (screen.width || innerWidth) + 'px'; g.style.height = (screen.height || innerHeight) + 'px';
@@ -6483,46 +6549,90 @@ function whTrayGlass(){
   g.style.left = -(innerWidth / 2 - whTray.offsetWidth / 2) + 'px'; g.style.top = -(32 + WH.D + 10) + 'px'; g.style.width = (screen.width || innerWidth) + 'px'; g.style.height = (screen.height || innerHeight) + 'px';
   glassDraw(g);
 }
-// what rides the rim: what's open (with the apps pinned in Start); one app's windows; or, with something typed, every app that matches
+// What rides the rim: what's open (with the apps pinned in Start); one app's windows; or, with something typed,
+// every app that matches. Those are laid out from the middle: the best match at the bottom, the next ones to either
+// side of it by turns, so what you most likely meant is always nearest.
 function whItems(){
   const q = $('whQ').value.trim().toLowerCase();
+  WH.mid = 0;
   if (q){
     const list = startApps.map(a => { const n = a.name.toLowerCase(); return [n.startsWith(q) ? 0 : n.split(/[\s\-_.]+/).some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : 9, a]; })
-      .filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name)).map(x => x[1]);
-    return list.slice(0, 80).map(a => ({key:'a:' + a.launch, name:a.name, short:a.name, launch:a.launch, kind:'launch'}));
+      .filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name)).slice(0, 60).map(x => x[1]);
+    const left = [], right = [];
+    list.forEach((a, r) => { if (r) (r % 2 ? right : left).push(a); });
+    WH.mid = left.length;
+    return [...left.reverse(), ...list.slice(0, 1), ...right].map(a => ({key:'a:' + a.launch, name:a.name, short:a.name, launch:a.launch, kind:'launch'}));
   }
   if (WH.mode === 'wins') return DK.wins.filter(w => w.launch === WH.only).map(w => ({key:'w:' + w.id, name:w.title || w.name, short:w.name, launch:w.launch, kind:'win', w, run:true, act:w.active}));
   return DK.apps.map(g => ({key:'g:' + g.launch, name:g.wins.length > 1 ? `${g.name}, ${g.wins.length} windows` : g.wins[0] ? (g.wins[0].title || g.name) : g.name, short:g.name, launch:g.launch, kind:'app', g,
     run:g.wins.length > 0, act:g.wins.some(w => w.active)}));
 }
-// The rim is threaded again. `to`: 'active' turns the app in use to the bottom, 'first' the first one; nothing keeps what was there.
-function whRender(to){
-  const keep = WH.items[WH.sel] && WH.items[WH.sel].key;
-  if (WH.mode === 'wins' && ($('whQ').value.trim() || !DK.wins.some(w => w.launch === WH.only))){ WH.mode = 'open'; to = to || 'active'; }
+// The rim is threaded again. `to`: 'active' turns the app in use to the bottom, 'first' the first one (the best match,
+// when searching); nothing keeps what was there. `grow`: beads that weren't there before grow into place.
+function whRender(to, grow){
+  const keep = WH.items[WH.sel] && WH.items[WH.sel].key, q = $('whQ').value.trim();
+  if (WH.mode === 'wins' && (q || !DK.wins.some(w => w.launch === WH.only))){ WH.mode = 'open'; to = to || 'active'; }
   WH.items = whItems();
   const n = WH.items.length;
-  let i = to === 'first' ? 0 : to === 'active' ? WH.items.findIndex(x => x.act) : WH.items.findIndex(x => x.key === keep);
+  let i = to === 'first' ? WH.mid : to === 'active' ? WH.items.findIndex(x => x.act) : WH.items.findIndex(x => x.key === keep);
   if (i < 0) i = to === 'active' ? Math.floor((n - 1) / 2) : Math.min(WH.sel, n - 1);
   WH.sel = Math.max(0, i);
-  if (to){ WH.rot = WH.sel - 2.4; WH.vrot = 0; }             // (a fresh rim swings into place)
-  $('whRim').innerHTML = WH.items.map((it, k) => { const u = iconCache.get(it.launch);
-    return `<button class="wh-b far${it.run ? ' run' : ''}${it.act ? ' act' : ''}" data-i="${k}" aria-label="${esc(it.name)}"><img data-src="${esc(it.launch)}" ${u ? `src="${u}" class="ok"` : ''} alt="" draggable="false"><span class="fbk">${esc((it.short || it.name || '?').charAt(0).toUpperCase())}</span><i></i></button>`; }).join('');
-  WH.els = [...$('whRim').children];
   wheel.classList.toggle('wins', WH.mode === 'wins');
   if (WH.mode === 'wins') $('whBackName').textContent = (DK.apps.find(g => g.launch === WH.only) || {}).name || 'Back';
-  whPeek(null); WH.dir = 0; whName(); whDraw(); whRun(); whIcons();
+  whPeek(null); WH.dir = 0; whName(); whPlace(grow); whIcons();
 }
-// pictures for the beads that can be seen (and a few either side), asked for once things have stopped
+function whBead(it){
+  const b = document.createElement('button'), u = iconCache.get(it.launch);
+  b.className = 'wh-b'; b._key = it.key;
+  b.innerHTML = `<span class="wh-bi"><img data-src="${esc(it.launch)}" ${u ? `src="${u}" class="ok"` : ''} alt="" draggable="false"><span class="fbk">${esc((it.short || it.name || '?').charAt(0).toUpperCase())}</span><i></i></span>`;
+  return b;
+}
+// Every bead near the one picked is given its place on the rim: its distance round from the bottom, as one transform
+// (see the styles). Beads farther round than can be seen aren't kept at all; one comes into being a couple of places
+// before it turns into view. The one at the bottom is the one picked, and a little larger.
+function whPlace(grow){
+  const n = WH.items.length, rim = $('whRim'), keep = new Set(), Rb = WH.R - 37;
+  for (let i = Math.max(0, WH.sel - 7); i <= Math.min(n - 1, WH.sel + 7); i++){
+    const it = WH.items[i], a = (i - WH.sel) * WH.step, off = Math.abs(a);
+    let el = WH.live.get(it.key);
+    const born = !el;
+    if (born){
+      el = whBead(it); WH.live.set(it.key, el);
+      if (grow && off < 1.3){ el.classList.add('in'); el.style.setProperty('--d', Math.min(260, Math.round(off / WH.step) * 28) + 'ms'); }
+    } else el.classList.remove('out');
+    keep.add(it.key);
+    el.dataset.i = i; el._a = a; el.setAttribute('aria-label', it.name);
+    el.style.transform = `rotate(${(-a).toFixed(4)}rad) translateY(${Rb}px) rotate(${a.toFixed(4)}rad) scale(${i === WH.sel ? 1.2 : 1})`;
+    el.style.opacity = Math.max(0, Math.min(1, (1.4 - off) / .2)).toFixed(2);
+    el.className = 'wh-b' + (it.run ? ' run' : '') + (it.act ? ' act' : '') + (i === WH.sel ? ' sel' : '') + (off > 1.36 ? ' edge' : '') + (el.classList.contains('in') ? ' in' : '') + (el.classList.contains('lift') ? ' lift' : '');
+    if (born) rim.appendChild(el);
+  }
+  for (const [k, el] of WH.live) if (!keep.has(k)){
+    WH.live.delete(k);
+    if (WH.open && +el.style.opacity > .05){ el.classList.add('out'); setTimeout(() => el.remove(), 260); } else el.remove();
+  }
+}
+$('whRim').addEventListener('animationend', e => { const b = e.target.closest && e.target.closest('.wh-b'); if (b) b.classList.remove('in'); });
+// pictures for the beads on the rim that have none yet, asked for once things have stopped
 function whIcons(){
   clearTimeout(WH.iconT);
   WH.iconT = setTimeout(async () => {
-    const want = [];
-    for (let i = Math.max(0, WH.sel - 9); i < Math.min(WH.els.length, WH.sel + 10); i++){ const im = WH.els[i].firstChild; if (!im.classList.contains('ok') && !want.some(x => x.dataset.src === im.dataset.src)) want.push(im); }
+    const want = [...new Set([...WH.live.values()].map(el => el.firstChild.firstChild).filter(im => !im.classList.contains('ok')).map(im => im.dataset.src))];
     for (let i = 0; i < want.length; i += 10){
-      const part = want.slice(i, i + 10), urls = (await invoke('app_icons', {sources:part.map(m => m.dataset.src)})) || [];
-      part.forEach((m, j) => { if (!urls[j]) return; iconCache.set(m.dataset.src, urls[j]); for (const el of WH.els){ const im = el.firstChild; if (im.dataset.src === m.dataset.src && !im.classList.contains('ok')){ im.src = urls[j]; im.classList.add('ok'); } } });
+      const part = want.slice(i, i + 10), urls = (await invoke('app_icons', {sources:part})) || [];
+      part.forEach((src, j) => { if (!urls[j]) return; iconCache.set(src, urls[j]); for (const el of WH.live.values()){ const im = el.firstChild.firstChild; if (im.dataset.src === src && !im.classList.contains('ok')){ im.src = urls[j]; im.classList.add('ok'); } } });
     }
-  }, 90);
+  }, 60);
+}
+// Every app's picture is fetched once, quietly, a while after the wheel is set up: what a search finds then has
+// its picture from the first moment, not a letter that turns into one.
+async function whWarm(){
+  const all = (startApps || []).map(a => a.launch).filter(l => !iconCache.has(l));
+  for (let i = 0; i < all.length && DK.on; i += 12){
+    const part = all.slice(i, i + 12).filter(l => !iconCache.has(l));
+    if (part.length){ const urls = (await invoke('app_icons', {sources:part})) || []; part.forEach((l, j) => { if (urls[j]) iconCache.set(l, urls[j]); }); }
+    await dkWait(WH.open ? 600 : 160);
+  }
 }
 // The name of what's picked, at the hub. A new name follows the old one in from the side the wheel is turning from.
 function whName(i, text){
@@ -6533,49 +6643,32 @@ function whName(i, text){
   for (const old of box.children){ if (old.classList.contains('out')) continue; old.classList.add('out'); old.style.setProperty('--to', (-WH.dir * 22) + 'px'); setTimeout(() => old.remove(), 210); }
   const nu = document.createElement('span'); nu.textContent = t; nu.style.setProperty('--from', (WH.dir * 22) + 'px'); box.appendChild(nu);
 }
-// Where everything is this instant: how far down the wheel has rolled, and each bead's place on the rim (it turns
-// as it comes down, so it rolls; the bead at the bottom is the one picked, and a little larger).
-function whDraw(){
-  const Rb = WH.R - 37, cy = WH.cy, phi = (WH.ty / WH.rest) * .95;
-  whBody.style.transform = `translate3d(0, ${WH.ty.toFixed(2)}px, 0)`;
-  WH.gw.style.transform = WH.gwT.style.transform = `translate3d(0, ${(-WH.ty).toFixed(2)}px, 0)`;     // (the glass's picture stays put while the glass moves)
-  for (let i = 0; i < WH.els.length; i++){
-    const el = WH.els[i], a = (i - WH.rot) * WH.step + phi, far = Math.abs(a) > 1.5;
-    if (far !== el._far){ el._far = far; el.classList.toggle('far', far); }
-    if (far) continue;
-    const s = 1 + .2 * Math.max(0, 1 - Math.abs(a) / WH.step);
-    el._a = a;
-    el.style.transform = `translate3d(${(Rb * Math.sin(a)).toFixed(2)}px, ${(cy + Rb * Math.cos(a)).toFixed(2)}px, 0) scale(${s.toFixed(3)})`;
-    el.style.opacity = Math.max(0, Math.min(1, (1.4 - Math.abs(a)) / .2)).toFixed(2);
-    const sel = i === WH.sel; if (sel !== el._sel){ el._sel = sel; el.classList.toggle('sel', sel); }
-  }
+// ULTRON at the hub is the character in the notch, drawn a second time on a see-through canvas of its own (the way
+// it is drawn beside the cursor when you pick text): frame() asks for it while the wheel is down.
+function whGL(){
+  if (WH.gl) return WH.gl;
+  const r = new THREE.WebGLRenderer({canvas:$('whMasCv'), antialias:true, alpha:true, powerPreference:'low-power'});
+  r.setPixelRatio(Math.min(2, devicePixelRatio)); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.2;
+  r.setSize(72, 72, false); r.setClearColor(0x000000, 0);
+  const sc = new THREE.Scene(), env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), new THREE.MeshBasicMaterial({color:0x26282c, side:THREE.BackSide})));
+  [[9, 4, [0, 7, 3], 2.6], [2.5, 9, [-7, 0, 1], 1.8], [2.5, 9, [7, 0, 1], 1.8], [4, 9, [0, 0, -7], 1.5]].forEach(([w, h, pos, i]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({color:new THREE.Color(0xffffff).multiplyScalar(i), side:THREE.DoubleSide}));
+    m.position.set(...pos); m.lookAt(0, 0, 0); env.add(m);
+  });
+  sc.environment = new THREE.PMREMGenerator(r).fromScene(env, .02).texture;
+  const l = new THREE.DirectionalLight(0xffffff, .9); l.position.set(1.5, 3, 4); sc.add(l);
+  const cam = new THREE.PerspectiveCamera(32, 1, .1, 50); cam.position.set(0, .02, 1.34);
+  return WH.gl = {r, sc, cam};
 }
-function whRun(){ if (!WH.raf){ WH.t = performance.now(); WH.raf = requestAnimationFrame(whStep); } }
-function whStep(now){
-  WH.raf = 0;
-  const dt = Math.min(.032, Math.max(.004, (now - WH.t) / 1000)); WH.t = now;
-  let moving = false;
-  // (springs a little short of fully damped: it comes down, goes a touch past, and settles)
-  let d = WH.tty - WH.ty; WH.vty += (d * 190 - WH.vty * 22) * dt; WH.ty += WH.vty * dt;
-  if (Math.abs(d) > .05 || Math.abs(WH.vty) > .8) moving = true; else { WH.ty = WH.tty; WH.vty = 0; }
-  d = WH.sel - WH.rot; WH.vrot += (d * 150 - WH.vrot * 19) * dt; WH.rot += WH.vrot * dt;
-  if (Math.abs(d) > .002 || Math.abs(WH.vrot) > .02) moving = true; else { WH.rot = WH.sel; WH.vrot = 0; }
-  whDraw();
-  if (moving) WH.raf = requestAnimationFrame(whStep);
-}
-// ULTRON at the hub is the character in the notch: each time that one is drawn, its picture is copied here (frame() asks)
-function whMascot(){
-  const c = $('whMasCv'), s = renderer.domElement, px = Math.round(62 * Math.min(2, devicePixelRatio || 1));
-  if (!s.width) return;
-  if (c.width !== px) c.width = c.height = px;
-  const x = c.getContext('2d'); x.clearRect(0, 0, px, px); x.drawImage(s, 0, 0, px, px);
-}
+function whMascot(){ const g = whGL(); g.sc.add(mochi); g.r.render(g.sc, g.cam); scene.add(mochi); }
 function whOpen(focus){
   clearTimeout(WH.openT); clearTimeout(WH.closeT);
   if (WH.open || !DK.on || wheel.classList.contains('away')) return;
   closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); closeSpot(true);
-  WH.open = true; wheel.classList.add('open'); WH.mode = 'open'; $('whQ').value = '';
-  whRender('active'); WH.tty = 0; whRun(); wake();
+  WH.mode = 'open'; $('whQ').value = '';
+  whRender('active');                                        // (threaded while it's still up: it comes down already turned to the app in use)
+  WH.open = true; wheel.classList.add('open'); wake();
   if (focus) setTimeout(() => $('whQ').focus({preventScroll:true}), 120);
   syncHit(); setTimeout(syncHit, 520);
 }
@@ -6584,21 +6677,22 @@ function whClose(){
   if (!WH.open) return;
   WH.open = false; wheel.classList.remove('open'); whPeek(null); whDragEnd(true);
   if (document.activeElement === $('whQ')) $('whQ').blur();
-  WH.tty = WH.rest; whRun(); setTimeout(syncHit, 380);
+  setTimeout(syncHit, 380);
 }
 function whSpin(by){
   const n = WH.items.length; if (!n) return;
-  WH.dir = by > 0 ? 1 : -1; WH.sel = Math.max(0, Math.min(n - 1, WH.sel + by)); whPeek(null); whName(); whRun(); whIcons();
+  const to = Math.max(0, Math.min(n - 1, WH.sel + by)); if (to === WH.sel) return;
+  WH.dir = by > 0 ? 1 : -1; WH.sel = to; whPeek(null); whName(); whPlace(); whIcons();
 }
 // a bead is pressed: go to that window; an app with several shows them on the rim; an app that isn't open, opens
 function whAct(i){
   const it = WH.items[i]; if (!it) return;
-  WH.dir = Math.sign(i - WH.sel); WH.sel = i; whName(); whRun();
+  WH.dir = Math.sign(i - WH.sel); WH.sel = i; whName(); whPlace();
   const done = () => setTimeout(whClose, 240);
   if (it.kind === 'launch'){ invoke('launch', {target:it.launch}); done(); }
   else if (it.kind === 'win'){ invoke('dock_act', {id:it.w.id, what:'focus'}); done(); }
   else if (!it.g.wins.length){ invoke('launch', {target:it.launch}); done(); }
-  else if (it.g.wins.length > 1){ WH.mode = 'wins'; WH.only = it.launch; whRender('first'); }
+  else if (it.g.wins.length > 1){ WH.mode = 'wins'; WH.only = it.launch; whRender('first', true); }
   else { const w = it.g.wins[0]; invoke('dock_act', {id:w.id, what:w.active && !w.min ? 'min' : 'focus'}); done(); }
 }
 function whTile(){
@@ -6609,25 +6703,36 @@ function whTile(){
   });
 }
 
-/* a window shown beside its bead */
+/* A window shown beside its bead. The card comes out of the bead to a place a little way off the wheel, lying the
+   way the wheel curves at that place, with a thin stem back to the bead it belongs to. Its picture is the window as
+   it is now, or, for one that's minimized, as it last was (dock.rs keeps one of each window you use). */
 function whPeek(el){
   clearTimeout(WH.peekT);
-  const card = $('whPeek'), it = el && WH.items[+el.dataset.i];
-  if (!it || !S.dkPeek || WH.drag || (it.kind !== 'win' && !(it.kind === 'app' && it.g.wins.length))){ card.classList.remove('on'); WH.peekFor = ''; return; }
+  const card = $('whPeek'), stem = $('whStem'), it = el && WH.items[+el.dataset.i];
+  if (!it || !S.dkPeek || WH.drag || (it.kind !== 'win' && !(it.kind === 'app' && it.g.wins.length))){ card.classList.remove('on'); stem.classList.remove('on'); WH.peekFor = ''; return; }
   const w = it.kind === 'win' ? it.w : (it.g.wins.find(x => x.active) || it.g.wins.find(x => !x.min) || it.g.wins[0]);
   if (WH.peekFor === w.id && card.classList.contains('on')) return;
   WH.peekT = setTimeout(async () => {
-    const a = el._a || 0, Rb = WH.R - 37, Rp = WH.R + 88 + (WH.tray ? 74 : 0);     // (clear of the tray, when that's out)
-    // (out of the bead, to a place beyond the rim along the bead's spoke, leaning as the spoke leans)
-    card.style.setProperty('--bx', (Rb * Math.sin(a)).toFixed(1) + 'px'); card.style.setProperty('--by', (WH.cy + Rb * Math.cos(a)).toFixed(1) + 'px');
-    card.style.setProperty('--px', (Rp * Math.sin(a) * 1.04).toFixed(1) + 'px'); card.style.setProperty('--py', (WH.cy + Rp * Math.cos(a) + 6).toFixed(1) + 'px');
-    card.style.setProperty('--rot', (-a * 57.3 * .55).toFixed(1) + 'deg');
-    $('whPeekT').textContent = w.title || w.name; $('whPeekIc').src = iconCache.get(it.launch) || '';
-    const img = $('whPeekImg'); img.removeAttribute('src'); card.classList.remove('shot');
-    WH.peekFor = w.id; card.classList.remove('on'); void card.offsetWidth; card.classList.add('on');
-    const shot = w.min ? null : await invoke('dock_peek', {id:w.id});
-    if (shot && WH.peekFor === w.id){ img.src = shot; card.classList.add('shot'); }
-  }, 260);
+    // the bead is at angle a on the rim; the card sits on a wider circle, a little nearer the bottom (so one at
+    // the side doesn't run off under the bar), and is turned to lie square to the spoke through its own middle
+    const a = el._a || 0, ac = a * .72, Rb = WH.R - 37, Rc = WH.R + 106 + (WH.tray ? 74 : 0), H = 164;
+    const bx = Rb * Math.sin(a), by = WH.cy + Rb * Math.cos(a), cx = Rc * Math.sin(ac), cy = WH.cy + Rc * Math.cos(ac);
+    const set = (k, v) => card.style.setProperty(k, v);
+    set('--bx', bx.toFixed(1) + 'px'); set('--by', by.toFixed(1) + 'px'); set('--px', cx.toFixed(1) + 'px'); set('--py', cy.toFixed(1) + 'px'); set('--rot', (-ac).toFixed(4) + 'rad');
+    // the stem: from just outside the bead to the middle of the card's near edge
+    const sx = (Rb + 27) * Math.sin(a), sy = WH.cy + (Rb + 27) * Math.cos(a), tx = cx - Math.sin(ac) * (H / 2 + 1), ty = cy - Math.cos(ac) * (H / 2 + 1);
+    stem.style.height = Math.max(0, Math.hypot(tx - sx, ty - sy)).toFixed(1) + 'px';
+    stem.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) rotate(${Math.atan2(-(tx - sx), ty - sy).toFixed(4)}rad)`;
+    const many = it.kind === 'app' && it.g.wins.length > 1, icon = iconCache.get(it.launch) || '';
+    $('whPeekT').textContent = w.title || w.name; $('whPeekIc').src = icon; $('whPeekBadge').src = icon;
+    $('whPeekN').textContent = many ? `${it.g.wins.length} windows` : '';
+    const img = $('whPeekImg'); img.removeAttribute('src'); card.classList.remove('shot'); card.classList.toggle('many', many);
+    WH.peekFor = w.id; card.classList.remove('on'); stem.classList.remove('on'); void card.offsetWidth; card.classList.add('on'); stem.classList.add('on');
+    const shot = await invoke('dock_peek', {id:w.id});
+    if (WH.peekFor !== w.id) return;
+    if (shot){ img.onload = () => { if (WH.peekFor === w.id) card.classList.add('shot'); }; img.src = shot; }
+    else if (!many) $('whPeekN').textContent = w.min ? 'Minimized' : '';
+  }, 220);
 }
 
 /* groups: beads dragged into pods in a tray under the wheel */
@@ -6661,7 +6766,7 @@ function whDragMove(e){
     if (!WH.tray) whTrayShow(true);
     try { $('whRim').setPointerCapture(e.pointerId); } catch(_){}
   }
-  $('whDrag').style.transform = `translate3d(${(e.clientX - innerWidth / 2).toFixed(1)}px, ${(e.clientY - WH.ty).toFixed(1)}px, 0) scale(1.08)`;
+  $('whDrag').style.transform = `translate3d(${(e.clientX - innerWidth / 2).toFixed(1)}px, ${e.clientY.toFixed(1)}px, 0) scale(1.08)`;
   const under = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('wh-pod'));
   if (under !== d.pod){ if (d.pod) d.pod.classList.remove('take'); d.pod = under && !under.classList.contains('full') ? under : null; if (d.pod) d.pod.classList.add('take'); }
 }
@@ -6684,12 +6789,12 @@ function dockWins(list){
   for (const w of list){ const g = open.get(w.launch) || {launch:w.launch, name:w.name, wins:[]}; g.wins.push(w); open.set(w.launch, g); }
   const pinned = !S.dkPins ? [] : (pins || []).slice(0, 8).map(l => { const a = startApps && startApps.find(x => x.launch === l); return a ? {launch:l, name:a.name, wins:(open.get(l) || {wins:[]}).wins} : null; }).filter(Boolean);
   DK.apps = [...pinned, ...[...open.values()].filter(g => !pinned.some(p => p.launch === g.launch))];
-  if (WH.open && !WH.drag && !$('whQ').value.trim()) whRender();
+  if (WH.open && !WH.drag && !$('whQ').value.trim()) whRender(null, true);
   // (their pictures are fetched as they turn up, so the wheel's first roll down already has them)
   const need = DK.apps.map(g => g.launch).filter(l => !iconCache.has(l) && !DK.asked.has(l));
   if (need.length){ need.forEach(l => DK.asked.add(l)); invoke('app_icons', {sources:need}).then(urls => (urls || []).forEach((u, i) => { if (u) iconCache.set(need[i], u); })); }
 }
-function whStyle(){ if (!DK.on) return; whGeom(); if (!WH.open) WH.ty = WH.tty = WH.rest; dockWins(DK.wins); whDraw(); whRun(); syncHit(); }
+function whStyle(){ if (!DK.on) return; whGeom(); dockWins(DK.wins); whPlace(); invoke('dock_keep', {on:!!S.dkPeek}); syncHit(); }
 async function dockOn(quiet){
   if (DK.on || DK.busy || !TAURI) return;
   DK.busy = true;
@@ -6697,10 +6802,13 @@ async function dockOn(quiet){
     if (!startApps) startApps = (await invoke('start_apps')) || [];
     pinnedApps();
     await invoke('dock_set', {on:true});                    // (Windows' taskbar slides away, and its strip of the screen goes to your windows)
+    invoke('dock_keep', {on:!!S.dkPeek});
     DK.on = true; whGeom();
-    WH.open = false; wheel.classList.remove('open'); WH.ty = WH.rest - 26; WH.tty = WH.rest; WH.vty = 0;
+    WH.open = false; wheel.classList.remove('open');
     dockWins((await invoke('dock_list')) || []);
-    document.body.classList.add('docked'); whDraw(); whRun(); syncHit(); startKey();
+    document.body.classList.add('docked'); syncHit(); startKey();
+    setTimeout(() => { if (DK.on) whGL(); }, 4000);          // (ULTRON's second canvas is made ready ahead of the first roll down)
+    setTimeout(whWarm, 7000);
     if (!quiet){ setTimeout(whOpen, 800); setTimeout(() => { if (!WH.over) whClose(); }, 3600); }      // (switched on by you: it shows itself once)
   } finally { DK.busy = false; }
 }
@@ -6716,7 +6824,7 @@ async function dockOff(){
   } finally { DK.busy = false; }
 }
 listen('dock-wins', l => { if (DK.on) dockWins(l || []); });
-whDisc.addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'click'){ clearTimeout(WH.openT); WH.openT = setTimeout(whOpen, 80); } });
+whDisc.addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'click'){ clearTimeout(WH.openT); WH.openT = setTimeout(whOpen, 70); } });
 whBody.addEventListener('pointerenter', () => { WH.over = true; clearTimeout(WH.closeT); });
 whBody.addEventListener('pointerleave', () => {
   WH.over = false; clearTimeout(WH.openT); whPeek(null);
@@ -6742,7 +6850,7 @@ wheel.addEventListener('click', e => {
   else if (e.target.closest('#whMas')){ whClose(); closeDD(); setOpen(true); if (activeTab !== 'assistant') selectTab('assistant'); setTimeout(() => $('askIn').focus({preventScroll:true}), 380); }
   else if (e.target.closest('#whTile')) whTile();
   else if (e.target.closest('#whGroups')) whTrayShow(!WH.tray);
-  else if (e.target.closest('#whBack')){ WH.mode = 'open'; whRender('active'); }
+  else if (e.target.closest('#whBack')){ WH.mode = 'open'; whRender('active', true); }
 });
 wheel.addEventListener('auxclick', e => {                    // (the middle button on a bead closes its window, or all of that app's)
   const b = e.target.closest('.wh-b'); if (!b || e.button !== 1) return;
@@ -6754,18 +6862,18 @@ wheel.addEventListener('contextmenu', e => {                 // (the right butto
   e.preventDefault(); const pod = e.target.closest('.wh-pod'); if (!pod || pod.dataset.g === 'new') return;
   pod.classList.add('bye'); const k = +pod.dataset.g; setTimeout(() => { S.groups.splice(k, 1); save(); whPods(); }, 240);
 });
-$('whRim').addEventListener('pointerover', e => { const b = e.target.closest('.wh-b'); if (b && !WH.drag){ const i = +b.dataset.i; WH.dir = Math.sign(i - WH.sel); whName(i); whPeek(b); } });
+$('whRim').addEventListener('pointerover', e => { const b = e.target.closest('.wh-b'); if (b && !WH.drag && !b.classList.contains('out')){ const i = +b.dataset.i; WH.dir = Math.sign(i - WH.sel); whName(i); whPeek(b); } });
 $('whPods').addEventListener('pointerover', e => { const p = e.target.closest('.wh-pod'); if (!p || WH.drag) return; const g = S.groups[+p.dataset.g]; WH.dir = 0; whName(null, g ? g.apps.map(whAppName).join(', ') : 'A new group'); });
-$('whQ').addEventListener('input', () => whRender('first'));
+$('whQ').addEventListener('input', () => whRender('first', true));
 $('whQ').addEventListener('keydown', e => {
   e.stopPropagation();
   if (e.key === 'Enter') whAct(WH.sel);
-  else if (e.key === 'Escape'){ if ($('whQ').value){ $('whQ').value = ''; whRender('active'); } else whClose(); }
+  else if (e.key === 'Escape'){ if ($('whQ').value){ $('whQ').value = ''; whRender('active', true); } else whClose(); }
   else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); whSpin(1); }
   else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); whSpin(-1); }
 });
 addEventListener('pointerdown', e => { if (WH.open && !e.target.closest('#wheel')) whClose(); });
-addEventListener('resize', () => { if (DK.on){ whGeom(); whDraw(); } });
+addEventListener('resize', () => { if (DK.on) whGeom(); });
 // while the notch is open (it comes down over the same place), the wheel stands aside
 new MutationObserver(() => {
   const away = notch.classList.contains('open') || notch.classList.contains('call');
@@ -6781,16 +6889,19 @@ if (TAURI) setTimeout(() => { if (S.dock === 'ultron') dockOn(true); else invoke
    also be asked of ULTRON, or looked up. */
 var spot = $('spot');
 var SP = {items:[], sel:0, pic:false, t:0, at:0};
-const SP_ICON = {ask:'<svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg>', web:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg>'};
+const SP_DO = [['Lock', 'lock', 'lock'], ['Sleep', 'sleep', 'sleep'], ['Restart', 'restart', 'restart reboot'], ['Shut down', 'shutdown', 'shut shutdown power turn off']];
+const SP_ICON = {do:'<svg viewBox="0 0 24 24"><path d="M12 4v7"/><path d="M7.6 6.9a7 7 0 1 0 8.8 0"/></svg>', ask:'<svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg>', web:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg>'};
 function startKey(){ if (TAURI) invoke('start_key', {on:!!(DK.on && S.dkStart === 'ultron')}); }
 function spClock(){ const d = new Date(); $('spTime').textContent = d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); $('spDate').textContent = d.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'}); }
 function spWall(){ invoke('wall_picture', {w:520, h:780}).then(u => { if (u){ SP.pic = true; $('spPic').src = u; } }); }
 function spList(){
   const q = $('spQ').value.trim(), ql = q.toLowerCase();
+  const does = ql.length < 2 ? [] : SP_DO.filter(d => d[0].toLowerCase().startsWith(ql) || d[2].split(' ').some(w => w.startsWith(ql)));
   const apps = !q ? pinnedApps().slice(0, 6)
     : startApps.map(a => { const n = a.name.toLowerCase(); return [n.startsWith(ql) ? 0 : n.split(/[\s\-_.]+/).some(w => w.startsWith(ql)) ? 1 : n.includes(ql) ? 2 : 9, a]; })
-        .filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name)).slice(0, 4).map(x => x[1]);
+        .filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].name.localeCompare(b[1].name)).slice(0, 4 - does.length).map(x => x[1]);
   SP.items = apps.map(a => ({kind:'app', name:a.name, launch:a.launch, sub:q ? 'App' : 'Pinned'}));
+  for (const d of does) SP.items.push({kind:'do', name:d[0], act:d[1], sub:'This PC'});
   if (q) SP.items.push({kind:'ask', name:q, sub:'Ask ULTRON'}, {kind:'web', name:q, sub:'Search the web'});
   SP.sel = 0;
   $('spList').innerHTML = SP.items.map((it, i) => `<button class="sp-row${i ? '' : ' sel'}" data-i="${i}" style="--i:${i}"><span class="sp-ic">${it.kind === 'app'
@@ -6802,6 +6913,7 @@ function spGo(it){
   if (!it) return;
   closeSpot(true);
   if (it.kind === 'app') invoke('launch', {target:it.launch});
+  else if (it.kind === 'do') setTimeout(() => it.act === 'lock' ? doAction('lock') : invoke('power', {action:it.act}), 260);
   else if (it.kind === 'ask') setTimeout(() => askUltron(it.name), 140);
   else invoke('launch', {target:'https://www.google.com/search?q=' + encodeURIComponent(it.name)});
 }
@@ -6837,22 +6949,41 @@ $('spQ').addEventListener('keydown', e => {
 spot.addEventListener('pointerdown', e => e.stopPropagation());
 spot.addEventListener('click', e => { e.stopPropagation(); const r = e.target.closest('.sp-row'); if (r) spGo(SP.items[+r.dataset.i]); else $('spQ').focus({preventScroll:true}); });
 $('spList').addEventListener('pointermove', e => { const r = e.target.closest('.sp-row'); if (r && +r.dataset.i !== SP.sel) spPick(+r.dataset.i); });
-addEventListener('pointerdown', e => { if (spot.classList.contains('open') && !e.target.closest('#spot')) closeSpot(true); });
+addEventListener('pointerdown', e => { if (spot.classList.contains('open') && !e.target.closest('#spot, #searchBtn')) closeSpot(true); });
 // (a click on anything that isn't ULTRON takes the keyboard there: the search goes away with it)
 addEventListener('blur', () => { if (performance.now() - SP.at > 600) closeSpot(true); });
 
 /* ---------- ULTRON's lock screen ----------
-   Settings, Look & feel, Lock screen: ULTRON. "Lock Screen" in ULTRON's menu (and "Lock" in Start) then brings this
-   up over everything: the wallpaper, the time, the date. A click or any key takes it away. It keeps nobody out by
-   itself; with "Ask for my Windows password after it" on, Windows' own sign-in follows it. (ULTRON's window grows to
-   the whole screen for it. Windows counts that as a full-screen app, and ULTRON's bar and wheel stand down for those
-   anyway.) */
+   Settings, Look & feel, Lock screen: ULTRON. "Lock Screen" in ULTRON's menu (and "lock" typed into its search)
+   then brings this up over everything: the wallpaper, the time, the date. With no passcode a click or any key takes
+   it away. With one (set in Settings; only a scrambled form of it is kept), the time draws back and a glass field
+   comes forward: type it and the screen lets go; five wrong goes, or "Use Windows sign-in instead", hand over to
+   Windows' own lock. It is ULTRON's cover, not Windows' lock: it keeps a passer-by out, and Windows' sign-in can be
+   asked for after it. (ULTRON's window grows to the whole screen for it. Windows counts that as a full-screen app,
+   and ULTRON's bar and wheel stand down for those anyway.) */
 var lockEl = $('lock');
-var LK = {on:false, busy:false, t:0, hm:'', at:0, full:false};
+var LK = {on:false, busy:false, t:0, hm:'', at:0, full:false, typed:'', tries:0, askT:0, seq:0};
+function lkCode(){ return S.lockHash && S.lockSalt ? {salt:S.lockSalt, hash:S.lockHash} : null; }
+async function lkHash(salt, code){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + '\n' + code));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
 function lkClock(){
   const d = new Date(), hm = d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
   if (LK.hm !== hm){ LK.hm = hm; $('lkTime').innerHTML = [...hm].map((c, i) => `<span style="--i:${i}">${c}</span>`).join(''); }
   $('lkDate').textContent = d.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+}
+function lkDots(){
+  const d = $('lkDots'), n = [...LK.typed].length;
+  while (d.children.length > n) d.lastChild.remove();
+  while (d.children.length < n) d.appendChild(document.createElement('i'));
+  $('lkBox').classList.toggle('has', n > 0);
+}
+// the field comes forward (the time draws back), or goes away again; left alone for a while, it goes by itself
+function lkAsk(on){
+  clearTimeout(LK.askT); LK.typed = ''; LK.seq++; lkDots(); $('lkBox').classList.remove('no', 'yes');
+  lockEl.classList.toggle('ask', on);
+  if (on){ $('lkSay').textContent = 'Type your passcode'; LK.askT = setTimeout(() => { if (LK.on) lkAsk(false); }, 25000); }
 }
 async function lockShow(){
   if (LK.on || LK.busy || !TAURI) return;
@@ -6861,29 +6992,64 @@ async function lockShow(){
     closeDD(); closePanels(); openedAt = 0; setOpen(false);
     const pic = await invoke('wall_picture', {w:Math.round(screen.width * devicePixelRatio), h:Math.round(screen.height * devicePixelRatio)});
     if (pic) $('lkBg').src = pic; else $('lkBg').removeAttribute('src');
-    LK.hm = ''; lkClock(); LK.full = fullscreen;
+    LK.hm = ''; lkClock(); LK.full = fullscreen; LK.tries = 0; lkAsk(false);
+    $('lkHint').textContent = lkCode() ? 'Click, or press a key, to unlock' : 'Click, or press any key';
     winH = Math.round(screen.height); await invoke('set_window_height', {h:winH}); await dkWait(160);
     LK.on = true; LK.at = performance.now(); lockEl.classList.remove('bye'); void lockEl.offsetWidth; lockEl.classList.add('on');
     invoke('focus_main'); syncHit(); setTimeout(syncHit, 400);
     clearInterval(LK.t); LK.t = setInterval(lkClock, 1000);
   } finally { LK.busy = false; }
 }
-function lockHide(){
+// (`win`: Windows' own sign-in is wanted this time, whatever the setting says)
+function lockHide(win){
   if (!LK.on) return;
-  LK.on = false; clearInterval(LK.t); lockEl.classList.add('bye');
-  if (S.lockPass) invoke('power', {action:'lock'});          // (Windows' own sign-in comes up over it before it has gone)
+  win = win || S.lockPass;
+  LK.on = false; clearInterval(LK.t); clearTimeout(LK.askT); LK.typed = ''; lockEl.classList.add('bye');
+  if (win) invoke('power', {action:'lock'});                 // (Windows' own sign-in comes up over it before it has gone)
   setTimeout(() => {
-    lockEl.classList.remove('on', 'bye'); winH = 700; invoke('set_window_height', {h:700}); syncHit(); setTimeout(syncHit, 400);
-    if (!S.lockPass) invoke('focus_back');
+    lockEl.classList.remove('on', 'bye', 'ask'); lkDots(); winH = 700; invoke('set_window_height', {h:700}); syncHit(); setTimeout(syncHit, 400);
+    if (!win) invoke('focus_back');
     // (the bar stood down while the window filled the screen; if Windows doesn't say that's over, it's brought back anyway)
     if (!LK.full) setTimeout(() => { if (!LK.on && fullscreen){ fullscreen = false; document.body.classList.remove('fullscreen'); syncHit(); } }, 900);
   }, 480);
 }
-lockEl.addEventListener('pointerdown', e => { e.stopPropagation(); if (performance.now() - LK.at > 500) lockHide(); });
+// What's typed is checked as it goes (so the right passcode lets you in the moment it's complete); Enter with the
+// wrong one counts as a go.
+async function lkTry(asked){
+  const c = lkCode(), box = $('lkBox'), n = ++LK.seq, typed = LK.typed;
+  if (!c || !typed) return;
+  const ok = (await lkHash(c.salt, typed)) === c.hash;
+  if (!LK.on || n !== LK.seq) return;                        // (more has been typed meanwhile, or it has gone)
+  if (ok){ clearTimeout(LK.askT); box.classList.add('yes'); $('lkSay').textContent = ''; setTimeout(() => lockHide(), 300); return; }
+  if (!asked) return;
+  LK.tries++; LK.typed = ''; lkDots();
+  box.classList.remove('no'); void box.offsetWidth; box.classList.add('no');
+  if (LK.tries >= 5){ $('lkSay').textContent = 'Windows will ask now'; setTimeout(() => lockHide(true), 800); }
+  else $('lkSay').textContent = 'That isn’t it. Try again';
+}
+function lkKey(e){
+  if (!lkCode()) return lockHide();
+  if (!lockEl.classList.contains('ask')){ lkAsk(true); if (e.key.length !== 1) return; }   // (a letter or number that wakes it is also the first one typed)
+  clearTimeout(LK.askT); LK.askT = setTimeout(() => { if (LK.on) lkAsk(false); }, 25000);
+  if (e.key === 'Escape') return lkAsk(false);
+  if (e.key === 'Backspace'){ LK.typed = [...LK.typed].slice(0, -1).join(''); LK.seq++; lkDots(); return; }
+  if (e.key === 'Enter') return void lkTry(true);
+  if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && [...LK.typed].length < 32){ LK.typed += e.key; lkDots(); lkTry(false); }
+}
+lockEl.addEventListener('pointerdown', e => {
+  e.stopPropagation(); if (performance.now() - LK.at < 500) return;
+  if (!lkCode()) return lockHide();
+  if (e.target.closest('#lkWin')) return lockHide(true);
+  if (!lockEl.classList.contains('ask')) lkAsk(true);
+});
 lockEl.addEventListener('click', e => e.stopPropagation());
-addEventListener('keydown', e => { if (!LK.on) return; e.preventDefault(); e.stopImmediatePropagation(); if (performance.now() - LK.at > 500) lockHide(); }, true);
-// (with the password wanted, switching away from it some other way is the same as taking it away: Windows locks)
-addEventListener('blur', () => { if (LK.on && S.lockPass && performance.now() - LK.at > 1200) lockHide(); });
+addEventListener('keydown', e => { if (!LK.on) return; e.preventDefault(); e.stopImmediatePropagation(); if (performance.now() - LK.at > 500) lkKey(e); }, true);
+addEventListener('blur', () => {
+  if (!LK.on || performance.now() - LK.at < 1200) return;
+  if (S.lockPass) lockHide();                                // (with Windows' sign-in wanted, switching away is the same as taking it away: Windows locks)
+  else if (lkCode()) setTimeout(() => { if (LK.on) invoke('focus_main'); }, 300);          // (a passcode is wanted: the keyboard is taken back)
+});
+$('lkNew').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') setEl.querySelector('[data-sx="lkset"]').click(); });
 
 /* ---------- developer tools: only when ULTRON is started with ULTRON_DEV_INBOX=1 ----------
    Frame timings go to the log every few seconds, and lines starting with "!" in the inbox file

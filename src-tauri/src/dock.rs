@@ -179,6 +179,7 @@ pub fn set(app: &AppHandle, on: bool) -> i32 {
         let app = app.clone();
         std::thread::spawn(move || {
             let mut last: Vec<OpenWin> = Vec::new();
+            let mut front = (0isize, 0u64, 0u64); // (the window in use, since when, and when its picture was last taken)
             loop {
                 if !ON.load(SeqCst) {
                     last.clear();
@@ -197,6 +198,7 @@ pub fn set(app: &AppHandle, on: bool) -> i32 {
                     }
                 }
                 let now = list(&app);
+                keep_pictures(&now, &mut front);
                 if now != last {
                     let _ = app.emit_to("main", "dock-wins", &now);
                     last = now;
@@ -219,6 +221,12 @@ pub fn act(id: &str, what: &str) {
         match what {
             "focus" => crate::apps::focus_window(h),
             "min" => {
+                // (its picture as it goes down, for the wheel to show while it's away)
+                if KEEP.load(SeqCst) {
+                    if let Some(pic) = shoot(h) {
+                        remember(n, pic);
+                    }
+                }
                 let _ = PostMessageW(Some(h), WM_SYSCOMMAND, WPARAM(SC_MINIMIZE as usize), LPARAM(0));
             }
             "close" => {
@@ -333,47 +341,125 @@ unsafe extern "system" {
     fn PrintWindow(hwnd: HWND, hdc: windows::Win32::Graphics::Gdi::HDC, flags: u32) -> windows::core::BOOL;
 }
 
-/// A small picture of a window as it is now, for the wheel to show beside its bead (None when it's
-/// minimized, or won't be drawn).
-pub fn peek(id: &str) -> Option<String> {
+/// The newest small picture of each window that has been in use (never written anywhere: they are
+/// for the wheel to show a window that has since been minimized, which can't be pictured any more).
+static SHOTS: Mutex<Vec<(isize, String)>> = Mutex::new(Vec::new());
+static KEEP: AtomicBool = AtomicBool::new(true);
+static SHOOTING: AtomicBool = AtomicBool::new(false);
+
+/// Whether pictures of windows are kept at all (Settings, Taskbar: show a window when the pointer rests on its app).
+pub fn keep(on: bool) {
+    KEEP.store(on, SeqCst);
+    if !on {
+        SHOTS.lock().unwrap().clear();
+    }
+}
+
+fn remember(n: isize, pic: String) {
+    let mut s = SHOTS.lock().unwrap();
+    s.retain(|x| x.0 != n);
+    s.push((n, pic));
+    if s.len() > 40 {
+        s.remove(0);
+    }
+}
+
+/// A small picture of a window as it is now (None when it's minimized, or draws nothing). Windows
+/// draws the window into a picture of its own size and shrinks that itself; only the small one is
+/// brought over and packed.
+fn shoot(h: HWND) -> Option<String> {
     use base64::Engine;
     use windows::Win32::Graphics::Gdi::*;
-    let h = HWND(id.parse::<isize>().ok()? as _);
     unsafe {
         if !IsWindow(Some(h)).as_bool() || IsIconic(h).as_bool() {
             return None;
         }
-        let mut r = RECT::default();
-        GetWindowRect(h, &mut r).ok()?;
-        let (w, hh) = (r.right - r.left, r.bottom - r.top);
-        if w < 60 || hh < 60 || w > 8000 || hh > 5000 {
+        // (a window's own edges include an unseen border for resizing: the seen part is what's kept)
+        let (mut out, mut seen) = (RECT::default(), RECT::default());
+        GetWindowRect(h, &mut out).ok()?;
+        if DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, &mut seen as *mut _ as _, std::mem::size_of::<RECT>() as u32).is_err() {
+            seen = out;
+        }
+        let (w, hh) = (out.right - out.left, out.bottom - out.top);
+        let (sx, sy, sw, sh) = (seen.left - out.left, seen.top - out.top, seen.right - seen.left, seen.bottom - seen.top);
+        if w < 60 || hh < 60 || w > 8000 || hh > 5000 || sw < 40 || sh < 40 || sx < 0 || sy < 0 || sx + sw > w || sy + sh > hh {
             return None;
         }
+        let k = (440.0 / sw as f64).min(270.0 / sh as f64).min(1.0);
+        let (tw, th) = (((sw as f64 * k).round() as i32).max(1), ((sh as f64 * k).round() as i32).max(1));
         let sdc = GetDC(None);
-        let mdc = CreateCompatibleDC(Some(sdc));
-        let bmp = CreateCompatibleBitmap(sdc, w, hh);
-        let old = SelectObject(mdc, bmp.into());
+        let (mdc, tdc) = (CreateCompatibleDC(Some(sdc)), CreateCompatibleDC(Some(sdc)));
+        let (big, small) = (CreateCompatibleBitmap(sdc, w, hh), CreateCompatibleBitmap(sdc, tw, th));
+        let (old_b, old_s) = (SelectObject(mdc, big.into()), SelectObject(tdc, small.into()));
         let ok = PrintWindow(h, mdc, 2).as_bool(); // (2: as the screen draws it, so apps that draw with the graphics card are there too)
+        SetStretchBltMode(tdc, HALFTONE);
+        let _ = SetBrushOrgEx(tdc, 0, 0, None);
+        let _ = StretchBlt(tdc, 0, 0, tw, th, Some(mdc), sx, sy, sw, sh, SRCCOPY);
         let mut bi = BITMAPINFO::default();
         bi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
-        bi.bmiHeader.biWidth = w;
-        bi.bmiHeader.biHeight = -hh;
+        bi.bmiHeader.biWidth = tw;
+        bi.bmiHeader.biHeight = -th;
         bi.bmiHeader.biPlanes = 1;
         bi.bmiHeader.biBitCount = 32;
-        let mut buf = vec![0u8; (w * hh * 4) as usize];
-        let lines = GetDIBits(mdc, bmp, 0, hh as u32, Some(buf.as_mut_ptr() as _), &mut bi, DIB_RGB_COLORS);
-        SelectObject(mdc, old);
-        let _ = DeleteObject(bmp.into());
+        let mut buf = vec![0u8; (tw * th * 4) as usize];
+        let lines = GetDIBits(tdc, small, 0, th as u32, Some(buf.as_mut_ptr() as _), &mut bi, DIB_RGB_COLORS);
+        SelectObject(mdc, old_b);
+        SelectObject(tdc, old_s);
+        let _ = DeleteObject(big.into());
+        let _ = DeleteObject(small.into());
         let _ = DeleteDC(mdc);
+        let _ = DeleteDC(tdc);
         ReleaseDC(None, sdc);
         if !ok || lines == 0 {
             return None;
         }
+        // (a window that gives nothing comes back black from edge to edge: no picture is better than that one)
+        if buf.chunks_exact(4).step_by(41).all(|p| p[0] < 6 && p[1] < 6 && p[2] < 6) {
+            return None;
+        }
         let rgb: Vec<u8> = buf.chunks_exact(4).flat_map(|p| [p[2], p[1], p[0]]).collect();
-        let small = image::DynamicImage::ImageRgb8(image::RgbImage::from_raw(w as u32, hh as u32, rgb)?).thumbnail(400, 260).to_rgb8();
-        let mut out = Vec::new();
-        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 80).encode_image(&small).ok()?;
-        Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out)))
+        let img = image::RgbImage::from_raw(tw as u32, th as u32, rgb)?;
+        let mut jpg = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpg, 82).encode_image(&img).ok()?;
+        Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(jpg)))
+    }
+}
+
+/// A window's picture for the wheel to show beside its bead: as it is now, or, minimized, as it was
+/// when last in use (None when there has never been one).
+pub fn peek(id: &str) -> Option<String> {
+    let n = id.parse::<isize>().ok()?;
+    if let Some(pic) = shoot(HWND(n as _)) {
+        if KEEP.load(SeqCst) {
+            remember(n, pic.clone());
+        }
+        return Some(pic);
+    }
+    SHOTS.lock().unwrap().iter().find(|s| s.0 == n).map(|s| s.1.clone())
+}
+
+/// Called by the watcher each time it looks: pictures of windows that have closed are dropped, and
+/// the window in use has its picture taken (once it has been in use for a moment, then every twenty
+/// seconds), on a thread of its own so that a window slow to draw never holds the watcher up.
+fn keep_pictures(wins: &[OpenWin], front: &mut (isize, u64, u64)) {
+    if !KEEP.load(SeqCst) {
+        return;
+    }
+    let live: Vec<isize> = wins.iter().filter_map(|w| w.id.parse().ok()).collect();
+    SHOTS.lock().unwrap().retain(|s| live.contains(&s.0));
+    let Some(a) = wins.iter().find(|w| w.active && !w.min).and_then(|w| w.id.parse::<isize>().ok()) else { return };
+    let t = now_ms();
+    if a != front.0 {
+        *front = (a, t, 0);
+    }
+    if t.saturating_sub(front.1) > 900 && t.saturating_sub(front.2) > 20_000 && !SHOOTING.swap(true, SeqCst) {
+        front.2 = t;
+        std::thread::spawn(move || {
+            if let Some(pic) = shoot(HWND(a as _)) {
+                remember(a, pic);
+            }
+            SHOOTING.store(false, SeqCst);
+        });
     }
 }
 
