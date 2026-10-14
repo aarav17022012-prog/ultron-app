@@ -927,16 +927,23 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .wheel:not(.open) .wh-b{pointer-events:none}
 .wh-hub > *{position:absolute; left:0}
 /* the hub, from the top: the name of what's picked; a row with the search between Tile and Groups; ULTRON */
-/* The name rolls over like an odometer: the old one's letters go up and out one after another, and the new one's
-   come up from below after them, each settling with a small bounce (the other way round when the wheel turns back). */
+/* The name changes with a wipe: one soft edge sweeps across the way the wheel is turning, the old name ahead of it and
+   the new name behind it (both cover the same box, so their masks are mirror images on the same clock and never show
+   at once), the new name's letters drawing in from a little wider to their own spacing as it goes. */
 .wh-name{top:calc(var(--cy) + 71px); width:240px; height:22px; margin-left:-120px; overflow:hidden; pointer-events:none;
   -webkit-mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)}
 .wh-name span{position:absolute; left:0; right:0; top:0; text-align:center; font-size:15px; font-weight:650; letter-spacing:-.01em; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   text-shadow:0 1px 2px rgba(0,0,0,.3)}
-.wh-name span i{display:inline-block; font-style:normal; white-space:pre; animation:whRollIn .5s cubic-bezier(.2,1.35,.35,1) both; animation-delay:calc(min(var(--c), 16) * 13ms)}
-.wh-name span.out i{animation:whRollOut .26s cubic-bezier(.5,0,.8,.3) both; animation-delay:calc(min(var(--c), 16) * 7ms)}
-@keyframes whRollIn{from{opacity:0; transform:translateY(calc(var(--roll, 1) * 16px)) scale(.92)}}
-@keyframes whRollOut{to{opacity:0; transform:translateY(calc(var(--roll, 1) * -16px)) scale(.92)}}
+.wh-name span.in, .wh-name span.out{-webkit-mask-size:240% 100%; mask-size:240% 100%; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat}
+.wh-name span.in{-webkit-mask-image:linear-gradient(90deg, #000 45%, transparent 55%); mask-image:linear-gradient(90deg, #000 45%, transparent 55%);
+  animation:whSweep .56s cubic-bezier(.3,.65,.2,1) both, whDraw .56s cubic-bezier(.3,.65,.2,1) both}
+.wh-name span.in.back{-webkit-mask-image:linear-gradient(270deg, #000 45%, transparent 55%); mask-image:linear-gradient(270deg, #000 45%, transparent 55%); animation-name:whSweepBack, whDraw}
+.wh-name span.out{-webkit-mask-image:linear-gradient(90deg, transparent 45%, #000 55%); mask-image:linear-gradient(90deg, transparent 45%, #000 55%);
+  animation:whSweep .56s cubic-bezier(.3,.65,.2,1) both}
+.wh-name span.out.back{-webkit-mask-image:linear-gradient(270deg, transparent 45%, #000 55%); mask-image:linear-gradient(270deg, transparent 45%, #000 55%); animation-name:whSweepBack}
+@keyframes whSweep{from{-webkit-mask-position:100% 0; mask-position:100% 0} to{-webkit-mask-position:0 0; mask-position:0 0}}
+@keyframes whSweepBack{from{-webkit-mask-position:0 0; mask-position:0 0} to{-webkit-mask-position:100% 0; mask-position:100% 0}}
+@keyframes whDraw{from{letter-spacing:.07em} to{letter-spacing:-.01em}}
 
 .wh-row{top:calc(var(--cy) + 98px); display:flex; align-items:center; gap:6px; width:max-content; transform:translateX(-50%)}
 /* searching is always there: type a name and the rim fills with what matches */
@@ -6749,10 +6756,10 @@ function whName(i, text){
   const t = text != null ? text : it ? it.name : $('whQ').value.trim() ? 'Nothing by that name' : 'Nothing is open';
   if (box._t === t) return;
   box._t = t;
-  const roll = WH.dir < 0 ? -1 : 1, ch = [...t], shown = ch.length > 34 ? [...ch.slice(0, 33).join('').trimEnd(), '…'] : ch;
-  for (const old of box.children){ if (old.classList.contains('out')) continue; old.classList.add('out'); old.style.setProperty('--roll', roll); setTimeout(() => old.remove(), 420); }
-  const nu = document.createElement('span'); nu.style.setProperty('--roll', roll);
-  nu.innerHTML = shown.map((c, k) => `<i style="--c:${k}">${esc(c)}</i>`).join(''); box.appendChild(nu);
+  const roll = WH.dir < 0 ? -1 : 1;
+  for (const old of box.children){ if (old.classList.contains('out')) continue; old.className = roll < 0 ? 'out back' : 'out'; setTimeout(() => old.remove(), 600); }
+  const nu = document.createElement('span'); nu.className = roll < 0 ? 'in back' : 'in';
+  nu.textContent = t; box.appendChild(nu);
 }
 // ULTRON at the hub is the character in the notch, drawn a second time on a see-through canvas of its own (the way
 // it is drawn beside the cursor when you pick text): frame() asks for it while the wheel is down.
