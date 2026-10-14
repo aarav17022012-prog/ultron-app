@@ -1647,6 +1647,28 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 .fl-ln.next.rise{animation:flNext .55s cubic-bezier(.22,1,.36,1) .14s both}
 @keyframes flNext{from{transform:translateY(12px); opacity:0}}
 
+/* ---------- the sheet's edge is the bar's own: the bar's hairline turns down the sheet's sides and runs round its
+   foot (it starts at the bar's line, so the two read as one piece), and its shadow is the bar's light one ---------- */
+.notch.glass::after{display:block; opacity:0; padding:0 1px 1px; transition:opacity .26s ease .16s;
+  background:linear-gradient(180deg, transparent calc(var(--bar) - 1px), rgba(255,255,255,.18) calc(var(--bar) - 1px))}
+.notch.glass.open::after, .notch.glass.call::after{opacity:1; transition:opacity .16s}
+.notch.glass.open, .notch.glass.call:not(.open){box-shadow:0 1px 10px rgba(0,0,0,.12), 0 18px 36px -16px rgba(0,0,0,.42)}
+
+/* ---------- the wheel's pull-tab: a little tongue of the bar's glass under ULTRON's name. Reach for it and it
+   stretches down, its arrow nudging; the wheel then rolls down from behind the bar, and the tab draws back up ---------- */
+.wh-grip{display:none}
+.notch.glass.hover:not(.open):not(.call){height:var(--bar)}   /* (the name's hover area stays in the bar: below it is the tab's) */
+.wh-tab{position:absolute; left:-30px; top:calc(var(--bar) - 1px); width:60px; height:13px; border-radius:0 0 11px 11px; pointer-events:auto; cursor:default;
+  --tint:rgba(16,16,20,.34); --hs:0; box-shadow:0 1px 8px rgba(0,0,0,.2); transform-origin:50% 0;
+  transition:transform .55s var(--spring), opacity .25s, box-shadow .35s}
+.wh-tab.glass::after{padding:0 1px 1px; background:rgba(255,255,255,.18)}
+.wh-tab svg{position:absolute; left:50%; top:3px; width:12px; height:6px; margin-left:-6px; fill:none; stroke:rgba(255,255,255,.72); stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round;
+  transform-origin:50% 0; transition:transform .55s var(--spring), stroke .25s}
+.wh-tab:hover{transform:scale(1.3, 1.55); box-shadow:0 2px 12px rgba(0,0,0,.28)}
+.wh-tab:hover svg{transform:scale(.77, .645) translateY(3px); stroke:#fff; animation:whTug 1.1s var(--glide) .35s infinite}
+@keyframes whTug{0%, 100%{translate:0 0} 50%{translate:0 1.5px}}
+.wheel.open .wh-tab{transform:translateY(-15px) scaleX(.6); opacity:0; pointer-events:none; transition:transform .3s cubic-bezier(.5,0,.75,0), opacity .2s}
+
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
 .sl-swap{position:relative}
@@ -2328,7 +2350,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
   <filter id="mb9" x="-45%" y="0" width="190%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9 0"/></filter>
   <filter id="mb14" x="-60%" y="0" width="220%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="14 0"/></filter>
 </defs></svg>
-<div class="wheel" id="wheel" aria-label="Taskbar"><div class="wh-body" id="whBody">
+<div class="wheel" id="wheel" aria-label="Taskbar"><div class="wh-tab glass" id="whTab" role="button" aria-label="Open the taskbar wheel"><i class="gw"></i><svg viewBox="0 0 12 6"><path d="M1 1l5 4 5-4"/></svg></div><div class="wh-body" id="whBody">
   <div class="wh-tray glass" id="whTray"><i class="gw"></i><div class="wh-pods" id="whPods"></div></div>
   <div class="wh-disc glass" id="whDisc"><i class="gw"></i><div class="wh-hubbg"></div></div>
   <div class="wh-rim" id="whRim"></div>
@@ -6854,7 +6876,7 @@ function syncHit(){
   const fl = $('flyr');
   if (fl.classList.contains('on')) rects.push({x:Math.floor(fl.offsetLeft - 4), y:Math.floor(fl.offsetTop - 4), w:fl.offsetWidth + 8, h:fl.offsetHeight + 8});
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
-  if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 78), y:30, w:156, h:18}); }
+  if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
   if (window.NF && NF.shown.length) rects.push({x:Math.floor(innerWidth - 10 - NF_W - 8), y:32, w:NF_W + 16, h:Math.ceil(NF.h + 18)});
   for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel')]) if (el.classList.contains('open') && el.id !== 'wheel'){
@@ -7240,10 +7262,12 @@ paintSettings();                                           // (the Taskbar secti
 // how big the wheel is and how far it comes down, from the size you chose
 function whGeom(){
   const R = {s:215, m:250, l:285}[S.dkSize] || 250;
-  WH.R = R; WH.D = Math.round(R * .76); WH.cy = 32 + WH.D - R; WH.rest = -(WH.D - 10); WH.step = 59 / (R - 37);    // (beads 59 px apart along the rim)
+  WH.R = R; WH.D = Math.round(R * .76); WH.cy = 32 + WH.D - R; WH.rest = -(WH.D + 2); WH.step = 59 / (R - 37);    // (beads 59 px apart along the rim)
   const set = (k, v) => wheel.style.setProperty(k, v);
   set('--R', R + 'px'); set('--rb', (R - 37) + 'px'); set('--cy', WH.cy + 'px'); set('--rest', WH.rest + 'px'); set('--k', (R / 250).toFixed(3));
   wheel.classList.toggle('smoked', S.dkTint === 'smoked');
+  const tg = $('whTab').querySelector('.gw');                // (the tab's glass, lined up with the screen)
+  tg.style.left = -(innerWidth / 2 - 30) + 'px'; tg.style.top = -(32 - 1) + 'px'; tg.style.width = (screen.width || innerWidth) + 'px'; tg.style.height = (screen.height || innerHeight) + 'px';
   const g = WH.gw;                                         // (its glass, lined up with the screen for when it's down)
   g.style.left = -(innerWidth / 2 - R) + 'px'; g.style.top = -(WH.cy - R) + 'px'; g.style.width = (screen.width || innerWidth) + 'px'; g.style.height = (screen.height || innerHeight) + 'px';
   glassDraw(g); whTrayGlass();
@@ -7534,6 +7558,8 @@ async function dockOff(){
 }
 listen('dock-wins', l => { if (DK.on) dockWins(l || []); });
 whDisc.addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'click'){ clearTimeout(WH.openT); WH.openT = setTimeout(whOpen, 70); } });
+$('whTab').addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'click'){ clearTimeout(WH.openT); WH.openT = setTimeout(whOpen, 150); } });
+$('whTab').addEventListener('pointerleave', () => { if (!WH.open) clearTimeout(WH.openT); });
 whBody.addEventListener('pointerenter', () => { WH.over = true; clearTimeout(WH.closeT); });
 whBody.addEventListener('pointerleave', () => {
   WH.over = false; clearTimeout(WH.openT);
