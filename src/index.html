@@ -605,16 +605,22 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 @keyframes flEq{0%, 100%{height:3px} 50%{height:10px}}
 .fl-txt{position:relative; z-index:1; flex:1; min-width:0; height:62px; pointer-events:none}
 .fl-l{position:absolute; left:0; right:0; white-space:nowrap; transform-origin:0 50%}
-/* the line being sung comes in a word at a time, as each is sung (the words' times are spread over the line: only its
-   start and end are known), each word whipping in with motion blur and sharpening, the way the words of a title do
-   in a video; the line that's done smears off to the side */
+/* The line being sung is there whole, its words dim until each is sung: then it brightens and lifts a hair (the words'
+   times are spread over the line by their length, since only the line's start and end are known). A new line whips
+   in from the right with motion blur, word after word a moment apart, overshoots a touch and snaps sharp; the old one
+   whips off to the left the same way. The line waiting underneath follows it in. */
 .fl-l.cur{top:4px; font-size:var(--fs, 23px); font-weight:650; letter-spacing:-.012em; line-height:30px; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
-.fl-w{display:inline-block; animation:mbIn .36s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--t, 0s) - var(--at, 0s))}
-.flyr:not(.playing) .fl-w{animation-play-state:paused}
+.fl-w{display:inline-block; color:rgba(255,255,255,.4); animation:flWhipIn .56s cubic-bezier(.16,1,.3,1) both, flSung .42s ease forwards;
+  animation-delay:calc(var(--k, 0) * 28ms), calc(var(--t, 0s) - var(--at, 0s))}
+.flyr:not(.playing) .fl-w{animation-play-state:running, paused}
+@keyframes flSung{to{color:#fff; translate:0 -1.5px}}
+@keyframes flWhipIn{0%{opacity:0; transform:translateX(64px) skewX(-14deg); filter:url(#mb14)} 28%{opacity:1; filter:url(#mb9)}
+  52%{transform:translateX(-4px) skewX(2deg); filter:url(#mb5)} 76%{transform:translateX(1px) skewX(0deg); filter:url(#mb2)} 100%{opacity:1; transform:none; filter:none}}
+@keyframes flWhipOut{0%{filter:none} 25%{filter:url(#mb2)} 50%{filter:url(#mb5)} 75%{filter:url(#mb9); opacity:.55}
+  100%{opacity:0; transform:translateX(-72px) skewX(14deg); filter:url(#mb14)}}
 .fl-l.next{top:38px; font-size:13.5px; font-weight:500; color:rgba(255,255,255,.55); overflow:hidden; text-overflow:ellipsis}
-.fl-l.nin{animation:flRise2 .5s var(--glide) backwards}
-.fl-l.out{animation:mbOut .3s ease-in forwards}
-@keyframes flRise2{from{opacity:0; transform:translateY(10px)}}
+.fl-l.nin{animation:flWhipIn .5s cubic-bezier(.16,1,.3,1) .14s both}
+.fl-l.out{animation:flWhipOut .3s cubic-bezier(.55,0,.8,.2) forwards}
 .fl-meta{position:absolute; left:84px; right:46px; top:5px; z-index:1; font-size:10.5px; font-weight:600; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   opacity:0; transform:translateY(-4px); transition:opacity .25s, transform .3s var(--glide); pointer-events:none}
 .fl-x{position:absolute; right:12px; top:50%; z-index:2; width:24px; height:24px; margin-top:-12px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:12px; padding:0;
@@ -3179,8 +3185,8 @@ function renderFloat(m){
   if (m.art !== flArtSrc){ flArtSrc = m.art; const a = $('flArt'); a.classList.remove('ok'); if (m.art){ a.onload = () => a.classList.add('ok'); a.src = m.art; } }
   if (m.key === flLast) return;   // only play / pause changed: the words keep their places (their animations pause)
   flLast = m.key;
-  // the line that was sung (and the one that was waiting under it) smear away
-  flTxt.querySelectorAll('.fl-l:not(.out)').forEach(l => { l.classList.add('out'); setTimeout(() => l.remove(), 320); });
+  // the line that was sung (and the one that was waiting under it) whip away to the left
+  flTxt.querySelectorAll('.fl-l:not(.out)').forEach(l => { l.classList.add('out'); setTimeout(() => l.remove(), 330); });
   const cur1 = document.createElement('div'); cur1.className = 'fl-l cur'; cur1.style.setProperty('--at', m.at.toFixed(3) + 's');
   // when each word is sung: one after another across the line, a longer word taking a little longer
   const words = (m.line || '♪').split(/\s+/).filter(Boolean), weight = words.map(w => 1 + Math.min(12, w.length) * .14);
@@ -3188,7 +3194,7 @@ function renderFloat(m){
   let when = 0;
   words.forEach((w, i) => {
     if (i) cur1.appendChild(document.createTextNode(' '));
-    const s = document.createElement('span'); s.className = 'fl-w'; s.textContent = w; s.style.setProperty('--t', when.toFixed(3) + 's');
+    const s = document.createElement('span'); s.className = 'fl-w'; s.textContent = w; s.style.setProperty('--t', when.toFixed(3) + 's'); s.style.setProperty('--k', Math.min(i, 9));
     cur1.appendChild(s); when += span * weight[i] / total;
   });
   flTxt.appendChild(cur1);
