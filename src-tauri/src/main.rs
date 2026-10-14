@@ -24,6 +24,7 @@ mod cts;
 mod clock;
 mod notes;
 mod spotkey;
+mod cleaner;
 mod veil;
 mod wall;
 mod icons;
@@ -844,6 +845,30 @@ fn spot_key(on: bool) {
     spotkey::set(on);
 }
 
+/// The wheel's own shortcut (Settings, Taskbar): Windows' modifier bits and a key code; 0 takes it away.
+#[tauri::command]
+fn wheel_key(mods: u32, vk: u32) {
+    spotkey::set_key(spotkey::WHEEL, mods, vk);
+}
+
+/// Cleaner: how much each kind of junk comes to (nothing is touched).
+#[tauri::command]
+async fn cleaner_scan(app: AppHandle) -> Vec<cleaner::Group> {
+    tauri::async_runtime::spawn_blocking(move || cleaner::scan(&app)).await.unwrap_or_default()
+}
+
+/// Cleaner: clear the ticked kinds; the page hears it go ("clean-file", "clean-group"). How much was freed.
+#[tauri::command]
+async fn cleaner_clean(app: AppHandle, ids: Vec<String>) -> u64 {
+    tauri::async_runtime::spawn_blocking(move || cleaner::clean(&app, &ids)).await.unwrap_or(0)
+}
+
+/// One email as it looks: its words and its pictures.
+#[tauri::command]
+async fn mail_rich(app: AppHandle, uid: u32) -> Result<Vec<mail::Block>, String> {
+    tauri::async_runtime::spawn_blocking(move || mail::rich(&app, uid)).await.map_err(|e| e.to_string())?
+}
+
 /* ---------------- ULTRON's own notifications (notes.rs) ---------------- */
 
 #[tauri::command]
@@ -1127,7 +1152,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

@@ -427,6 +427,285 @@ pub fn watch(app: AppHandle) {
     });
 }
 
+/* ---------------- a message as it looks: its words with its pictures ---------------- */
+
+/// A piece of a message as shown: words ("p"), or a picture ("img") with where it links to.
+#[derive(Serialize, Clone, Default)]
+pub struct Block {
+    pub kind: &'static str,
+    pub text: String,
+    pub src: String,
+    pub href: String,
+    pub w: u32,
+    pub h: u32,
+}
+
+/// the last few messages opened, as shown (a message is fetched whole only when it's opened)
+static RICH: Mutex<Vec<(u32, Vec<Block>)>> = Mutex::new(Vec::new());
+
+/// One message as it was written, pictures and all. The inbox only keeps the first 48 KB of each message (enough
+/// for its words); the whole of this one is fetched now, and its pictures put back where they were: the ones sent
+/// inside it (cid:) as pictures, the ones on the web by their address. Tracking dots (a pixel or two) are left out.
+pub fn rich(app: &AppHandle, uid: u32) -> Result<Vec<Block>, String> {
+    if let Some(b) = RICH.lock().unwrap().iter().find(|x| x.0 == uid) {
+        return Ok(b.1.clone());
+    }
+    let acc = account(app).ok_or("No email is connected yet.")?;
+    let pass = password(&acc.email).ok_or("The saved password is gone. Please sign in again.")?;
+    let raw = {
+        let _one = BUSY.lock().unwrap_or_else(|e| e.into_inner());
+        let mut sess = open(&acc, &pass)?;
+        sess.examine("INBOX").map_err(|e| format!("I couldn't open the inbox: {e}"))?;
+        let got = sess.uid_fetch(uid.to_string(), "BODY.PEEK[]<0.4194304>").map_err(|e| format!("I couldn't read that message: {e}"))?;
+        let raw = got.iter().next().and_then(|f| f.body()).map(|b| b.to_vec()).ok_or("That message has gone.")?;
+        let _ = sess.logout();
+        raw
+    };
+    let m = mailparse::parse_mail(&raw).map_err(|_| "That message couldn't be read.".to_string())?;
+    let blocks = blocks_of(&m);
+    let mut c = RICH.lock().unwrap();
+    c.retain(|x| x.0 != uid);
+    c.push((uid, blocks.clone()));
+    if c.len() > 12 {
+        c.remove(0);
+    }
+    Ok(blocks)
+}
+
+fn blocks_of(m: &mailparse::ParsedMail) -> Vec<Block> {
+    use mailparse::MailHeaderMap;
+    fn parts<'a>(m: &'a mailparse::ParsedMail<'a>, out: &mut Vec<&'a mailparse::ParsedMail<'a>>) {
+        if m.subparts.is_empty() {
+            out.push(m);
+        }
+        for p in &m.subparts {
+            parts(p, out);
+        }
+    }
+    let mut all = Vec::new();
+    parts(m, &mut all);
+    let attached = |p: &mailparse::ParsedMail| p.get_content_disposition().disposition == mailparse::DispositionType::Attachment;
+    // pictures sent inside the message, by their Content-ID
+    let mut cids: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for p in &all {
+        let id = p.headers.get_first_value("Content-ID").unwrap_or_default();
+        let id = id.trim().trim_start_matches('<').trim_end_matches('>').to_string();
+        if !id.is_empty() && p.ctype.mimetype.starts_with("image/") {
+            if let Ok(bytes) = p.get_body_raw() {
+                if bytes.len() <= 3_000_000 {
+                    use base64::Engine;
+                    cids.insert(id.to_lowercase(), format!("data:{};base64,{}", p.ctype.mimetype, base64::engine::general_purpose::STANDARD.encode(bytes)));
+                }
+            }
+        }
+    }
+    let html = all.iter().find(|p| p.ctype.mimetype.eq_ignore_ascii_case("text/html") && !attached(p)).and_then(|p| p.get_body().ok());
+    let mut out = match html {
+        Some(h) => html_blocks(&h, &cids),
+        None => text_blocks(&all.iter().find(|p| p.ctype.mimetype.eq_ignore_ascii_case("text/plain") && !attached(p)).and_then(|p| p.get_body().ok()).unwrap_or_default()),
+    };
+    // pictures attached (not placed in the words) come at the end
+    for p in &all {
+        if attached(p) && p.ctype.mimetype.starts_with("image/") {
+            if let Ok(bytes) = p.get_body_raw() {
+                if bytes.len() <= 3_000_000 {
+                    use base64::Engine;
+                    out.push(Block { kind: "img", src: format!("data:{};base64,{}", p.ctype.mimetype, base64::engine::general_purpose::STANDARD.encode(bytes)), ..Default::default() });
+                }
+            }
+        }
+    }
+    out.truncate(80);
+    out
+}
+
+fn entities(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('&') {
+        out.push_str(&rest[..i]);
+        let tail = &rest[i..];
+        let end = tail.find(';').filter(|&e| e <= 10);
+        let Some(e) = end else {
+            out.push('&');
+            rest = &tail[1..];
+            continue;
+        };
+        let name = &tail[1..e];
+        let ch: Option<String> = match name {
+            "nbsp" => Some(" ".into()),
+            "amp" => Some("&".into()),
+            "lt" => Some("<".into()),
+            "gt" => Some(">".into()),
+            "quot" => Some("\"".into()),
+            "apos" => Some("'".into()),
+            "rsquo" | "lsquo" => Some("’".into()),
+            "ldquo" | "rdquo" => Some("\"".into()),
+            "ndash" => Some("–".into()),
+            "mdash" => Some("—".into()),
+            "hellip" => Some("…".into()),
+            "copy" => Some("©".into()),
+            "reg" => Some("®".into()),
+            "trade" => Some("™".into()),
+            "bull" => Some("•".into()),
+            "zwnj" | "zwj" | "shy" => Some(String::new()),
+            n if n.starts_with("#x") || n.starts_with("#X") => u32::from_str_radix(&n[2..], 16).ok().and_then(char::from_u32).map(|c| c.to_string()),
+            n if n.starts_with('#') => n[1..].parse::<u32>().ok().and_then(char::from_u32).map(|c| c.to_string()),
+            _ => None,
+        };
+        match ch {
+            Some(c) => {
+                out.push_str(&c);
+                rest = &tail[e + 1..];
+            }
+            None => {
+                out.push('&');
+                rest = &tail[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out.replace('\u{a0}', " ")
+}
+
+/// Words as shown: lines trimmed, runs of blank lines to one, and the quoted thread under a reply left out.
+fn tidy(text: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    for l in entities(text).lines() {
+        let t = l.split_whitespace().collect::<Vec<_>>().join(" ");
+        if t.starts_with('>') {
+            continue;
+        }
+        if (t.starts_with("On ") && t.ends_with("wrote:")) || t.starts_with("-----Original Message") {
+            break;
+        }
+        if t.is_empty() && lines.last().map(|x| x.is_empty()).unwrap_or(true) {
+            continue;
+        }
+        lines.push(t);
+    }
+    while lines.last().map(|x| x.is_empty()).unwrap_or(false) {
+        lines.pop();
+    }
+    lines.join("\n")
+}
+
+fn attr(tag: &str, name: &str) -> String {
+    let low = tag.to_ascii_lowercase(); // (same length as the tag: positions found in one hold in the other)
+    let mut from = 0;
+    while let Some(i) = low[from..].find(name).map(|i| i + from) {
+        let before = low[..i].chars().last().unwrap_or(' ');
+        let after = low[i + name.len()..].trim_start();
+        if (before.is_whitespace() || before == '<') && after.starts_with('=') {
+            let v = tag[i + name.len()..].trim_start()[1..].trim_start();
+            return if let Some(q) = v.chars().next().filter(|c| *c == '"' || *c == '\'') {
+                v[1..].split(q).next().unwrap_or("").to_string()
+            } else {
+                v.split(|c: char| c.is_whitespace() || c == '>').next().unwrap_or("").to_string()
+            };
+        }
+        from = i + name.len();
+    }
+    String::new()
+}
+
+fn html_blocks(html: &str, cids: &std::collections::HashMap<String, String>) -> Vec<Block> {
+    let mut s = html.to_string();
+    for tag in ["style", "script", "head", "title"] {
+        while let Some(a) = s.to_ascii_lowercase().find(&format!("<{tag}")) {
+            match s.to_ascii_lowercase()[a..].find(&format!("</{tag}>")) {
+                Some(b) => s.replace_range(a..a + b + tag.len() + 3, " "),
+                None => {
+                    s.truncate(a);
+                    break;
+                }
+            }
+        }
+    }
+    let mut out: Vec<Block> = Vec::new();
+    let mut text = String::new();
+    let mut href = String::new();
+    let flush = |text: &mut String, out: &mut Vec<Block>| {
+        let t = tidy(text);
+        if !t.is_empty() {
+            out.push(Block { kind: "p", text: t, ..Default::default() });
+        }
+        text.clear();
+    };
+    let b = s.as_bytes();
+    let mut i = 0;
+    while i < s.len() {
+        if b[i] == b'<' {
+            // the whole tag, minding quotes
+            let mut j = i + 1;
+            let mut q = 0u8;
+            while j < b.len() && !(b[j] == b'>' && q == 0) {
+                if q == 0 && (b[j] == b'"' || b[j] == b'\'') {
+                    q = b[j];
+                } else if b[j] == q {
+                    q = 0;
+                }
+                j += 1;
+            }
+            let tag = &s[i..j.min(s.len())];
+            let name: String = tag[1..].trim_start().chars().take_while(|c| c.is_alphanumeric() || *c == '/').collect::<String>().to_lowercase();
+            match name.as_str() {
+                "img" => {
+                    let src = attr(tag, "src");
+                    let (w, h) = (attr(tag, "width").trim_end_matches("px").parse::<u32>().unwrap_or(0), attr(tag, "height").trim_end_matches("px").parse::<u32>().unwrap_or(0));
+                    let tiny = (w > 0 && w <= 3) || (h > 0 && h <= 3);
+                    let src = if let Some(id) = src.strip_prefix("cid:") { cids.get(&id.to_lowercase()).cloned().unwrap_or_default() } else if src.starts_with("http://") || src.starts_with("https://") || src.starts_with("data:image/") { entities(&src) } else { String::new() };
+                    if !src.is_empty() && !tiny {
+                        flush(&mut text, &mut out);
+                        out.push(Block { kind: "img", text: entities(&attr(tag, "alt")), src, href: href.clone(), w, h });
+                    }
+                }
+                "a" => href = entities(&attr(tag, "href")),
+                "/a" => href.clear(),
+                "br" | "br/" => text.push('\n'),
+                "li" => text.push_str("\n• "),
+                "p" | "/p" | "div" | "/div" | "tr" | "/tr" | "table" | "/table" | "h1" | "/h1" | "h2" | "/h2" | "h3" | "/h3" | "h4" | "/h4" | "blockquote" | "/blockquote" | "ul" | "/ul" | "ol" | "/ol" | "hr" | "center" | "/center" => text.push('\n'),
+                "td" | "/td" | "th" => text.push(' '),
+                _ => {}
+            }
+            i = j + 1;
+            continue;
+        }
+        let ch = s[i..].chars().next().unwrap();
+        text.push(if ch == '\n' || ch == '\r' || ch == '\t' { ' ' } else { ch });
+        i += ch.len_utf8();
+    }
+    flush(&mut text, &mut out);
+    out
+}
+
+/// A plain-text message: its words, and lines that are just a picture's address shown as that picture.
+fn text_blocks(text: &str) -> Vec<Block> {
+    let mut out = Vec::new();
+    let mut para = String::new();
+    for l in text.lines() {
+        let t = l.trim().trim_start_matches('<').trim_end_matches('>');
+        let low = t.to_lowercase();
+        let pic = (low.starts_with("http://") || low.starts_with("https://")) && !t.contains(' ') && [".png", ".jpg", ".jpeg", ".gif", ".webp"].iter().any(|e| low.split('?').next().unwrap_or("").ends_with(e));
+        if pic {
+            let p = tidy(&para);
+            if !p.is_empty() {
+                out.push(Block { kind: "p", text: p, ..Default::default() });
+            }
+            para.clear();
+            out.push(Block { kind: "img", src: t.to_string(), ..Default::default() });
+        } else {
+            para.push_str(l);
+            para.push('\n');
+        }
+    }
+    let p = tidy(&para);
+    if !p.is_empty() {
+        out.push(Block { kind: "p", text: p, ..Default::default() });
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

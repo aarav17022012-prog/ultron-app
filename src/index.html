@@ -965,9 +965,6 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .wh-mas canvas{display:block; width:100%; height:100%; pointer-events:none}
 .wheel:not(.open) .wh-hub > *, .wheel:not(.open) .wh-row > *{pointer-events:none}
 /* the sliver that shows while the wheel is up: a small handle, which widens when the pointer comes near */
-.wh-grip{top:calc(var(--cy) + 250px - 6.5px); width:26px; height:3px; margin-left:-13px; border-radius:2px; background:rgba(255,255,255,.55); pointer-events:none; transition:width .35s var(--spring), margin-left .35s var(--spring), background .2s, opacity .2s}
-.wh-disc:hover ~ .wh-hub .wh-grip{width:44px; margin-left:-22px; background:#fff}
-.wheel.open .wh-grip{opacity:0}
 /* groups: a tray that comes out from under the wheel. Drag a bead onto a pod (four apps to a pod, four pods);
    press a pod and its apps open together, side by side. */
 .wh-tray{position:absolute; left:0; top:calc(var(--cy) + var(--R) + 10px); width:max-content; height:62px; padding:7px; display:flex; align-items:center; border-radius:20px; --tint:rgba(16,16,22,.46);
@@ -1423,6 +1420,167 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
 .pk-x svg{width:11px; height:11px; fill:none; stroke:#fff; stroke-width:3; stroke-linecap:round}
 @keyframes pkXPop{from{transform:scale(0) rotate(-90deg)}}
 .pk-w{display:inline-block; animation:mlWord .4s var(--glide) backwards}
+
+/* ---------- notifications: the pile's button rolls over as it opens and closes ---------- */
+.nf-n.swap{animation:slIn .35s var(--glide)}
+
+/* ---------- the wheel's own shortcut, recorded by pressing it ---------- */
+.hk-wrap{display:inline-flex; align-items:center; gap:6px}
+.hk{position:relative; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-width:136px; height:32px; padding:0 10px; border:0; border-radius:10px;
+  background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); color:#fff; font:inherit; font-size:12.5px; font-weight:600; cursor:default;
+  transition:background .2s, box-shadow .3s, transform .3s var(--spring)}
+.hk:hover{background:rgba(255,255,255,.16)} .hk:active{transform:scale(.96)}
+.hk kbd{display:inline-grid; place-items:center; min-width:24px; height:22px; padding:0 7px; border-radius:7px; background:rgba(255,255,255,.16);
+  box-shadow:inset 0 -1.5px 0 rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.1); font:inherit; font-size:11.5px; font-weight:700; animation:hkIn .45s var(--spring) backwards; animation-delay:calc(var(--i, 0) * 55ms)}
+.hk .hk-plus{opacity:.45; font-size:11px; animation:hkIn .45s var(--spring) backwards; animation-delay:calc(var(--i, 0) * 55ms)}
+@keyframes hkIn{from{opacity:0; transform:translateY(6px) scale(.6)}}
+.hk .hk-say{animation:slIn .35s var(--glide) backwards; white-space:nowrap}
+.hk.rec{background:rgba(10,132,255,.2); box-shadow:inset 0 0 0 1.5px rgba(10,132,255,.9)}
+.hk.rec::after{content:""; position:absolute; inset:-1px; border-radius:11px; box-shadow:0 0 0 0 rgba(10,132,255,.5); animation:hkPulse 1.2s ease-out infinite; pointer-events:none}
+@keyframes hkPulse{to{box-shadow:0 0 0 9px rgba(10,132,255,0)}}
+.hk.bad{animation:pkNope .5s cubic-bezier(.36,.07,.19,.97); box-shadow:inset 0 0 0 1.5px #ff453a}
+.hk.ok{box-shadow:inset 0 0 0 1.5px #30d158; transition:box-shadow .3s}
+.hk-x{width:26px; height:26px; flex:none; display:grid; place-items:center; border:0; border-radius:50%; background:rgba(255,255,255,.1); opacity:.75; cursor:default;
+  transition:opacity .2s, background .2s, transform .3s var(--spring); animation:hkIn .4s var(--spring) backwards}
+.hk-x[hidden]{display:none}
+.hk-x:hover{opacity:1; background:rgba(255,255,255,.2)} .hk-x:active{transform:scale(.85)}
+.hk-x svg{width:10px; height:10px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round}
+
+/* ---------- the lock screen's passcode: each step slides in, the dots seal into a lock when it's saved ---------- */
+.lk-pass .sw-l{min-width:0}
+#lkSay{display:block} #lkSay.swap{animation:slIn .4s var(--glide)}
+.lk-box{position:relative; display:flex; align-items:center; justify-content:flex-end; flex:none; min-height:32px}
+.lk-st{display:flex; align-items:center; gap:8px; white-space:nowrap}
+.lk-st.in{animation:lkIn .45s var(--glide) backwards}
+.lk-st.out{position:absolute; right:0; animation:lkOut .28s var(--glide) forwards; pointer-events:none}
+@keyframes lkIn{from{opacity:0; transform:translateX(20px)}}
+@keyframes lkOut{to{opacity:0; transform:translateX(-20px)}}
+.lk-field{position:relative; display:block; width:150px; height:32px}
+.lk-field input{width:100%; height:100%; padding:0 12px; border:0; border-radius:10px; outline:0; background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+  color:transparent; caret-color:#fff; font:inherit; font-size:13px; letter-spacing:.32em; transition:box-shadow .2s, background .2s}
+.lk-field input::placeholder{color:rgba(255,255,255,.45); letter-spacing:0}
+.lk-field input:focus{background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.lk-dots{position:absolute; left:12px; top:0; bottom:0; display:flex; align-items:center; gap:4px; pointer-events:none}
+.lk-dots i{width:7px; height:7px; flex:none; border-radius:50%; background:#fff; animation:lkDot .32s var(--spring) backwards}
+.lk-dots i.go{animation:lkDotOut .18s ease-in forwards}
+@keyframes lkDot{from{transform:scale(0)}}
+@keyframes lkDotOut{to{transform:scale(0); opacity:0}}
+.lk-field.bad{animation:pkNope .5s cubic-bezier(.36,.07,.19,.97)} .lk-field.bad input{box-shadow:inset 0 0 0 1.5px #ff453a}
+.lk-field.seal .lk-dots i{animation:lkSeal .42s cubic-bezier(.5,0,.4,1) forwards; animation-delay:calc(var(--i, 0) * 22ms)}
+@keyframes lkSeal{to{transform:translateX(var(--to, 0)) scale(.3); opacity:0}}
+.lk-done{display:inline-flex; align-items:center; gap:9px; height:32px; font-size:12.5px; font-weight:650; color:#30d158}
+.lk-done.gone{color:rgba(255,255,255,.75)}
+.lk-lock{width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:#30d158; animation:hkIn .5s var(--spring) backwards}
+.lk-lock svg{width:15px; height:15px; fill:none; stroke:#04210c; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; overflow:visible}
+.lk-lock .shackle{transform:translateY(-3px); animation:lkShut .45s var(--spring) .28s forwards}
+@keyframes lkShut{to{transform:none}}
+
+/* ---------- Cleaner: a glass shredder. What's being cleared drops into its slot and comes out in strips ---------- */
+.cl-stage{position:relative; height:210px; margin:2px 0 14px; border-radius:20px; overflow:hidden;
+  background:radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,.08), rgba(255,255,255,.02) 62%, transparent); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.cl-head{position:absolute; left:18px; top:14px; z-index:3}
+.cl-head b{display:block; font-size:28px; font-weight:750; letter-spacing:-.02em; line-height:1.1; font-variant-numeric:tabular-nums}
+.cl-head span{font-size:12px; color:rgba(255,255,255,.6)}
+.cl-fall{position:absolute; left:0; right:0; top:0; height:96px; overflow:hidden; z-index:1}
+.cl-out{position:absolute; left:0; right:0; top:134px; bottom:0; overflow:hidden; z-index:1}
+.cl-mach{position:absolute; z-index:2; left:50%; top:94px; width:260px; height:42px; margin-left:-130px; border-radius:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.08)); box-shadow:inset 0 1px 0 rgba(255,255,255,.42), inset 0 0 0 1px rgba(255,255,255,.14), 0 12px 28px rgba(0,0,0,.38)}
+.cl-slot{position:absolute; left:24px; right:24px; top:-2px; height:6px; border-radius:3px; background:#040406; box-shadow:0 1px 0 rgba(255,255,255,.3), inset 0 1px 2px rgba(0,0,0,.8)}
+.cl-teeth{position:absolute; left:28px; right:44px; bottom:8px; display:flex; justify-content:space-between}
+.cl-teeth i{width:6px; height:11px; border-radius:2px; background:rgba(255,255,255,.34); transform-origin:50% 100%}
+.cl-stage.run .cl-teeth i{animation:clChew .2s ease-in-out infinite alternate; animation-delay:calc(var(--i) * -31ms)}
+@keyframes clChew{to{transform:scaleY(.4)}}
+.cl-light{position:absolute; right:16px; bottom:12px; width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.28); transition:background .3s, box-shadow .3s}
+.cl-stage.scan .cl-light{background:#ffcf5c; box-shadow:0 0 9px #ffcf5c; animation:clBlink .7s steps(2) infinite}
+.cl-stage.run .cl-light{background:#30d158; box-shadow:0 0 10px #30d158; animation:clBlink .5s steps(2) infinite}
+.cl-stage.done .cl-light{background:#30d158; box-shadow:0 0 8px #30d158}
+@keyframes clBlink{50%{opacity:.35}}
+.cl-stage.scan .cl-mach{animation:clHum 1.6s ease-in-out infinite}
+@keyframes clHum{50%{transform:translateY(-1.5px)}}
+.cl-stage.run .cl-mach{animation:clShake .12s linear infinite}
+@keyframes clShake{25%{transform:translate(.6px, -.5px)} 75%{transform:translate(-.6px, .5px)}}
+.cl-card{position:absolute; top:0; left:50%; width:48px; height:60px; margin-left:-24px; padding:9px 7px 0; border-radius:8px; overflow:hidden;
+  background:linear-gradient(160deg, rgba(255,255,255,.36), rgba(255,255,255,.12)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.38), 0 6px 14px rgba(0,0,0,.25);
+  animation:clDrop .95s cubic-bezier(.45,0,.6,1) forwards}
+.cl-card::before{content:""; position:absolute; right:0; top:0; width:12px; height:12px; background:linear-gradient(225deg, rgba(10,10,14,.55) 50%, rgba(255,255,255,.5) 50%)}
+.cl-card i{display:block; height:3px; margin-bottom:5px; border-radius:2px; background:rgba(255,255,255,.55)}
+.cl-card i:nth-child(2){width:70%} .cl-card i:nth-child(3){width:85%}
+.cl-card span{position:absolute; left:4px; right:4px; bottom:5px; font-size:6.5px; font-weight:700; color:rgba(255,255,255,.85); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center}
+@keyframes clDrop{0%{transform:translate(var(--x), -72px) rotate(var(--r)); opacity:0} 16%{opacity:1} 55%{transform:translate(calc(var(--x) * .25), 8px) rotate(calc(var(--r) * .2))} 100%{transform:translate(0, 100px) rotate(0)}}
+.cl-strip{position:absolute; top:0; left:50%; width:5px; height:var(--h, 44px); margin-left:var(--x, 0); border-radius:2px;
+  background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.16)); animation:clStrip 1.25s cubic-bezier(.35,0,.7,1) forwards; animation-delay:var(--d, 0ms)}
+@keyframes clStrip{0%{transform:translateY(calc(-1 * var(--h, 44px))); opacity:1} 100%{transform:translate(var(--dx, 0), 96px) rotate(var(--rot, 0)); opacity:0}}
+.cl-ok{position:absolute; z-index:3; left:50%; top:46px; width:38px; height:38px; margin-left:-19px; display:grid; place-items:center; border-radius:50%; background:#30d158;
+  box-shadow:0 0 0 6px rgba(48,209,88,.16); opacity:0; transform:scale(.3)}
+.cl-ok svg{width:20px; height:20px; fill:none; stroke:#04210c; stroke-width:2.8; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:22; stroke-dashoffset:22}
+.cl-stage.done .cl-ok{opacity:1; transform:none; transition:opacity .2s, transform .55s var(--spring)}
+.cl-stage.done .cl-ok svg{stroke-dashoffset:0; transition:stroke-dashoffset .45s var(--glide) .2s}
+.cl-rows{display:grid; gap:8px}
+.cl-row{display:grid; grid-template-columns:34px minmax(0, 1fr) auto auto; align-items:center; gap:12px; padding:10px 14px; border-radius:14px; background:rgba(255,255,255,.07);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06); transition:background .25s, opacity .3s, box-shadow .3s}
+.sw-sec.on .cl-row{animation:rowIn .45s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 40ms)}
+.cl-row > .ic{width:34px; height:34px; display:grid; place-items:center; border-radius:11px; background:rgba(255,255,255,.1)}
+.cl-row > .ic svg{width:17px; height:17px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.cl-row b{font-size:13px; font-weight:650} .cl-row small{display:block; margin-top:2px; font-size:11.5px; line-height:1.35; color:rgba(255,255,255,.55)}
+.cl-row em{display:block; margin-top:2px; font-style:normal; font-size:11px; color:#ffb38a}
+.cl-bar{height:3px; margin-top:7px; border-radius:2px; background:rgba(255,255,255,.08); overflow:hidden}
+.cl-bar i{display:block; width:var(--w, 0%); height:100%; border-radius:inherit; background:rgba(255,255,255,.72); transition:width 1s var(--glide)}
+.cl-size{min-width:64px; text-align:right; font-size:12.5px; font-weight:650; font-variant-numeric:tabular-nums; white-space:nowrap}
+.cl-row.off{opacity:.55}
+.cl-row.fresh{animation:rowIn .5s var(--glide) backwards}
+.cl-size.swap{animation:slIn .38s var(--glide)}
+.cl-row.now{background:rgba(255,255,255,.13); box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.cl-row.now .cl-size{animation:clBlink .8s ease-in-out infinite}
+.cl-row.done .cl-size{color:#30d158}
+.cl-row.done > .ic{background:rgba(48,209,88,.2)}
+.cl-acts{display:flex; align-items:center; gap:10px; margin:12px 2px 2px}
+.cl-go{position:relative; height:38px; padding:0 20px; border:0; border-radius:12px; background:#fff; color:#0b0b0d; font:inherit; font-size:13px; font-weight:700; text-shadow:none; cursor:default;
+  transition:transform .3s var(--spring), opacity .2s, background .2s}
+.cl-go:hover{background:#e9e9ee} .cl-go:active{transform:scale(.96)} .cl-go:disabled{opacity:.45}
+.cl-go span{display:inline-block} .cl-go span.swap{animation:slIn .35s var(--glide)}
+
+/* ---------- the wheel's handle: drawn on whole pixels, widened by a transform (no stepping), with a soft light ---------- */
+.wh-grip{top:calc(var(--cy) + 250px - 8px); width:46px; height:4px; margin-left:-23px; border-radius:4px; pointer-events:none;
+  background:linear-gradient(90deg, rgba(255,255,255,.4), rgba(255,255,255,.9) 50%, rgba(255,255,255,.4)); box-shadow:0 1px 4px rgba(0,0,0,.4);
+  transform:scaleX(.58) translateZ(0); opacity:.78; transition:transform .55s var(--spring), opacity .25s, box-shadow .35s}
+.wh-disc:hover ~ .wh-hub .wh-grip{transform:scaleX(1) translateZ(0); opacity:1; box-shadow:0 0 10px rgba(255,255,255,.35), 0 1px 4px rgba(0,0,0,.4)}
+.wheel.open .wh-grip{opacity:0; transform:scaleX(.3) translateZ(0)}
+
+/* ---------- email: its pictures, where they were ---------- */
+.ml-body .ml-p{margin:0 0 8px; white-space:pre-line}
+.ml-fig{margin:4px 0 10px; text-align:center}
+.ml-fig img{max-width:100%; height:auto; border-radius:10px; background:rgba(255,255,255,.04); opacity:0; transform:scale(.97); transition:opacity .45s var(--glide), transform .6s var(--glide)}
+.ml-fig.sm{display:inline-block; margin:2px 4px} .ml-fig.sm img{border-radius:4px}
+.ml-fig.in img{opacity:1; transform:none}
+.ml-fig.link img{cursor:pointer}
+.ml-body.rich{animation:aiIn .35s var(--glide)}
+
+/* ---------- the notch's answers, formatted: steps get number badges, bold words stand out, blocks ease in ---------- */
+.reply .md{white-space:normal; color:rgba(255,255,255,.8)}
+.reply .md > *{margin:0 0 7px} .reply .md > :last-child{margin-bottom:0}
+.reply .md strong{color:#fff; font-weight:650}
+.reply .md em{color:rgba(255,255,255,.9)}
+.reply .md code{font-family:"Cascadia Code", Consolas, ui-monospace, monospace; font-size:.88em; padding:1px 5px; border-radius:5px; background:rgba(255,255,255,.1); color:#fff}
+.reply .md pre{padding:9px 11px; border-radius:10px; background:rgba(0,0,0,.3); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); overflow:auto; white-space:pre; font-size:12px; line-height:1.5}
+.reply .md pre code{padding:0; background:none}
+.reply .md h4{font-size:14.5px; font-weight:700; color:#fff}
+.reply .md ol, .reply .md ul{display:grid; gap:6px; padding:0; list-style:none}
+.reply .md ol{counter-reset:md}
+.reply .md li{position:relative; padding-left:27px; animation:mdIn .45s var(--glide) backwards}
+.reply .md ol > li::before{counter-increment:md; content:counter(md); position:absolute; left:0; top:1px; width:19px; height:19px; display:grid; place-items:center; border-radius:7px;
+  background:rgba(255,255,255,.14); color:#fff; font-size:10.5px; font-weight:750; animation:mdBadge .5s var(--spring) backwards}
+.reply .md ul > li::before{content:""; position:absolute; left:7px; top:.6em; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.75)}
+.reply .md .md-lab{color:#fff; font-weight:650}
+.reply .md blockquote{padding-left:11px; box-shadow:inset 2px 0 0 rgba(255,255,255,.3); color:rgba(255,255,255,.7)}
+.reply .md table{border-collapse:collapse; font-size:12.5px}
+.reply .md th, .reply .md td{padding:4px 10px 4px 0; border-bottom:1px solid rgba(255,255,255,.1); text-align:left; vertical-align:top}
+.reply .md th{color:#fff; font-weight:650}
+.reply .md a{color:#fff; text-decoration:underline; text-decoration-color:rgba(255,255,255,.4); text-underline-offset:2px; cursor:pointer}
+.reply .md hr{height:1px; border:0; background:rgba(255,255,255,.12)}
+.reply .md .md-in{animation:mdIn .45s var(--glide) backwards}
+.reply .md .caret{height:.95em}
+@keyframes mdIn{from{opacity:0; transform:translateY(5px)}}
+@keyframes mdBadge{from{opacity:0; transform:scale(.4)}}
 
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
@@ -2171,6 +2329,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button data-sec="taskbar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg><span>Taskbar</span></button>
     <button data-sec="notes"><svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Notifications</span></button>
     <button data-sec="system"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>System</span></button>
+    <button data-sec="cleaner"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="7" rx="2"/><path d="M7.5 14v6M11 14v4M14.5 14v6M18 14v3"/></svg><span>Cleaner</span></button>
     <button data-sec="privacy"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg><span>Privacy</span></button>
     <button data-sec="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>About</span></button>
   </nav>
@@ -2180,10 +2339,11 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only"><span class="sw-l">Passcode<small>Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><span class="lk-set"><input id="lkNew" type="password" maxlength="32" placeholder="New passcode" autocomplete="new-password" spellcheck="false" aria-label="New passcode"><button class="chipb" data-sx="lkset">Set</button><button class="chipb" data-sx="lkclear" id="lkClear" hidden>Remove</button></span></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
-    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>ULTRON’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or ULTRON closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="nfQuiet"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="nfSound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
+    <section class="sw-sec" data-sec="cleaner"><h2>Cleaner</h2><p class="sw-sub">Clears the junk Windows and your apps leave behind. Your files, sign-ins, passwords and settings aren’t touched.</p><div class="cl-stage" id="clStage"><div class="cl-head"><b id="clNum">…</b><span id="clCap">Looking for junk…</span></div><div class="cl-fall" id="clFall"></div><div class="cl-mach"><i class="cl-slot"></i><div class="cl-teeth"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i></div><i class="cl-light"></i></div><div class="cl-out" id="clOut"></div><div class="cl-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></div></div><div class="cl-rows" id="clRows"></div><div class="cl-acts"><button class="cl-go" id="clGo" type="button" data-clx="go" disabled><span>Clear</span></button><button class="chipb" type="button" data-clx="scan">Look again</button></div></section>
     <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>What the old Clipboard menu had saved. Nothing new is kept.</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
     <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small>Version 0.3 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
   </div>
@@ -2591,13 +2751,15 @@ listen('backdrop', async url => {
 document.addEventListener('transitionstart', () => { if (!glassSoon) glassSoon = requestAnimationFrame(() => { glassSoon = 0; glassAim(); }); }, true);
 setInterval(() => {
   const panel = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('recw'), $('filew'), $('spot'), $('wheel')].some(el => el && el.classList.contains('open')) || $('flyr').classList.contains('on') || !!(window.NF && NF.shown.length);
-  const off = !S.liveGlass || fullscreen || document.body.classList.contains('leaving');
+  // (Spotlight opened over a full-screen app kept the picture from before it: its glass stays live there too)
+  const spotOn = $('spot').classList.contains('open');
+  const off = !S.liveGlass || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
   const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('recw'), $('filew'), $('spot'), $('wheel')].some(el => el && el.classList.contains('open'));
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
-  const ms = off || answering ? 0 : boxOpen ? 33 : panel ? 100 : S.bar === 'hide' ? (barHid ? 0 : 400) : 8000;
+  const ms = off || answering ? 0 : spotOn ? 16 : boxOpen ? 33 : panel ? 100 : S.bar === 'hide' ? (barHid ? 0 : 400) : 8000;
   if (ms !== glassRate){ glassRate = ms; invoke('backdrop_rate', {ms}); if (off) document.documentElement.classList.remove('live'); }
   glassAim();
 }, 250);
@@ -2919,7 +3081,7 @@ function paintSettings(){
   bodyMat.color.set(S.tint);
   // (what only matters with ULTRON's taskbar, or its lock screen, folds away without them)
   document.querySelectorAll('.sw-rows').forEach(r => { r.classList.toggle('dk-off', S.dock !== 'ultron'); r.classList.toggle('lk-off', S.lock !== 'ultron'); r.classList.toggle('nf-off', S.notes !== 'ultron'); });
-  $('lkClear').hidden = !S.lockHash; $('lkNew').placeholder = S.lockHash ? 'Change passcode' : 'New passcode';
+  if (typeof lkPaint === 'function') lkPaint();
 }
 let sensTimer = 0;
 const pushSens = () => { clearTimeout(sensTimer); sensTimer = setTimeout(() => invoke('voice_config', {sens:S.sens}), 120); };
@@ -3695,7 +3857,7 @@ const Voice = (() => {
     speechSynthesis.speak(u);
   }
   function push(text){
-    text = text.replace(/\s+/g, ' ').trim();
+    text = mdPlain(text).replace(/\s+/g, ' ').trim();
     if (!/[a-z0-9]/i.test(text)) return;
     if (!ac) build();
     if (ac.state === 'suspended') ac.resume();
@@ -4414,6 +4576,7 @@ async function mailFill(row, view){
   out.style.setProperty('--dx', sum ? '16px' : '-16px'); out.classList.remove('in'); void out.offsetWidth; out.classList.add('in');
   if (sum) mlType(out, text); else out.textContent = text;
   out.scrollTop = 0; setTimeout(syncHit, 420);
+  if (!sum) mlRich(uid);
 }
 function mailRow(row){
   const was = row.classList.contains('open');
@@ -4466,6 +4629,8 @@ mailw.addEventListener('submit', e => { e.preventDefault(); mailConnect(); });
 mailw.addEventListener('input', e => { if (e.target.id === 'mlEmail'){ $('mlHint').innerHTML = mailHint(e.target.value); mailErr(''); } });
 mailw.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') closeMail(); });
 mailw.addEventListener('click', e => {
+  const fig = e.target.closest('.ml-fig.link');
+  if (fig){ e.stopPropagation(); const u = fig.dataset.href; closeMail(); setOpen(true); selectTab('browser'); setTimeout(() => bwGo(u), 120); return; }
   e.stopPropagation();
   const act = e.target.closest('[data-ml]')?.dataset.ml;
   if (act === 'gapp'){ invoke('launch', {target:'https://myaccount.google.com/apppasswords'}); return; }
@@ -4562,6 +4727,7 @@ function nbHide(){
 }
 // an answer as it's written: the words that have just arrived rise into place
 function nbText(t){
+  t = mdPlain(t);
   if (t.length < nbLen) nbSeen = 0;                        // (a new answer)
   nbLen = t.length;
   let n = 0, out = '';
@@ -4974,10 +5140,9 @@ listen('ai-token', piece => {
   }
   aiStream.text += piece;
   if (piece.includes('\n') && !reply.classList.contains('list')){ reply.classList.add('list'); fit(); }
-  const sp = document.createElement('span'); sp.className = 'tk'; sp.textContent = piece;
-  const atEnd = reply.scrollHeight - reply.scrollTop - reply.clientHeight < 40;
-  reply.insertBefore(sp, reply.lastChild);           // new words fade in; earlier ones never re-render
-  if (atEnd) reply.scrollTop = reply.scrollHeight;   // follow the answer unless you scrolled back up
+  // (formatted as it comes, once a frame: finished blocks stay put, new ones ease in, the last one grows)
+  const atEnd = reply.scrollHeight - reply.scrollTop - reply.clientHeight < 40, s = aiStream;
+  if (!s.md) s.md = requestAnimationFrame(() => { s.md = 0; if (s.stopped || aiStream !== s) return; mdLive(reply, s.text, false); if (atEnd) reply.scrollTop = reply.scrollHeight; });
   Voice.feed(piece);                                 // start speaking as soon as a sentence is ready
   if (!fitT) fitT = setTimeout(() => { fitT = 0; fit(); }, 120);
 });
@@ -5042,9 +5207,9 @@ async function runAssist(cmd){
     // keep the steps on screen and add how it went underneath
     const sum = document.createElement('div'); sum.className = 'ag-sum'; reply.appendChild(sum); reveal(sum, r.reply, 35);
   } else if (streamed){
-    reply.querySelector('.caret')?.remove();
-    if (said.trim() !== r.reply.trim()) reply.textContent = r.reply;
-  } else { reply.classList.toggle('long', r.reply.length > 90); reveal(reply, r.reply, 45); }
+    if (mine.md) cancelAnimationFrame(mine.md);
+    mdLive(reply, r.reply, true);
+  } else { reply.classList.toggle('long', r.reply.length > 90 || /\n/.test(r.reply)); revealMd(reply, r.reply, 45); }
   reply.classList.remove('streaming');
   fit();
   setMood(!r.ok ? 'sad' : r.action ? 'allgood' : 'happy', !r.ok ? 2400 : 2000);
@@ -6297,6 +6462,8 @@ function showSec(k){
   setEl.querySelectorAll('.sw-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === k));
   moveHl(); paintBrainInfo();
   if (k === 'notes') nfAppsLoad();
+  if (k === 'cleaner' && !CL.busy && (!CL.at || Date.now() - CL.at > 60000)) clScan();
+  if (k === 'taskbar') hkPaint();
 }
 /* routines: what ULTRON does by itself, and when */
 async function paintRoutines(){
@@ -6366,10 +6533,6 @@ setEl.addEventListener('click', e => {
     case 'clearlyr': try { localStorage.removeItem('ultron-lyr-offsets'); } catch(_){} lyrOffset = 0; paintNudge(); done('Reset'); break;
     case 'taskmgr': invoke('menu_action', {action:'task-manager'}); break;
     case 'lockshow': closeSettings(); setTimeout(lockShow, 380); break;
-    case 'lkset': { const v = $('lkNew').value; if ([...v].length < 4){ done('4 or more'); break; }
-      const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join('');
-      lkHash(salt, v).then(h => { S.lockSalt = salt; S.lockHash = h; save(); $('lkNew').value = ''; paintSettings(); }); done('Saved'); break; }
-    case 'lkclear': delete S.lockSalt; delete S.lockHash; save(); $('lkNew').value = ''; paintSettings(); break;
     case 'quit': invoke('quit_app'); break;
     case 'memall': invoke('memory_forget', {index:null}); $('swMem').querySelectorAll('div').forEach(d => d.classList.add('gone')); setTimeout(paintMemory, 380); done('Forgotten'); break;
     case 'intro': closeSettings(); setTimeout(() => invoke('intro_play'), 300); break;
@@ -7391,6 +7554,8 @@ function spGo(it){
 }
 async function openSpot(){
   if (spot.classList.contains('open') || LK.on || LK.busy) return;
+  // (what's behind starts streaming now, not at the next quarter-second look: it opened on an old picture before)
+  if (S.liveGlass && glassRate !== 16){ glassRate = 16; invoke('backdrop_rate', {ms:16}); }
   if (!startApps) startApps = (await invoke('start_apps')) || [];
   closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); whClose();
   closeNotes();
@@ -7412,6 +7577,362 @@ function closeSpot(away){
 listen('win-key', () => { spot.classList.contains('open') ? closeSpot() : openSpot(); });
 listen('spot-key', () => { spot.classList.contains('open') ? closeSpot() : openSpot(); });
 listen('spot-key-state', ok => { $('spkTaken').hidden = !!ok; });
+/* ---------- answers, formatted ----------
+   What the brain writes as steps, bullet points, labels ("Ingredients:"), **bold** words, code or a small table is
+   shown as such. While it streams, each finished block stays put, new blocks ease in and only the last one grows;
+   the marks themselves are never spoken (mdPlain). */
+function mdPlain(s){
+  return String(s).replace(/\*\*([^*]+)\*\*/g, '$1').replace(/__([^_]+)__/g, '$1').replace(/`+/g, '').replace(/^\s*#{1,4}\s+/gm, '')
+    .replace(/^\s*[-*•]\s+/gm, '').replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1').replace(/^\s*\|?[\s:|-]{3,}\|?\s*$/gm, '').replace(/\|/g, ', ');
+}
+function mdInline(s){
+  let h = esc(s);
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/__([^_]+)__/g, '<strong>$1</strong>');
+  h = h.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>');
+  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a data-u="$2">$1</a>');
+  h = h.replace(/(^|\s)(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, '$1<a data-u="$2">$2</a>');
+  return h;
+}
+function mdBlocks(text){
+  const lines = String(text).replace(/\r/g, '').split('\n'), out = [];
+  const isUl = l => /^\s*[-*•]\s+\S/.test(l), isOl = l => /^\s*\d+[.)]\s+\S/.test(l), isRow = l => /^\s*\|.*\|\s*$/.test(l);
+  let i = 0;
+  while (i < lines.length){
+    const l = lines[i];
+    if (!l.trim()){ i++; continue; }
+    if (/^\s*```/.test(l)){
+      const buf = []; i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
+      i++; out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`); continue;
+    }
+    let m = l.match(/^\s*#{1,4}\s+(.*)$/);
+    if (m){ out.push(`<h4>${mdInline(m[1])}</h4>`); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){ out.push('<hr>'); i++; continue; }
+    if (isUl(l) || isOl(l)){
+      const ol = isOl(l), items = [], start = ol ? +l.match(/\d+/)[0] : 1;
+      while (i < lines.length && (ol ? isOl(lines[i]) : isUl(lines[i]))) items.push(lines[i++].replace(ol ? /^\s*\d+[.)]\s+/ : /^\s*[-*•]\s+/, ''));
+      const tag = ol ? 'ol' : 'ul';
+      out.push(`<${tag}${ol && start > 1 ? ` style="counter-reset:md ${start - 1}"` : ''}>${items.map(x => `<li>${mdInline(x)}</li>`).join('')}</${tag}>`);
+      continue;
+    }
+    if (/^\s*>/.test(l)){
+      const buf = []; while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ''));
+      out.push(`<blockquote>${mdInline(buf.join(' '))}</blockquote>`); continue;
+    }
+    if (isRow(l) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].includes('-')){
+      const row = s => s.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const head = row(l); i += 2; const body = [];
+      while (i < lines.length && isRow(lines[i])) body.push(row(lines[i++]));
+      out.push(`<table><tr>${head.map(c => `<th>${mdInline(c)}</th>`).join('')}</tr>${body.map(r => `<tr>${r.map(c => `<td>${mdInline(c)}</td>`).join('')}</tr>`).join('')}</table>`);
+      continue;
+    }
+    // a paragraph: its lines, a "Label: what" line with the label in bold
+    const buf = [];
+    while (i < lines.length && lines[i].trim() && !isUl(lines[i]) && !isOl(lines[i]) && !isRow(lines[i]) && !/^\s*(#{1,4}\s|```|>)/.test(lines[i])) buf.push(lines[i++]);
+    if (!buf.length){ out.push(`<p>${mdInline(lines[i++])}</p>`); continue; }   // (a lone table row with no rule under it)
+    out.push(`<p>${buf.map(x => { const lab = x.match(/^\s*([A-Z][\w '’/&-]{1,28}):\s+(\S.*)$/); return lab ? `<span class="md-lab">${esc(lab[1])}:</span> ${mdInline(lab[2])}` : mdInline(x); }).join('<br>')}</p>`);
+  }
+  return out;
+}
+// Render text into el as formatted blocks, keeping what's already there: unchanged blocks aren't touched, a growing
+// list keeps its items (new ones ease in), and only new blocks get the entrance. `done` false: a caret at the end.
+function mdLive(el, text, done){
+  let box = el.querySelector(':scope > .md');
+  if (!box){ el.innerHTML = ''; box = document.createElement('div'); box.className = 'md'; el.appendChild(box); }
+  box.querySelectorAll('.caret').forEach(c => c.remove());
+  const blocks = mdBlocks(text), kids = box.children, tpl = document.createElement('template');
+  blocks.forEach((h, i) => {
+    const k = kids[i];
+    if (k && k._h === h) return;
+    tpl.innerHTML = h; const nu = tpl.content.firstElementChild; if (!nu) return;
+    if (k && k.tagName === nu.tagName && (nu.tagName === 'OL' || nu.tagName === 'UL')){
+      const a = k.children, b = nu.children;
+      for (let j = 0; j < b.length; j++){ if (!a[j]) k.appendChild(b[j].cloneNode(true)); else if (a[j].innerHTML !== b[j].innerHTML) a[j].innerHTML = b[j].innerHTML; }
+      while (a.length > b.length) a[a.length - 1].remove();
+      const st = nu.getAttribute('style'); st ? k.setAttribute('style', st) : k.removeAttribute('style');
+      k._h = h; return;
+    }
+    nu._h = h;
+    if (k && k.tagName === nu.tagName){ k.innerHTML = nu.innerHTML; k._h = h; return; }
+    nu.classList.add('md-in');
+    k ? box.replaceChild(nu, k) : box.appendChild(nu);
+  });
+  while (kids.length > blocks.length) kids[kids.length - 1].remove();
+  if (blocks.length > 1 || /<(ol|ul|pre|table)/.test(blocks[0] || '')) el.classList.add('long');
+  if (!done){
+    const last = box.lastElementChild, at = last && /^(OL|UL)$/.test(last.tagName) ? last.lastElementChild : last;
+    const c = document.createElement('span'); c.className = 'caret'; (at && at.tagName !== 'PRE' && at.tagName !== 'TABLE' && at.tagName !== 'HR' ? at : box).appendChild(c);
+  }
+}
+// A whole answer at once: plain sentences reveal word by word as before; anything with shape comes in block by block.
+function revealMd(el, text, step){
+  if (!/\n|\*\*|`|^\s*#|\|/.test(text)) return reveal(el, text, step);
+  ++reveals; el.innerHTML = '';
+  mdLive(el, text, true);
+  [...el.querySelectorAll('.md > *')].forEach((b, i) => { b.classList.add('md-in'); b.style.animationDelay = (i * 80) + 'ms'; });
+  return Promise.resolve(true);
+}
+reply.addEventListener('click', e => {
+  const a = e.target.closest('.md a[data-u]'); if (!a) return;
+  e.stopPropagation(); selectTab('browser'); setTimeout(() => bwGo(a.dataset.u), 80);
+});
+
+/* ---------- email: the message as it looks, its pictures where they were ----------
+   The words show at once (from the inbox); the whole message is fetched alongside, and if it has pictures it's
+   redrawn with them, each fading in as it loads. Tiny tracking dots are left out (mail.rs). */
+async function mlRich(uid){
+  ML.rich = ML.rich || new Map();
+  let blocks = ML.rich.get(uid);
+  if (!blocks){ try { blocks = await invokeLoud('mail_rich', {uid}); } catch(_){ return; } ML.rich.set(uid, blocks || []); }
+  if (!blocks || !blocks.some(b => b.kind === 'img')) return;              // (no pictures: the words already shown stay)
+  const row = mlIn.querySelector(`.ml-row.open[data-uid="${uid}"]`); if (!row || row.dataset.view !== 'orig') return;
+  const out = row.querySelector('.ml-body'); if (!out) return;
+  const small = b => (b.w && b.w < 72) || (b.h && b.h < 48);
+  out.innerHTML = blocks.map(b => b.kind === 'p' ? `<p class="ml-p">${esc(b.text)}</p>`
+    : `<figure class="ml-fig${small(b) ? ' sm' : ''}${b.href ? ' link' : ''}"${b.href ? ` data-href="${esc(b.href)}"` : ''}><img src="${esc(b.src)}" alt="${esc(b.text || '')}" referrerpolicy="no-referrer" decoding="async"${b.w && b.w <= 640 ? ` width="${b.w}"` : ''}></figure>`).join('');
+  out.classList.remove('rich'); void out.offsetWidth; out.classList.add('rich');
+  out.querySelectorAll('.ml-fig img').forEach((img, i) => {
+    const f = img.parentElement, show = () => setTimeout(() => f.classList.add('in'), Math.min(i * 60, 400));
+    // (a picture that turns out to be a dot or two is a tracking pixel: it goes)
+    const ok = () => (img.naturalWidth <= 3 || img.naturalHeight <= 3) ? f.remove() : show();
+    if (img.complete && img.naturalWidth) ok(); else { img.onload = ok; img.onerror = () => f.remove(); }
+  });
+  setTimeout(syncHit, 420);
+}
+
+/* ---------- the wheel's own shortcut (Settings, Taskbar): click it, press the keys ---------- */
+const HK_NAMES = {8:'Backspace', 9:'Tab', 13:'Enter', 32:'Space', 33:'PgUp', 34:'PgDn', 35:'End', 36:'Home', 37:'Left', 38:'Up', 39:'Right', 40:'Down', 45:'Ins', 46:'Del',
+  186:';', 187:'=', 188:',', 189:'-', 190:'.', 191:'/', 192:'`', 219:'[', 220:'\\', 221:']', 222:"'"};
+const hkName = vk => HK_NAMES[vk] || (vk >= 112 && vk <= 135 ? 'F' + (vk - 111) : vk >= 96 && vk <= 105 ? 'Num ' + (vk - 96) : String.fromCharCode(vk));
+var HK = {rec:false};
+const hkCaps = names => names.map((n, i) => `${i ? `<span class="hk-plus" style="--i:${i * 2 - 1}">+</span>` : ''}<kbd style="--i:${i * 2}">${esc(n)}</kbd>`).join('');
+function hkPaint(){
+  const b = $('whKeyBtn'); if (!b || !HK || HK.rec) return;
+  b.classList.remove('rec'); b.innerHTML = S.whKey ? hkCaps(S.whKey.names) : '<span class="hk-say">Set a shortcut</span>';
+  $('whKeyX').hidden = !S.whKey;
+}
+function hkStart(){ HK.rec = true; const b = $('whKeyBtn'); b.classList.add('rec'); b.innerHTML = '<span class="hk-say">Press the keys…</span>'; invoke('focus_main'); b.focus({preventScroll:true}); }
+function hkStop(){ if (!HK.rec) return; HK.rec = false; hkPaint(); }
+function hkBad(say){
+  const b = $('whKeyBtn'); if (!b) return;
+  b.classList.remove('bad', 'ok'); void b.offsetWidth; b.classList.add('bad'); b.innerHTML = `<span class="hk-say">${esc(say)}</span>`;
+  setTimeout(() => { b.classList.remove('bad'); if (HK.rec) b.innerHTML = '<span class="hk-say">Press the keys…</span>'; else hkPaint(); }, 1300);
+}
+// while it's listening, keys are its own (nothing else hears them)
+addEventListener('keydown', e => {
+  if (!HK.rec) return;
+  e.preventDefault(); e.stopPropagation();
+  if (e.key === 'Escape') return hkStop();
+  const vk = e.keyCode, names = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
+  const mods = (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0);
+  if ([16, 17, 18, 91, 92].includes(vk)){ $('whKeyBtn').innerHTML = hkCaps(names) + '<span class="hk-plus">+ …</span>'; return; }   // (the modifiers held so far)
+  if (!mods) return hkBad('Hold Ctrl, Alt or Shift with it');
+  S.whKey = {mods, vk, names:[...names, hkName(vk)]}; save();
+  HK.rec = false; hkPaint();
+  const b = $('whKeyBtn'); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1000);
+  invoke('wheel_key', {mods, vk});
+}, true);
+$('whKeyBtn').addEventListener('click', e => { e.stopPropagation(); HK.rec ? hkStop() : hkStart(); });
+$('whKeyX').addEventListener('click', e => { e.stopPropagation(); delete S.whKey; save(); invoke('wheel_key', {mods:0, vk:0}); HK.rec = false; hkPaint(); });
+addEventListener('pointerdown', e => { if (HK.rec && !e.target.closest('#whKeyBtn')) hkStop(); }, true);
+listen('hotkey-state', s => { if (!s || s.id !== 0x5351 || s.ok) return; delete S.whKey; save(); hkPaint(); hkBad('Another app uses that one'); });
+listen('wheel-key', () => { if (!DK.on) return; WH.open ? whClose() : whOpen(true); });
+if (TAURI && S.whKey) invoke('wheel_key', {mods:S.whKey.mods, vk:S.whKey.vk});
+hkPaint();
+
+/* ---------- the lock screen's passcode (Settings, Look & feel) ----------
+   Set one; change it or remove it only after the current one is typed. Each step slides in where the last was,
+   the dots pop in as you type, and saving seals them into a lock. */
+const LK_SAY = $('lkSay') ? $('lkSay').textContent : '';
+var LKS = {st:"", next:""};                      // (var: Settings paints before this line has run)
+function lkSay(t){ const s = $('lkSay'); if (!s || s.textContent === t) return; s.textContent = t; s.classList.remove('swap'); void s.offsetWidth; s.classList.add('swap'); }
+function lkStep(st){
+  const box = $('lkBox'); if (!box) return;
+  LKS.st = st;
+  const w0 = box.offsetWidth, old = box.querySelector('.lk-st:not(.out)');
+  const field = ph => `<label class="lk-field"><input id="lkIn" type="password" maxlength="32" placeholder="${ph}" autocomplete="new-password" spellcheck="false" aria-label="${ph}"><span class="lk-dots"></span></label>`;
+  const nu = document.createElement('div'); nu.className = 'lk-st in';
+  nu.innerHTML = st === 'none' ? '<button class="chipb pri" type="button" data-lk="new">Set a passcode</button>'
+    : st === 'has' ? '<button class="chipb" type="button" data-lk="change">Change</button><button class="chipb" type="button" data-lk="remove">Remove</button>'
+    : st === 'old' ? field('Current passcode') + `<button class="chipb pri" type="button" data-lk="check">${LKS.next === 'remove' ? 'Remove' : 'Next'}</button><button class="chipb" type="button" data-lk="cancel">Cancel</button>`
+    : st === 'new' ? field(lkCode() ? 'New passcode' : 'Passcode') + '<button class="chipb pri" type="button" data-lk="save">Save</button><button class="chipb" type="button" data-lk="cancel">Cancel</button>'
+    : st === 'saved' ? '<span class="lk-done"><i class="lk-lock"><svg viewBox="0 0 24 24"><path class="shackle" d="M8 11V8a4 4 0 0 1 8 0v3"/><rect x="5.5" y="11" width="13" height="9" rx="2.5"/></svg></i>Saved</span>'
+    : '<span class="lk-done gone">Removed</span>';
+  if (old){ old.classList.remove('in'); old.classList.add('out'); setTimeout(() => old.remove(), 300); }
+  box.appendChild(nu);
+  // (the box glides to its new width)
+  const w1 = nu.offsetWidth; if (w0 && Math.abs(w1 - w0) > 2) box.animate([{width:w0 + 'px'}, {width:w1 + 'px'}], {duration:420, easing:'cubic-bezier(.22,1,.36,1)'});
+  const inp = nu.querySelector('input'); if (inp){ invoke('focus_main'); setTimeout(() => inp.focus({preventScroll:true}), 80); }
+}
+function lkPaint(){
+  if (!LKS) return;                                                   // (Settings is painted once before this part of the page has run)
+  if (['old', 'new', 'saved', 'removed'].includes(LKS.st)) return;   // (in the middle of something: left as it is)
+  const want = lkCode() ? 'has' : 'none'; if (LKS.st !== want) lkStep(want);
+}
+function lkBad(t){ const f = $('lkBox').querySelector('.lk-field'); if (f){ f.classList.remove('bad'); void f.offsetWidth; f.classList.add('bad'); } lkSay(t); $('lkIn')?.select(); }
+$('lkBox').addEventListener('input', e => {
+  const inp = e.target.closest('#lkIn'); if (!inp) return;
+  const f = inp.closest('.lk-field'), dots = f.querySelector('.lk-dots'), n = Math.min(12, [...inp.value].length), live = [...dots.querySelectorAll('i:not(.go)')];
+  f.classList.remove('bad');
+  for (let k = live.length; k < n; k++) dots.insertAdjacentHTML('beforeend', '<i></i>');
+  for (let k = live.length; k > n; k--){ const d = live[k - 1]; d.classList.add('go'); setTimeout(() => d.remove(), 200); }
+});
+$('lkBox').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('lkBox').querySelector('.lk-st:not(.out) .chipb.pri')?.click(); if (e.key === 'Escape') $('lkBox').querySelector('[data-lk="cancel"]')?.click(); });
+$('lkBox').addEventListener('click', async e => {
+  e.stopPropagation();
+  const b = e.target.closest('[data-lk]'); if (!b) return;
+  const k = b.dataset.lk, inp = $('lkIn'), v = inp ? inp.value : '';
+  if (k === 'new'){ lkSay('Four or more letters or numbers'); return lkStep('new'); }
+  if (k === 'change' || k === 'remove'){ LKS.next = k; lkSay(k === 'remove' ? 'Type your passcode to remove it' : 'Type your current passcode first'); return lkStep('old'); }
+  if (k === 'cancel'){ LKS.next = ''; lkSay(LK_SAY); LKS.st = ''; return lkPaint(); }
+  if (k === 'check'){
+    const c = lkCode(); if (!c){ LKS.st = ''; return lkPaint(); }
+    if (!v) return lkBad('Type your current passcode first');
+    if (await lkHash(c.salt, v) !== c.hash) return lkBad('That isn’t your passcode');
+    if (LKS.next === 'remove'){
+      delete S.lockSalt; delete S.lockHash; save(); LKS.next = '';
+      lkSay('Removed. ULTRON’s lock screen opens without one now'); lkStep('removed');
+      setTimeout(() => { lkSay(LK_SAY); LKS.st = ''; lkPaint(); }, 1700); return;
+    }
+    lkSay('Now the new one: four or more'); return lkStep('new');
+  }
+  if (k === 'save'){
+    if ([...v].length < 4) return lkBad('Four or more, please');
+    // the dots draw together and seal into a lock
+    const f = inp.closest('.lk-field'), dots = [...f.querySelectorAll('.lk-dots i:not(.go)')], mid = f.offsetWidth / 2 - 12;
+    dots.forEach((d, i) => { d.style.setProperty('--to', (mid - d.offsetLeft) + 'px'); d.style.setProperty('--i', i); });
+    f.classList.add('seal'); inp.blur();
+    const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join('');
+    const h = await lkHash(salt, v);
+    S.lockSalt = salt; S.lockHash = h; save(); inp.value = ''; LKS.next = '';
+    setTimeout(() => { lkStep('saved'); lkSay('Saved. ULTRON’s lock screen asks for it from now on'); setTimeout(() => { lkSay(LK_SAY); LKS.st = ''; lkPaint(); }, 1900); }, 430);
+  }
+});
+lkPaint();
+
+/* ---------- Cleaner (Settings, Cleaner) ----------
+   Looks first (nothing is touched), then clears what's ticked. While it clears, the files go into the shredder's
+   slot one after another and come out underneath in strips, the number counts up, and each kind is ticked off. */
+var CL = {groups:[], busy:false, at:0, shown:0, target:0, raf:0, cards:0, seen:new Set()};
+const CL_IC = {
+  temp:'<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+  browsers:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17"/></svg>',
+  apps:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>',
+  crash:'<svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>',
+  dev:'<svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>',
+  bin:'<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>',
+};
+const clFmt = b => b >= 1073741824 ? (b / 1073741824).toFixed(b >= 10737418240 ? 0 : 1) + ' GB' : b >= 1048576 ? Math.round(b / 1048576) + ' MB' : b >= 1024 ? Math.round(b / 1024) + ' KB' : (b | 0) + ' B';
+function clNum(target, instant){
+  CL.target = Math.max(0, target);
+  if (instant){ CL.shown = CL.target; const n = $('clNum'); if (n) n.textContent = clFmt(CL.shown); return; }
+  if (!CL.raf) CL.raf = requestAnimationFrame(clStep);
+}
+function clStep(){
+  CL.raf = 0; const d = CL.target - CL.shown;
+  CL.shown = Math.abs(d) < 65536 ? CL.target : CL.shown + d * .16;
+  const n = $('clNum'); if (n) n.textContent = clFmt(CL.shown);
+  if (CL.shown !== CL.target) CL.raf = requestAnimationFrame(clStep);
+}
+const clChosen = () => CL.groups.filter(g => g.on && g.bytes > 0);
+function clGo(){
+  const b = $('clGo'); if (!b) return;
+  const t = clChosen().reduce((a, g) => a + g.bytes, 0), s = b.querySelector('span');
+  const say = CL.busy ? 'Clearing…' : t ? `Clear ${clFmt(t)}` : 'Nothing to clear';
+  if (s.textContent !== say){ s.textContent = say; s.classList.remove('swap'); void s.offsetWidth; s.classList.add('swap'); }
+  b.disabled = CL.busy || !t;
+  if (!CL.busy && !$('clStage').classList.contains('done')) clNum(t);
+}
+const CL_ORDER = ['temp', 'browsers', 'apps', 'crash', 'dev', 'bin'];
+const clRowHtml = g => `<div class="cl-row${g.on ? '' : ' off'}" data-id="${g.id}"><i class="ic">${CL_IC[g.id] || ''}</i><div><b>${esc(g.name)}</b><small>${esc(g.what)}</small>${g.note ? `<em>${esc(g.note)}</em>` : ''}<div class="cl-bar"><i></i></div></div><span class="cl-size">${clFmt(g.bytes)}</span><button class="tg" role="switch" type="button" data-cl="${g.id}" aria-checked="${g.on}" aria-label="${esc(g.name)}"></button></div>`;
+function clBars(){
+  const max = Math.max(1, ...CL.groups.map(g => g.bytes)), rows = $('clRows');
+  CL.groups.forEach(g => rows.querySelector(`[data-id="${g.id}"] .cl-bar i`)?.style.setProperty('--w', g.bytes ? Math.max(2, g.bytes / max * 100).toFixed(1) + '%' : '0%'));
+}
+// one kind, looked through: its row comes in where it belongs (or its size rolls over to the new one)
+function clUpsert(g){
+  const rows = $('clRows'); if (!rows || !g) return;
+  const was = CL.groups.find(x => x.id === g.id), ng = {...g, on:was ? was.on : g.on};
+  CL.groups = CL.groups.filter(x => x.id !== g.id).concat(ng).sort((a, b) => CL_ORDER.indexOf(a.id) - CL_ORDER.indexOf(b.id));
+  let r = rows.querySelector(`[data-id="${g.id}"]`);
+  if (!r){
+    const t = document.createElement('template'); t.innerHTML = clRowHtml(ng); r = t.content.firstElementChild;
+    r.classList.add('fresh');
+    rows.insertBefore(r, [...rows.children].find(x => CL_ORDER.indexOf(x.dataset.id) > CL_ORDER.indexOf(g.id)) || null);
+  } else {
+    const s = r.querySelector('.cl-size'); s.textContent = clFmt(g.bytes); s.classList.remove('swap'); void s.offsetWidth; s.classList.add('swap');
+    r.querySelector('em')?.remove(); if (g.note) r.querySelector('small').insertAdjacentHTML('afterend', `<em>${esc(g.note)}</em>`);
+    r.classList.remove('done', 'now', 'wait');
+  }
+  requestAnimationFrame(clBars); clGo();
+}
+async function clScan(){
+  if (CL.busy || !TAURI) return;
+  const st = $('clStage'); st.classList.remove('done', 'run'); st.classList.add('scan');
+  $('clCap').textContent = 'Looking for junk…'; if (!CL.groups.length) $('clNum').textContent = '…';
+  $('clRows').querySelectorAll('.cl-size').forEach(s => s.textContent = '…');
+  CL.scanning = true;
+  const g = (await invoke('cleaner_scan')) || [];
+  g.forEach(clUpsert);
+  CL.scanning = false; CL.at = Date.now(); st.classList.remove('scan'); $('clCap').textContent = 'can be cleared'; clGo();
+}
+listen('clean-scan', g => { if (CL.scanning) clUpsert(g); });
+// one more file into the shredder: it drops into the slot, and its strips fall out underneath a moment later
+function clShred(name){
+  const fall = $('clFall'), out = $('clOut'); if (!fall || CL.cards > 5) return;
+  CL.cards++;
+  const c = document.createElement('div'); c.className = 'cl-card';
+  c.style.setProperty('--x', (Math.random() * 130 - 65).toFixed(0) + 'px'); c.style.setProperty('--r', (Math.random() * 26 - 13).toFixed(1) + 'deg');
+  c.innerHTML = `<i></i><i></i><i></i><span>${esc(String(name || '').slice(0, 16))}</span>`;
+  fall.appendChild(c);
+  c.addEventListener('animationend', () => { c.remove(); CL.cards--; });
+  setTimeout(() => {
+    for (let k = 0; k < 7; k++){
+      const s = document.createElement('i'); s.className = 'cl-strip';
+      s.style.setProperty('--x', (k * 7 - 24) + 'px'); s.style.setProperty('--dx', (Math.random() * 36 - 18).toFixed(0) + 'px');
+      s.style.setProperty('--rot', (Math.random() * 46 - 23).toFixed(0) + 'deg'); s.style.setProperty('--h', (34 + Math.random() * 28).toFixed(0) + 'px'); s.style.setProperty('--d', (k * 16) + 'ms');
+      out.appendChild(s); s.addEventListener('animationend', () => s.remove());
+    }
+  }, 600);
+}
+async function clClean(){
+  const ids = clChosen().map(g => g.id); if (!ids.length || CL.busy) return;
+  CL.busy = true; CL.seen = new Set(); clGo();
+  const st = $('clStage'), rows = $('clRows');
+  st.classList.remove('done', 'scan'); st.classList.add('run'); $('clCap').textContent = 'cleared so far'; clNum(0, true);
+  ids.forEach((id, i) => rows.querySelector(`[data-id="${id}"]`)?.classList.add(i ? 'wait' : 'now'));
+  const freed = (await invoke('cleaner_clean', {ids})) || 0;
+  CL.busy = false; st.classList.remove('run'); st.classList.add('done');
+  clNum(freed); $('clCap').textContent = freed ? 'cleared' : 'nothing could be cleared this time';
+  clGo(); setTimeout(syncHit, 100);
+  setTimeout(() => { if (!CL.busy){ st.classList.remove('done'); CL.at = 0; clScan(); } }, 5200);
+}
+listen('clean-file', e => { if (!e) return; clNum(e.bytes); CL.seen.add(e.group); clShred(e.name); });
+listen('clean-group', e => {
+  if (!e) return;
+  const rows = $('clRows'), r = rows && rows.querySelector(`[data-id="${e.id}"]`);
+  if (e.freed && !CL.seen.has(e.id)) clShred(e.id === 'bin' ? 'Recycle Bin' : '');   // (every kind gets at least one through)
+  if (r){
+    r.classList.remove('now', 'wait'); r.classList.add('done');
+    const s = r.querySelector('.cl-size'); s.textContent = e.freed ? clFmt(e.freed) + ' cleared' : 'Nothing to clear';
+    r.querySelector('.cl-bar i')?.style.setProperty('--w', '0%');
+    rows.querySelector('.cl-row.wait')?.classList.replace('wait', 'now');
+  }
+  clNum(e.total);
+});
+$('clRows').addEventListener('click', e => {
+  e.stopPropagation();
+  const t = e.target.closest('[data-cl]'); if (!t || CL.busy) return;
+  const g = CL.groups.find(x => x.id === t.dataset.cl); if (!g) return;
+  g.on = !g.on; t.setAttribute('aria-checked', g.on); t.closest('.cl-row').classList.toggle('off', !g.on);
+  $('clStage').classList.remove('done'); $('clCap').textContent = 'can be cleared'; clGo();
+});
+setEl.querySelector('.cl-acts').addEventListener('click', e => {
+  e.stopPropagation();
+  const b = e.target.closest('[data-clx]'); if (!b) return;
+  if (b.dataset.clx === 'go') clClean(); else { CL.at = 0; clScan(); }
+});
 /* ---------- ULTRON's own notifications (Settings › Notifications › ULTRON) ----------
    They hang from the menu bar under the clock (see the CSS), at most three at a time, and everything that has come
    gathers under the bell, by app. A click, a button or a typed reply does what Windows would have done with it
@@ -7517,15 +8038,19 @@ function nfLift(id, now){
 }
 function nfGone(ids){
   NF.list = NF.list.filter(n => !ids.includes(n.id));
+  // (right after a clear, Windows reports the same ones gone: the list is already animating them away, and a second
+  //  go at it was the double animation)
+  const clearing = performance.now() < (NF.quietUntil || 0);
   for (const id of ids){
     nfLift(id);
     const el = nfIn.querySelector(`.nf-item[data-id="${id}"]`);
-    if (el && !el.classList.contains('going') && nfw.classList.contains('open')) nfCollapse(el);
+    if (!clearing && el && !el.classList.contains('going') && !el.closest('.nf-grp.going') && nfw.classList.contains('open')) nfCollapse(el);
   }
   nfBadge();
 }
 // one leaves the list: it slides off to the side as the gap closes; an emptied app goes with it
 function nfCollapse(el){
+  if (nfIn.querySelectorAll('.nf-item:not(.going)').length <= 1) return nfToEmpty();   // (the last one: one movement to "No notifications")
   const grp = el.closest('.nf-grp');
   el.style.height = el.offsetHeight + 'px'; void el.offsetWidth; el.classList.add('going');
   setTimeout(() => {
@@ -7587,8 +8112,8 @@ for (const el of [nfStack, nfIn]){
 nfStack.addEventListener('click', nfClick);
 
 /* the list under the bell */
-function nfPaint(morph){
-  const groups = new Map(), h0 = morph ? nfIn.offsetHeight : 0;
+function nfPaint(morph, from){
+  const groups = new Map(), h0 = morph ? (from || nfIn.offsetHeight) : 0;
   for (const n of NF.list){ if (n.call) continue; const k = n.aumid || n.app; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(n); }
   let body = '', g = 0;
   for (const [key, ns] of groups){
@@ -7618,26 +8143,51 @@ function nfQuietSet(){
   setTimeout(syncHit, 460);
 }
 // everything cleared: each app slides off in turn, the list draws in, and "No notifications" settles in its place
+// (the list keeps its height while they go, then draws in once, straight to the size of "No notifications": shrinking
+//  to nothing first and growing again for the empty state was the double movement)
 function nfToEmpty(){
-  const groups = [...nfIn.querySelectorAll('.nf-grp')];
+  const groups = [...nfIn.querySelectorAll('.nf-grp')], h0 = nfIn.offsetHeight;
+  nfIn.style.height = h0 + 'px';
   nfIn.querySelector('.nf-clear')?.classList.add('going');
   groups.forEach((g, i) => setTimeout(() => { g.style.height = g.offsetHeight + 'px'; void g.offsetWidth; g.classList.add('going'); }, i * 50));
-  setTimeout(() => nfPaint(true), 330 + groups.length * 50);
+  setTimeout(() => { nfIn.style.height = ''; nfPaint(true, h0); }, 330 + groups.length * 50);
 }
+// A pile opens like a fanned deck: the top card stays where it is and the ones under it slide out from beneath it
+// to their places, while the list grows to fit; closing gathers them back under it. (It used to replay every card's
+// entrance, the top one's too: that was the double animation.)
 function nfExpand(grp){
-  const key = grp.dataset.app, open = grp.classList.contains('stack'), b = grp.querySelector('.nf-n');
-  open ? NF.open.add(key) : NF.open.delete(key);
-  grp.classList.toggle('stack', !open);
-  grp.querySelectorAll('.nf-item').forEach(i => { i.classList.remove('fresh'); if (open){ void i.offsetWidth; i.classList.add('fresh'); } });
-  if (b) b.textContent = open ? 'Show less' : (grp.querySelectorAll('.nf-item').length - 1) + ' more';
-  setTimeout(syncHit, 40);
+  const key = grp.dataset.app, opening = grp.classList.contains('stack'), b = grp.querySelector('.nf-n');
+  const items = [...grp.querySelectorAll('.nf-item')], first = items[0]; if (!first) return;
+  const h0 = nfIn.offsetHeight, ease = 'cubic-bezier(.22,1,.36,1)';
+  const grow = () => { const h1 = nfIn.offsetHeight; if (Math.abs(h1 - h0) > 2) nfIn.animate([{height:h0 + 'px'}, {height:h1 + 'px'}], {duration:480, easing:ease}); };
+  const label = t => { if (!b) return; b.textContent = t; b.classList.remove('swap'); void b.offsetWidth; b.classList.add('swap'); };
+  if (opening){
+    NF.open.add(key); grp.classList.remove('stack');
+    const top0 = first.offsetTop;
+    items.slice(1).forEach((it, i) => it.animate([{transform:`translateY(${top0 - it.offsetTop}px) scale(${Math.max(.86, .95 - i * .02)})`, opacity:0}, {transform:'none', opacity:1}],
+      {duration:520, delay:i * 45, easing:ease, fill:'backwards'}));
+    grow(); label('Show less');
+  } else {
+    NF.open.delete(key);
+    const top0 = first.offsetTop, rest = items.slice(1);
+    const anims = rest.map((it, i) => it.animate([{transform:'none', opacity:1}, {transform:`translateY(${top0 - it.offsetTop}px) scale(.94)`, opacity:0}],
+      {duration:300, delay:(rest.length - 1 - i) * 30, easing:'cubic-bezier(.5,0,.75,0)', fill:'forwards'}));
+    label((items.length - 1) + ' more');
+    Promise.all(anims.map(a => a.finished)).then(() => {
+      const h1 = nfIn.offsetHeight; grp.classList.add('stack'); anims.forEach(a => a.cancel());
+      const h2 = nfIn.offsetHeight; if (Math.abs(h2 - h1) > 2) nfIn.animate([{height:h1 + 'px'}, {height:h2 + 'px'}], {duration:420, easing:ease});
+      setTimeout(syncHit, 440);
+    });
+  }
+  setTimeout(syncHit, 40); setTimeout(syncHit, 540);
 }
 nfIn.addEventListener('click', e => {
   const b = e.target.closest('button'), k = b && b.dataset.nf, grp = e.target.closest('.nf-grp');
   if (k === 'quiet'){ S.nfQuiet = !S.nfQuiet; save(); paintSettings(); nfBadge(); nfQuietSet(); return; }
-  if (k === 'clearall'){ invoke('notes_clear', {aumid:null}); NF.list = NF.list.filter(n => n.call); NF.open.clear(); nfToEmpty(); return; }
+  if (k === 'clearall'){ NF.quietUntil = performance.now() + 2000; invoke('notes_clear', {aumid:null}); NF.list = NF.list.filter(n => n.call); NF.open.clear(); nfToEmpty(); return; }
   if (k === 'cleargrp' && grp){
-    const key = grp.dataset.app; NF.list = NF.list.filter(n => (n.aumid || n.app) !== key); NF.open.delete(key);
+    const key = grp.dataset.app; NF.quietUntil = performance.now() + 2000; NF.list = NF.list.filter(n => (n.aumid || n.app) !== key); NF.open.delete(key);
+    if (nfIn.querySelectorAll('.nf-grp').length < 2){ invoke('notes_clear', {aumid:key}); nfToEmpty(); return; }   // (the last one: the list ends as it does after Clear all)
     grp.style.height = grp.offsetHeight + 'px'; void grp.offsetWidth; grp.classList.add('going');
     setTimeout(() => { grp.remove(); if (!nfIn.querySelector('.nf-grp')) nfPaint(true); }, 330);
     invoke('notes_clear', {aumid:key}); return;
@@ -7646,7 +8196,8 @@ nfIn.addEventListener('click', e => {
   if (k === 'settings'){ closeNotes(); openSettings('notes'); return; }
   nfClick(e);
 });
-function openNotes(){
+async function openNotes(){
+  if (nfOn() && TAURI){ const got = await invoke('notes_list'); if (Array.isArray(got)) NF.list = got; }
   closeDD(); closeStart(); closeWifi(); closeCal(); closeSettings(); closeAI(); closeMail(); closeRec(); closeFiles(); closeSpot(true);
   const b = nfBtn.getBoundingClientRect(), w = 360;
   const left = Math.max(8, Math.min(innerWidth - w - 8, b.left + b.width / 2 - w + 60));
@@ -7656,7 +8207,6 @@ function openNotes(){
   placeGlass(nfw);
   nfw.classList.add('open'); nfBtn.classList.add('on'); nfBtn.setAttribute('aria-expanded', 'true');
   syncHit(); syncBrowser(); setTimeout(syncHit, 460);
-  nfLoad();
 }
 function closeNotes(){
   if (!nfw.classList.contains('open')) return;
@@ -7957,7 +8507,6 @@ addEventListener('blur', () => {
   if (S.lockPass) lockHide();                                // (with Windows' sign-in wanted, switching away is the same as taking it away: Windows locks)
   else if (lkCode()) setTimeout(() => { if (LK.on) invoke('focus_main'); }, 300);          // (a passcode is wanted: the keyboard is taken back)
 });
-$('lkNew').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') setEl.querySelector('[data-sx="lkset"]').click(); });
 
 /* ---------- developer tools: only when ULTRON is started with ULTRON_DEV_INBOX=1 ----------
    Frame timings go to the log every few seconds, and lines starting with "!" in the inbox file
