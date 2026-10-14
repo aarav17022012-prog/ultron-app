@@ -80,6 +80,40 @@ pub fn set(text: &str) -> bool {
     }
 }
 
+/// Put a picture on the clipboard (BGRA pixels, top row first), as Windows' own kind of picture.
+pub fn set_image(w: u32, h: u32, bgra: &[u8]) -> bool {
+    use windows::Win32::Graphics::Gdi::BITMAPINFOHEADER;
+    const CF_DIB: u32 = 8;
+    let head = std::mem::size_of::<BITMAPINFOHEADER>();
+    let row = (w * 4) as usize;
+    unsafe {
+        if OpenClipboard(None).is_err() {
+            return false;
+        }
+        let ok = (|| {
+            EmptyClipboard().ok()?;
+            let mem = GlobalAlloc(GMEM_MOVEABLE, head + row * h as usize).ok()?;
+            let p = GlobalLock(mem) as *mut u8;
+            if p.is_null() {
+                return None;
+            }
+            let bi = BITMAPINFOHEADER { biSize: head as u32, biWidth: w as i32, biHeight: h as i32, biPlanes: 1, biBitCount: 32, ..Default::default() };
+            std::ptr::copy_nonoverlapping(&bi as *const _ as *const u8, p, head);
+            // (bottom row first, as such pictures are kept)
+            for y in 0..h as usize {
+                let src = &bgra[(h as usize - 1 - y) * row..][..row];
+                std::ptr::copy_nonoverlapping(src.as_ptr(), p.add(head + y * row), row);
+            }
+            let _ = GlobalUnlock(mem);
+            SetClipboardData(CF_DIB, Some(HANDLE(mem.0))).ok()?;
+            Some(())
+        })()
+        .is_some();
+        let _ = CloseClipboard();
+        ok
+    }
+}
+
 pub fn list() -> Vec<String> {
     HISTORY.lock().unwrap().clone()
 }

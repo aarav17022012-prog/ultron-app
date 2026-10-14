@@ -20,6 +20,7 @@ mod squeeze;
 mod dictate;
 mod dock;
 mod keys;
+mod cts;
 mod veil;
 mod wall;
 mod icons;
@@ -761,6 +762,47 @@ async fn dock_peek(id: String) -> Option<String> {
     tauri::async_runtime::spawn_blocking(move || dock::peek(&id)).await.ok().flatten()
 }
 
+/// Circle to Search: the screen as it is now, held still (given back as a picture).
+#[tauri::command]
+async fn cts_grab() -> Option<String> {
+    tauri::async_runtime::spawn_blocking(cts::grab).await.ok().flatten()
+}
+
+#[tauri::command]
+fn cts_forget() {
+    cts::forget();
+}
+
+/// The words in the part that was circled.
+#[tauri::command]
+async fn cts_read(x: i32, y: i32, w: i32, h: i32) -> Vec<String> {
+    tauri::async_runtime::spawn_blocking(move || cts::read(x, y, w, h)).await.unwrap_or_default()
+}
+
+/// What ULTRON's eyes make of the part that was circled.
+#[tauri::command]
+async fn cts_ask(app: AppHandle, x: i32, y: i32, w: i32, h: i32, question: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || cts::ask(&app, x, y, w, h, &question)).await.map_err(|e| e.to_string())?
+}
+
+/// The part that was circled, looked up in Google Lens: the address of the results.
+#[tauri::command]
+async fn cts_lens(x: i32, y: i32, w: i32, h: i32) -> Option<String> {
+    match tauri::async_runtime::spawn_blocking(move || cts::lens(x, y, w, h)).await {
+        Ok(Ok(url)) => Some(url),
+        Ok(Err(e)) => {
+            log_line(&format!("circle to search: {e}"));
+            None
+        }
+        Err(_) => None,
+    }
+}
+
+#[tauri::command]
+async fn cts_copy(x: i32, y: i32, w: i32, h: i32) -> bool {
+    tauri::async_runtime::spawn_blocking(move || cts::copy(x, y, w, h)).await.unwrap_or(false)
+}
+
 /// Whether pictures of the windows in use are kept, for the wheel to show (Settings, Taskbar).
 #[tauri::command]
 fn dock_keep(on: bool) {
@@ -1025,7 +1067,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, wall_picture, start_key, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

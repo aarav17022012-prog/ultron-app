@@ -583,7 +583,6 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
 /* timer chip in the bar */
 /* ---------- floating lyrics: part of ULTRON's own overlay (like Settings), dragged anywhere ---------- */
-@property --fp { syntax:'<percentage>'; inherits:false; initial-value:0%; }
 .flyr{position:fixed; z-index:24; left:0; top:0; width:600px; height:86px; border-radius:24px; display:flex; align-items:center; gap:14px; padding:0 20px 0 13px; overflow:hidden;
   color:#fff; --tint:rgba(14, 14, 20, .42); --hs:0; text-shadow:0 1px 3px rgba(0,0,0,.45); cursor:grab; touch-action:none;
   --sx:0px; --sy:18px; --sb:44px; --so:.42; --lift:1; --tilt:0deg;
@@ -606,18 +605,16 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 @keyframes flEq{0%, 100%{height:3px} 50%{height:10px}}
 .fl-txt{position:relative; z-index:1; flex:1; min-width:0; height:62px; pointer-events:none}
 .fl-l{position:absolute; left:0; right:0; white-space:nowrap; transform-origin:0 50%}
-.fl-l.cur{top:4px; font-size:var(--fs, 23px); font-weight:650; letter-spacing:-.012em; line-height:30px; text-shadow:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,.45));
-  background:linear-gradient(90deg, #fff var(--fp), rgba(255,255,255,.45) var(--fp)); -webkit-background-clip:text; background-clip:text; color:transparent;
-  animation:flSing var(--dur, 4s) linear forwards; animation-delay:var(--at, 0s)}
-.flyr:not(.playing) .fl-l.cur{animation-play-state:paused}
-@keyframes flSing{from{--fp:0%} to{--fp:100%}}
+/* the line being sung comes in a word at a time, as each is sung (the words' times are spread over the line: only its
+   start and end are known), each word whipping in with motion blur and sharpening, the way the words of a title do
+   in a video; the line that's done smears off to the side */
+.fl-l.cur{top:4px; font-size:var(--fs, 23px); font-weight:650; letter-spacing:-.012em; line-height:30px; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
+.fl-w{display:inline-block; animation:mbIn .36s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--t, 0s) - var(--at, 0s))}
+.flyr:not(.playing) .fl-w{animation-play-state:paused}
 .fl-l.next{top:38px; font-size:13.5px; font-weight:500; color:rgba(255,255,255,.55); overflow:hidden; text-overflow:ellipsis}
-.fl-l.in{animation-name:flSing, flRise; animation-duration:var(--dur, 4s), .5s; animation-timing-function:linear, var(--glide); animation-fill-mode:forwards, backwards}
 .fl-l.nin{animation:flRise2 .5s var(--glide) backwards}
-.fl-l.out{animation:flLeave .55s cubic-bezier(.4,0,.2,1) forwards}
-@keyframes flRise{from{opacity:0; transform:translateY(16px); filter:blur(5px)}}
+.fl-l.out{animation:mbOut .3s ease-in forwards}
 @keyframes flRise2{from{opacity:0; transform:translateY(10px)}}
-@keyframes flLeave{0%{opacity:1} 100%{opacity:0; transform:translateY(-22px) scale(.94); filter:blur(6px)}}
 .fl-meta{position:absolute; left:84px; right:46px; top:5px; z-index:1; font-size:10.5px; font-weight:600; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   opacity:0; transform:translateY(-4px); transition:opacity .25s, transform .3s var(--glide); pointer-events:none}
 .fl-x{position:absolute; right:12px; top:50%; z-index:2; width:24px; height:24px; margin-top:-12px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:12px; padding:0;
@@ -846,6 +843,18 @@ body.pk-out #pet{opacity:0; transition:opacity .22s}       /* (the character has
 .nb-dots i{width:5px; height:5px; border-radius:50%; background:#0c0c0e; animation:mlDot 1s ease-in-out infinite}
 .nb-dots i:nth-child(2){animation-delay:.15s} .nb-dots i:nth-child(3){animation-delay:.3s}
 .nb-say{margin-top:6px} .nb-say:first-child{margin-top:0}
+/* ---------- motion blur ----------
+   What a camera sees of a quick sideways move: a smear along the way it goes, and nothing up or down. CSS's own blur
+   spreads every way, so the smear is a sideways-only blur (the filters next to the wheel in the page) at a few
+   strengths, stepped through in a few hundredths of a second, as the frames of a film would show it. Something
+   arriving comes in smeared, a little slanted and behind where it lands, and sharpens; something leaving smears on
+   out. (--whip: 1 moves left to right, -1 right to left.) */
+@keyframes mbIn{0%{opacity:0; filter:url(#mb14); transform:translateX(calc(var(--whip, 1) * -16px)) skewX(calc(var(--whip, 1) * -12deg))} 22%{opacity:1; filter:url(#mb9)}
+  48%{filter:url(#mb5); transform:translateX(calc(var(--whip, 1) * 2px)) skewX(calc(var(--whip, 1) * -3deg))} 74%{filter:url(#mb2)} 100%{opacity:1; filter:none; transform:none}}
+@keyframes mbOut{0%{filter:none} 30%{filter:url(#mb2)} 55%{filter:url(#mb5); opacity:.85} 80%{filter:url(#mb9); opacity:.45}
+  100%{opacity:0; filter:url(#mb14); transform:translateX(calc(var(--whip, 1) * 18px)) skewX(calc(var(--whip, 1) * -10deg))}}
+@keyframes mbGlide{0%{filter:none} 18%{filter:url(#mb5)} 45%{filter:url(#mb9)} 75%{filter:url(#mb2)} 100%{filter:none}}
+@keyframes mbGlide2{0%{filter:none} 18%{filter:url(#mb5)} 45%{filter:url(#mb9)} 75%{filter:url(#mb2)} 100%{filter:none}}
 /* ---------- ULTRON's own taskbar: the wheel ----------
    There is no bar along the bottom. Windows' taskbar is gone and windows have the screen to its bottom edge; the
    taskbar is a wheel of glass kept above the screen, with only its lowest sliver showing under the notch. Reach for
@@ -881,12 +890,12 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .wh-b.sel .wh-bi{background:rgba(255,255,255,.2); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
 .wh-b.edge{pointer-events:none}
 .wh-b.lift{opacity:.35 !important}
-/* a bead that has just turned up (a search finding it, an app opening) grows into its place, the middle ones first;
-   one that is gone shrinks away */
-.wh-b.in .wh-bi{animation:whIn .46s var(--spring) backwards; animation-delay:var(--d, 0ms)}
-@keyframes whIn{from{scale:.2; opacity:0}}
-.wh-b.out{opacity:0 !important; pointer-events:none; transition:opacity .2s}
-.wh-b.out .wh-bi{scale:.4; transition:scale .22s ease-in}
+/* As you type: a bead the search has just found whips into its place with motion blur, the middle ones first; one
+   it has dropped smears away; one that stays but moves blurs as it slides along the rim. */
+.wh-b.in .wh-bi{animation:mbIn .44s cubic-bezier(.2,.75,.25,1) backwards; animation-delay:var(--d, 0ms)}
+.wh-b.out{pointer-events:none}
+.wh-b.out .wh-bi{animation:mbOut .3s ease-in forwards}
+.wh-b.glide .wh-bi{animation:mbGlide .46s linear} .wh-b.glide2 .wh-bi{animation:mbGlide2 .46s linear}
 .wh-bi img{width:26px; height:26px; object-fit:contain; opacity:0; transition:opacity .2s; pointer-events:none} .wh-bi img.ok{opacity:1}
 .wh-bi .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:14px; font-weight:700; color:rgba(255,255,255,.7)} .wh-bi img.ok + .fbk{display:none}
 .wh-bi > i{position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s, width .25s, margin .25s}
@@ -894,14 +903,13 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .wheel:not(.open) .wh-b{pointer-events:none}
 .wh-hub > *{position:absolute; left:0}
 /* the hub, from the top: the name of what's picked; a row with the search between Tile and Groups; ULTRON */
-/* the name: as the wheel turns, the old name leaves the way the wheel is going and the new one follows it in */
+/* the name: as the wheel turns (or a search finds something else), the old name smears off the way the wheel is going
+   and the new one whips in after it, both with motion blur */
 .wh-name{top:calc(var(--cy) + 71px); width:240px; height:22px; margin-left:-120px; overflow:hidden; pointer-events:none;
   -webkit-mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)}
 .wh-name span{position:absolute; left:0; right:0; top:0; text-align:center; font-size:15px; font-weight:650; letter-spacing:-.01em; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  text-shadow:0 1px 2px rgba(0,0,0,.3); animation:whNmIn .3s var(--glide) both}
-.wh-name span.out{animation:whNmOut .2s ease-in both}
-@keyframes whNmIn{from{opacity:0; transform:translateX(var(--from, 0px)) scale(.94)}}
-@keyframes whNmOut{to{opacity:0; transform:translateX(var(--to, 0px)) scale(.94)}}
+  text-shadow:0 1px 2px rgba(0,0,0,.3); animation:mbIn .38s cubic-bezier(.2,.75,.25,1) both}
+.wh-name span.out{animation:mbOut .26s ease-in both}
 .wh-row{top:calc(var(--cy) + 98px); display:flex; align-items:center; gap:6px; width:max-content; transform:translateX(-50%)}
 /* searching is always there: type a name and the rim fills with what matches */
 .wh-q{display:flex; align-items:center; gap:6px; width:146px; height:28px; padding:0 11px; border-radius:14px; background:rgba(255,255,255,.1);
@@ -1007,6 +1015,68 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .spot.open.fresh .sp-row{animation:aiIn .42s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 30ms + 90ms)}
 .sp-foot{flex:none; display:flex; gap:16px; padding:8px 6px 0; font-size:11px; color:rgba(255,255,255,.42)}
 .sp-foot kbd{font:inherit; font-weight:700; margin-right:5px; padding:1px 5px; border-radius:5px; background:rgba(255,255,255,.12); color:rgba(255,255,255,.75)}
+/* ---------- Circle to Search ----------
+   The screen, held still, lifts a little into a frame with a soft light round its edge. Draw round anything: the
+   line glows as it's drawn, then gives way to a frame round what you circled (the rest dims), and a card of glass
+   comes up beside it with what can be done. */
+.cts{position:fixed; inset:0; z-index:88; overflow:hidden; background:#040406; color:#fff; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .25s, visibility 0s .3s}
+.cts.on{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .12s}
+.cts.on.bye{opacity:0; transition:opacity .38s .05s}
+.cts-stage{position:absolute; inset:0; overflow:hidden; transform-origin:50% 50%; transition:transform .38s ease-in, border-radius .38s, box-shadow .38s}
+.cts.on .cts-stage{transform:scale(.955); border-radius:24px; box-shadow:0 0 0 1px rgba(255,255,255,.3), 0 26px 80px rgba(0,0,0,.65); transition:transform .75s cubic-bezier(.2,1.1,.3,1), border-radius .75s var(--glide), box-shadow .75s}
+.cts.on.bye .cts-stage{transform:none; border-radius:0; box-shadow:none; transition:transform .38s ease-in, border-radius .38s, box-shadow .3s}
+.cts-stage > img{position:absolute; inset:0; width:100%; height:100%; display:block; user-select:none; -webkit-user-drag:none}
+.cts-stage > img:not([src]){visibility:hidden}
+#ctsInk{position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:crosshair}
+#ctsInk.fade{opacity:0; transition:opacity .5s .12s}
+/* a light that runs in round the frame as it lifts, and stays as a faint edge */
+.cts-ring{position:absolute; inset:0; border-radius:24px; pointer-events:none; transform:scale(.955); opacity:0;
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6), inset 0 0 46px rgba(255,255,255,.2)}
+.cts.on .cts-ring{animation:ctsRing 1.7s var(--glide) .12s both}
+.cts.on.picked .cts-ring, .cts.on.inking .cts-ring{opacity:.22; animation:none; transition:opacity .3s}
+@keyframes ctsRing{0%{opacity:0; transform:scale(.99)} 30%{opacity:1} 100%{opacity:.32; transform:scale(.955)}}
+/* what you circled: a frame, with the rest of the screen dimmed round it */
+.cts-sel{position:absolute; display:none; border-radius:16px; box-shadow:0 0 0 2px rgba(255,255,255,.95), 0 0 22px rgba(255,255,255,.35), 0 0 0 200vmax rgba(0,0,0,.46); pointer-events:none}
+.cts.picked .cts-sel{display:block; animation:ctsSel .55s cubic-bezier(.2,1.2,.3,1)}
+@keyframes ctsSel{from{opacity:0; transform:scale(1.07)}}
+/* the hint, with a little circle that draws itself, over and over */
+.cts-hint{position:absolute; left:50%; bottom:5.5%; display:flex; align-items:center; gap:10px; padding:10px 18px 10px 12px; border-radius:22px; background:rgba(28,28,34,.55);
+  -webkit-backdrop-filter:blur(24px) saturate(1.5); backdrop-filter:blur(24px) saturate(1.5); box-shadow:inset 0 0 0 1px rgba(255,255,255,.2), 0 10px 26px rgba(0,0,0,.35);
+  font-size:13.5px; font-weight:600; opacity:0; transform:translate(-50%, 18px); pointer-events:none; transition:opacity .2s, transform .3s var(--glide)}
+.cts.on .cts-hint{opacity:1; transform:translate(-50%, 0); transition:opacity .4s .4s, transform .75s var(--spring) .4s}
+.cts.on.inking .cts-hint, .cts.on.picked .cts-hint{opacity:0; transform:translate(-50%, 18px); transition:opacity .2s, transform .3s var(--glide)}
+.cts-hint svg{width:22px; height:22px; flex:none; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round}
+.cts-hint svg .c{stroke-dasharray:48; stroke-dashoffset:48; animation:ctsDraw 2.3s var(--glide) infinite}
+@keyframes ctsDraw{0%{stroke-dashoffset:48; opacity:1} 55%{stroke-dashoffset:0; opacity:1} 82%, 100%{stroke-dashoffset:0; opacity:0}}
+.cts-hint kbd{margin-left:6px; padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.14); font:inherit; font-size:11px; color:rgba(255,255,255,.7)}
+.cts-x{position:absolute; right:22px; top:18px; display:grid; place-items:center; width:32px; height:32px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:14px; cursor:default;
+  opacity:0; transform:scale(.6); transition:opacity .2s, transform .3s var(--spring), background .2s}
+.cts.on .cts-x{opacity:1; transform:none; transition:opacity .3s .3s, transform .5s var(--spring) .3s, background .2s}
+.cts-x:hover{background:rgba(255,255,255,.26)}
+/* the card */
+.cts-card{position:absolute; left:0; top:0; width:400px; padding:12px; border-radius:22px; background:rgba(26,26,32,.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); backdrop-filter:blur(28px) saturate(1.6);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2), inset 0 1px 0 rgba(255,255,255,.22), 0 20px 50px rgba(0,0,0,.45); opacity:0; transform:translateY(12px) scale(.95); pointer-events:none;
+  transition:opacity .18s, transform .3s var(--glide)}
+.cts.picked .cts-card{opacity:1; transform:none; pointer-events:auto; transition:opacity .3s .14s, transform .65s var(--spring) .14s}
+.cts-acts{display:flex; flex-wrap:wrap; gap:6px}
+.cts-acts button{display:flex; align-items:center; gap:6px; height:32px; padding:0 12px 0 10px; border:0; border-radius:16px; background:rgba(255,255,255,.12); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); color:#fff; font:inherit; font-size:12.5px; font-weight:600; cursor:default;
+  transition:background .2s, transform .25s var(--spring), opacity .2s}
+.cts-acts button:hover{background:rgba(255,255,255,.22)} .cts-acts button:active{transform:scale(.94)}
+.cts-acts button:disabled{opacity:.38; pointer-events:none}
+.cts-acts button.done{background:#fff; color:#111} .cts-acts button.done svg{stroke:#111}
+.cts-acts svg{width:15px; height:15px; flex:none; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.cts.picked .cts-acts button{animation:aiIn .45s var(--glide) backwards; animation-delay:calc(var(--i) * 45ms + .2s)}
+.cts-out{margin-top:10px; padding:0 4px; max-height:160px; overflow:auto; font-size:13.5px; line-height:1.5}
+.cts-out:empty{display:none}
+.cts-k{display:block; margin-bottom:2px; font-size:11px; font-weight:700; color:rgba(255,255,255,.5)}
+.cts-dim{color:rgba(255,255,255,.6)}
+.cts-think{display:inline-flex; gap:4px; margin-right:8px; vertical-align:middle}
+.cts-think i{width:5px; height:5px; border-radius:50%; background:#fff; animation:mlDot 1s ease-in-out infinite} .cts-think i:nth-child(2){animation-delay:.15s} .cts-think i:nth-child(3){animation-delay:.3s}
+.cts-q{display:flex; align-items:center; gap:8px; height:36px; margin-top:10px; padding:0 12px; border-radius:13px; background:rgba(255,255,255,.09); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); transition:background .2s, box-shadow .2s}
+.cts-q:focus-within{background:rgba(255,255,255,.13); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.45)}
+.cts-q svg{width:14px; height:14px; flex:none; fill:#fff}
+.cts-q input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:13px}
+.cts-q input::placeholder{color:rgba(255,255,255,.42)}
 /* ---------- ULTRON's lock screen ----------
    Your wallpaper, the time in thin light, and a few small pieces of glass. With no passcode, a click or a key takes
    it away. With one, the time draws back and a glass field comes forward to type it into. (It is a cover, not
@@ -1811,6 +1881,12 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button class="st clock" id="clock" aria-label="Calendar"></button>
   </div>
 </header>
+<svg class="mb-defs" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute; width:0; height:0"><defs>
+  <filter id="mb2" x="-20%" y="0" width="140%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="2 0"/></filter>
+  <filter id="mb5" x="-30%" y="0" width="160%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="5 0"/></filter>
+  <filter id="mb9" x="-45%" y="0" width="190%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9 0"/></filter>
+  <filter id="mb14" x="-60%" y="0" width="220%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="14 0"/></filter>
+</defs></svg>
 <div class="wheel" id="wheel" aria-label="Taskbar"><div class="wh-body" id="whBody">
   <div class="wh-tray glass" id="whTray"><i class="gw"></i><div class="wh-pods" id="whPods"></div></div>
   <div class="wh-disc glass" id="whDisc"><i class="gw"></i><div class="wh-hubbg"></div></div>
@@ -1831,6 +1907,22 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
     <div class="sp-list" id="spList"></div>
     <div class="sp-foot"><span><kbd>Enter</kbd>Open</span><span><kbd>&uarr;&darr;</kbd>Choose</span><span><kbd>Esc</kbd>Close</span></div></div>
+</div>
+<div class="cts" id="cts" aria-label="Circle to Search">
+  <div class="cts-stage" id="ctsStage"><img id="ctsShot" alt="" draggable="false"><canvas id="ctsInk"></canvas><div class="cts-sel" id="ctsSel"></div></div>
+  <div class="cts-ring"></div>
+  <div class="cts-hint"><svg viewBox="0 0 24 24"><path class="c" d="M17.2 6.2A7.6 7.6 0 1 0 19.4 12.6"/></svg>Circle anything to search it<kbd>Esc</kbd></div>
+  <button class="cts-x" id="ctsX" aria-label="Close">✕</button>
+  <div class="cts-card" id="ctsCard">
+    <div class="cts-acts">
+      <button data-c="ask" style="--i:0"><svg style="fill:#fff; stroke:none" viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg>Ask ULTRON</button>
+      <button data-c="web" id="ctsWeb" style="--i:1" disabled><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>Search the web</button>
+      <button data-c="lens" style="--i:2" title="Sends what you circled to Google"><svg viewBox="0 0 24 24"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/><circle cx="12" cy="12" r="3"/></svg>Google Lens</button>
+      <button data-c="copy" style="--i:3"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>Copy</button>
+    </div>
+    <div class="cts-out" id="ctsOut"></div>
+    <label class="cts-q"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="ctsQ" placeholder="Ask about it…" autocomplete="off" spellcheck="false" aria-label="Ask about what you circled"></label>
+  </div>
 </div>
 <div class="lock" id="lock" aria-label="Lock screen"><img class="lk-bg" id="lkBg" alt=""><div class="lk-dim"></div>
   <div class="lk-mid"><div class="lk-time" id="lkTime"></div><div class="lk-glass lk-date" id="lkDate"></div></div>
@@ -3085,25 +3177,21 @@ function renderFloat(m){
   flyr.classList.toggle('playing', !!m.playing);
   $('flMeta').textContent = m.title ? m.title + (m.artist ? '  ·  ' + m.artist : '') : '';
   if (m.art !== flArtSrc){ flArtSrc = m.art; const a = $('flArt'); a.classList.remove('ok'); if (m.art){ a.onload = () => a.classList.add('ok'); a.src = m.art; } }
-  if (m.key === flLast) return;   // only play / pause changed: the fill keeps its place
+  if (m.key === flLast) return;   // only play / pause changed: the words keep their places (their animations pause)
   flLast = m.key;
-  const waiting = flTxt.querySelector('.fl-l.next:not(.out)'), promote = waiting && waiting.textContent === (m.line || '♪');
-  flTxt.querySelectorAll('.fl-l.cur:not(.out)').forEach(l => { l.classList.add('out'); setTimeout(() => l.remove(), 560); });
-  if (waiting && !promote){ waiting.classList.add('out'); setTimeout(() => waiting.remove(), 560); }
-  let cur1;
-  if (promote){
-    // the line that was waiting underneath glides up and grows into the one being sung
-    const r0 = waiting.getBoundingClientRect();
-    waiting.className = 'fl-l cur'; cur1 = waiting;
-    cur1.style.setProperty('--dur', m.dur + 's'); cur1.style.setProperty('--at', (-m.at) + 's');
-    cur1.style.setProperty('--fs', '23px');
-    const r1 = cur1.getBoundingClientRect();
-    cur1.animate([{transform:`translate(${r0.left - r1.left}px, ${r0.top - r1.top}px) scale(${r0.height / r1.height})`, opacity:.8}, {transform:'none', opacity:1}],
-      {duration:520, easing:'cubic-bezier(.2,.8,.2,1)'});
-  } else {
-    cur1 = document.createElement('div'); cur1.className = 'fl-l cur in'; cur1.textContent = m.line || '♪';
-    cur1.style.setProperty('--dur', m.dur + 's'); cur1.style.setProperty('--at', (-m.at) + 's'); flTxt.appendChild(cur1);
-  }
+  // the line that was sung (and the one that was waiting under it) smear away
+  flTxt.querySelectorAll('.fl-l:not(.out)').forEach(l => { l.classList.add('out'); setTimeout(() => l.remove(), 320); });
+  const cur1 = document.createElement('div'); cur1.className = 'fl-l cur'; cur1.style.setProperty('--at', m.at.toFixed(3) + 's');
+  // when each word is sung: one after another across the line, a longer word taking a little longer
+  const words = (m.line || '♪').split(/\s+/).filter(Boolean), weight = words.map(w => 1 + Math.min(12, w.length) * .14);
+  const total = weight.reduce((x, y) => x + y, 0), span = Math.min(m.dur * .86, words.length * .5 + .2);
+  let when = 0;
+  words.forEach((w, i) => {
+    if (i) cur1.appendChild(document.createTextNode(' '));
+    const s = document.createElement('span'); s.className = 'fl-w'; s.textContent = w; s.style.setProperty('--t', when.toFixed(3) + 's');
+    cur1.appendChild(s); when += span * weight[i] / total;
+  });
+  flTxt.appendChild(cur1);
   let fs = 23; cur1.style.setProperty('--fs', fs + 'px');                       // long lines get smaller, never cut off
   while (fs > 14 && cur1.scrollWidth > flTxt.clientWidth){ fs--; cur1.style.setProperty('--fs', fs + 'px'); }
   if (m.next){ const n = document.createElement('div'); n.className = 'fl-l next nin'; n.textContent = m.next; flTxt.appendChild(n); }
@@ -3524,6 +3612,8 @@ const AIT = [
     ic:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h16M4 16h10"/></svg>'},
   {id:'pts', g:'On screen', t:'Key points', s:'The page as a few bullets', run:() => 'what are the key points on this page',
     ic:'<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="18" r=".6"/></svg>'},
+  {id:'cts', g:'On screen', t:'Circle to Search', s:'Draw round anything on screen to look it up', fn:'cts',
+    ic:'<svg viewBox="0 0 24 24"><path d="M17.6 6.6A8 8 0 1 0 19.8 12"/><circle cx="11.5" cy="12" r="3.2"/><path d="M13.9 14.4l2.3 2.3"/></svg>'},
   {id:'see', g:'On screen', t:'Describe screen', s:'Looks at it with its own eyes', run:() => 'what do you see on my screen',
     ic:'<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'},
   {id:'rew', g:'Selected text', t:'Rewrite', s:'Formal, friendly, shorter or fixed', ask:'chips', mode:'Or type how to rewrite it…', run:v => `rewrite the selected text to ${v}`,
@@ -3670,6 +3760,7 @@ async function aiActivate(row){
   if (row.classList.contains('chosen')) return aiSetMode(null);   // tap it again to go back
   if (tool.ask) return aiSetMode(tool);
   if (tool.fn === 'read') return aiPick(tool, {fn:'read', label:'Read aloud'});
+  if (tool.fn === 'cts'){ closeAI(); return ctsOpen(); }
   if (tool.g === 'Selected text') return aiPick(tool, {cmd:tool.run(), label:tool.t, paste:false});
   aiRun(tool.run());
 }
@@ -6158,7 +6249,7 @@ function syncHit(){
   const pad = notch.classList.contains('open') ? 0 : 6;
   const rects = [{x:Math.floor(r.left - pad - 10), y:0, w:Math.ceil(r.width + pad * 2 + 20), h:Math.ceil(r.bottom + pad)}];
   if (!fullscreen && !barHid) rects.push({x:0, y:0, w:innerWidth, h:32});
-  if (tourOn || (window.LK && LK.on)) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
+  if (tourOn || (window.LK && LK.on) || (window.CTS && CTS.on)) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
   if (bwWide.classList.contains('on')){ const w = bwWide.getBoundingClientRect(); rects.push({x:Math.floor(w.left - 4), y:Math.floor(w.top - 14), w:Math.ceil(w.width + 8), h:Math.ceil(w.height + 18)}); }
   const fl = $('flyr');
   if (fl.classList.contains('on')) rects.push({x:Math.floor(fl.offsetLeft - 4), y:Math.floor(fl.offsetTop - 4), w:fl.offsetWidth + 8, h:fl.offsetHeight + 8});
@@ -6595,7 +6686,7 @@ function whPlace(grow){
   for (let i = Math.max(0, WH.sel - 7); i <= Math.min(n - 1, WH.sel + 7); i++){
     const it = WH.items[i], a = (i - WH.sel) * WH.step, off = Math.abs(a);
     let el = WH.live.get(it.key);
-    const born = !el;
+    const born = !el, slid = !born && grow && Math.abs(a - el._a) > .02;
     if (born){
       el = whBead(it); WH.live.set(it.key, el);
       if (grow && off < 1.3){ el.classList.add('in'); el.style.setProperty('--d', Math.min(260, Math.round(off / WH.step) * 28) + 'ms'); }
@@ -6604,15 +6695,16 @@ function whPlace(grow){
     el.dataset.i = i; el._a = a; el.setAttribute('aria-label', it.name);
     el.style.transform = `rotate(${(-a).toFixed(4)}rad) translateY(${Rb}px) rotate(${a.toFixed(4)}rad) scale(${i === WH.sel ? 1.2 : 1})`;
     el.style.opacity = Math.max(0, Math.min(1, (1.4 - off) / .2)).toFixed(2);
-    el.className = 'wh-b' + (it.run ? ' run' : '') + (it.act ? ' act' : '') + (i === WH.sel ? ' sel' : '') + (off > 1.36 ? ' edge' : '') + (el.classList.contains('in') ? ' in' : '') + (el.classList.contains('lift') ? ' lift' : '');
+    el.className = 'wh-b' + (it.run ? ' run' : '') + (it.act ? ' act' : '') + (i === WH.sel ? ' sel' : '') + (off > 1.36 ? ' edge' : '') + (el.classList.contains('in') ? ' in' : '') + (el.classList.contains('lift') ? ' lift' : '')
+      + (slid ? (el.classList.contains('glide') ? ' glide2' : ' glide') : el.classList.contains('glide') ? ' glide' : el.classList.contains('glide2') ? ' glide2' : '');
     if (born) rim.appendChild(el);
   }
   for (const [k, el] of WH.live) if (!keep.has(k)){
     WH.live.delete(k);
-    if (WH.open && +el.style.opacity > .05){ el.classList.add('out'); setTimeout(() => el.remove(), 260); } else el.remove();
+    if (WH.open && +el.style.opacity > .05){ el.classList.add('out'); setTimeout(() => el.remove(), 330); } else el.remove();
   }
 }
-$('whRim').addEventListener('animationend', e => { const b = e.target.closest && e.target.closest('.wh-b'); if (b) b.classList.remove('in'); });
+$('whRim').addEventListener('animationend', e => { const b = e.target.closest && e.target.closest('.wh-b'); if (b && !b.classList.contains('out')) b.classList.remove('in', 'glide', 'glide2'); });
 // pictures for the beads on the rim that have none yet, asked for once things have stopped
 function whIcons(){
   clearTimeout(WH.iconT);
@@ -6631,7 +6723,7 @@ async function whWarm(){
   for (let i = 0; i < all.length && DK.on; i += 12){
     const part = all.slice(i, i + 12).filter(l => !iconCache.has(l));
     if (part.length){ const urls = (await invoke('app_icons', {sources:part})) || []; part.forEach((l, j) => { if (urls[j]) iconCache.set(l, urls[j]); }); }
-    await dkWait(WH.open ? 600 : 160);
+    await dkWait(WH.open ? 500 : 90);
   }
 }
 // The name of what's picked, at the hub. A new name follows the old one in from the side the wheel is turning from.
@@ -6640,8 +6732,8 @@ function whName(i, text){
   const t = text != null ? text : it ? it.name : $('whQ').value.trim() ? 'Nothing by that name' : 'Nothing is open';
   if (box._t === t) return;
   box._t = t;
-  for (const old of box.children){ if (old.classList.contains('out')) continue; old.classList.add('out'); old.style.setProperty('--to', (-WH.dir * 22) + 'px'); setTimeout(() => old.remove(), 210); }
-  const nu = document.createElement('span'); nu.textContent = t; nu.style.setProperty('--from', (WH.dir * 22) + 'px'); box.appendChild(nu);
+  for (const old of box.children){ if (old.classList.contains('out')) continue; old.classList.add('out'); old.style.setProperty('--whip', WH.dir < 0 ? -1 : 1); setTimeout(() => old.remove(), 280); }
+  const nu = document.createElement('span'); nu.textContent = t; nu.style.setProperty('--whip', WH.dir < 0 ? -1 : 1); box.appendChild(nu);
 }
 // ULTRON at the hub is the character in the notch, drawn a second time on a see-through canvas of its own (the way
 // it is drawn beside the cursor when you pick text): frame() asks for it while the wheel is down.
@@ -6808,7 +6900,7 @@ async function dockOn(quiet){
     dockWins((await invoke('dock_list')) || []);
     document.body.classList.add('docked'); syncHit(); startKey();
     setTimeout(() => { if (DK.on) whGL(); }, 4000);          // (ULTRON's second canvas is made ready ahead of the first roll down)
-    setTimeout(whWarm, 7000);
+    setTimeout(whWarm, 2500);                                 // (soon: a search typed in the first moments shouldn't find letters where icons go)
     if (!quiet){ setTimeout(whOpen, 800); setTimeout(() => { if (!WH.over) whClose(); }, 3600); }      // (switched on by you: it shows itself once)
   } finally { DK.busy = false; }
 }
@@ -6952,6 +7044,153 @@ $('spList').addEventListener('pointermove', e => { const r = e.target.closest('.
 addEventListener('pointerdown', e => { if (spot.classList.contains('open') && !e.target.closest('#spot, #searchBtn')) closeSpot(true); });
 // (a click on anything that isn't ULTRON takes the keyboard there: the search goes away with it)
 addEventListener('blur', () => { if (performance.now() - SP.at > 600) closeSpot(true); });
+
+/* ---------- Circle to Search ----------
+   AI Tools, On screen, Circle to Search. The screen as it is is held still (cts.rs) and lifted into a frame; draw
+   round anything (a circle, a scribble, a line under it) and that part is searched. Its words are read at once, on
+   this PC; with nothing to read, ULTRON's eyes say what it is. From the card it can then be asked about, looked up
+   on the web, sent to Google Lens (the one thing here that sends the picture off the PC, and only when pressed), or
+   copied. (ULTRON's window covers the whole screen while this is up, as for the lock screen.) */
+var cts = $('cts'), ctsStage = $('ctsStage');
+var CTS = {on:false, busy:false, w:0, h:0, pts:[], drawing:false, sel:null, text:'', seq:0, full:false, raf:0};
+const CTS_ASK = 'What is this? Say what it is in one or two short sentences. If it is a product, a place, a plant, an animal, a logo or a well-known thing, name it.';
+async function ctsOpen(){
+  if (CTS.on || CTS.busy || !TAURI || LK.on) return;
+  CTS.busy = true;
+  try {
+    closeDD(); closePanels(); openedAt = 0; setOpen(false);
+    await dkWait(300);                                       // (ULTRON's own panels out of the way before the screen is taken)
+    const pic = await invoke('cts_grab'); if (!pic) return;
+    const img = $('ctsShot'); img.src = pic; try { await img.decode(); } catch(_){}
+    CTS.w = img.naturalWidth; CTS.h = img.naturalHeight; CTS.full = fullscreen; ctsClear(true);
+    winH = Math.round(screen.height); await invoke('set_window_height', {h:winH}); await dkWait(140);
+    CTS.on = true; cts.classList.remove('bye', 'picked', 'inking'); void cts.offsetWidth; cts.classList.add('on');
+    const c = $('ctsInk'), d = devicePixelRatio || 1; c.width = Math.round(ctsStage.offsetWidth * d); c.height = Math.round(ctsStage.offsetHeight * d);
+    invoke('focus_main'); syncHit(); setTimeout(syncHit, 400);
+  } finally { CTS.busy = false; }
+}
+function ctsClose(){
+  if (!CTS.on) return;
+  CTS.on = false; CTS.seq++; cts.classList.add('bye');
+  setTimeout(() => {
+    cts.classList.remove('on', 'bye', 'picked', 'inking'); ctsClear(true); $('ctsShot').removeAttribute('src'); invoke('cts_forget');
+    winH = 700; invoke('set_window_height', {h:700}); syncHit(); setTimeout(syncHit, 400); invoke('focus_back');
+    if (!CTS.full) setTimeout(() => { if (!CTS.on && !LK.on && fullscreen){ fullscreen = false; document.body.classList.remove('fullscreen'); syncHit(); } }, 900);
+  }, 430);
+}
+// (`all`: the card's words and question go too, not only the frame)
+function ctsClear(all){
+  CTS.sel = null; CTS.pts = []; CTS.drawing = false; CTS.seq++;
+  cts.classList.remove('picked', 'inking'); $('ctsInk').classList.remove('fade');
+  const c = $('ctsInk'); c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  if (all){ $('ctsOut').replaceChildren(); $('ctsQ').value = ''; }
+}
+// where the pointer is on the held picture, in the frame's own units (the frame is drawn a little smaller)
+function ctsAt(e){ const r = ctsStage.getBoundingClientRect(), s = r.width / ctsStage.offsetWidth; return [(e.clientX - r.left) / s, (e.clientY - r.top) / s]; }
+// the line, drawn with a soft glow under it, smoothed through the points
+function ctsInk(){
+  if (CTS.raf) return;
+  CTS.raf = requestAnimationFrame(() => {
+    CTS.raf = 0;
+    const c = $('ctsInk'), x = c.getContext('2d'), d = devicePixelRatio || 1, P = CTS.pts;
+    x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, c.width, c.height);
+    if (P.length < 2) return;
+    x.lineCap = x.lineJoin = 'round'; x.lineWidth = 6; x.strokeStyle = 'rgba(255,255,255,.96)'; x.shadowColor = 'rgba(255,255,255,.9)'; x.shadowBlur = 18;
+    x.beginPath(); x.moveTo(P[0][0], P[0][1]);
+    for (let i = 1; i < P.length - 1; i++) x.quadraticCurveTo(P[i][0], P[i][1], (P[i][0] + P[i + 1][0]) / 2, (P[i][1] + P[i + 1][1]) / 2);
+    x.lineTo(P[P.length - 1][0], P[P.length - 1][1]); x.stroke();
+  });
+}
+// the part that was circled, in the held picture's own pixels
+function ctsRect(){ const s = CTS.sel, k = CTS.w / ctsStage.offsetWidth; return {x:Math.round(s.x * k), y:Math.round(s.y * k), w:Math.round(s.w * k), h:Math.round(s.h * k)}; }
+// The drawing is done: what it went round becomes the frame. (A line under something takes in a little above it.)
+function ctsPick(){
+  const P = CTS.pts;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of P){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  if (P.length < 3 || (x1 - x0 < 16 && y1 - y0 < 16)){ ctsClear(); return; }
+  const W = ctsStage.offsetWidth, H = ctsStage.offsetHeight, pad = 10;
+  if (y1 - y0 < 30) y0 -= 46;
+  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(W, x1 + pad); y1 = Math.min(H, y1 + pad);
+  CTS.sel = {x:x0, y:y0, w:x1 - x0, h:y1 - y0};
+  const s = $('ctsSel'); s.style.left = x0 + 'px'; s.style.top = y0 + 'px'; s.style.width = (x1 - x0) + 'px'; s.style.height = (y1 - y0) + 'px';
+  $('ctsInk').classList.add('fade'); $('ctsOut').replaceChildren(); $('ctsQ').value = '';
+  cts.classList.remove('picked'); void cts.offsetWidth; cts.classList.add('picked');
+  ctsPlaceCard(); ctsLook();
+}
+// the card sits under what was circled, or over it when there's no room below, kept on the screen
+function ctsPlaceCard(){
+  const card = $('ctsCard'), st = ctsStage.getBoundingClientRect(), k = st.width / ctsStage.offsetWidth, s = CTS.sel;
+  const r = {left:st.left + s.x * k, top:st.top + s.y * k, right:st.left + (s.x + s.w) * k, bottom:st.top + (s.y + s.h) * k};
+  const cw = card.offsetWidth, ch = Math.max(card.offsetHeight, 190);
+  let top = r.bottom + 14;
+  if (top + ch > innerHeight - 12) top = r.top - 14 - ch;
+  if (top < 12) top = Math.min(innerHeight - ch - 12, Math.max(12, r.bottom - ch - 12));
+  card.style.left = Math.max(12, Math.min(innerWidth - cw - 12, (r.left + r.right) / 2 - cw / 2)) + 'px'; card.style.top = top + 'px';
+}
+function ctsSay(html){ $('ctsOut').innerHTML = html; }
+// First the words in it are read; if there are hardly any, ULTRON's eyes are asked what it is.
+async function ctsLook(){
+  const n = ++CTS.seq, r = ctsRect(); CTS.text = '';
+  $('ctsWeb').disabled = true; ctsSay('<span class="cts-think"><i></i><i></i><i></i></span><span class="cts-dim">Reading it…</span>');
+  const lines = (await invoke('cts_read', r)) || [];
+  if (n !== CTS.seq || !CTS.on) return;
+  CTS.text = lines.join(' ').replace(/\s+/g, ' ').trim();
+  $('ctsWeb').disabled = !CTS.text;
+  if (CTS.text.length >= 3) ctsSay(`<span class="cts-k">The words in it</span>${esc(CTS.text.length > 320 ? CTS.text.slice(0, 320) + '…' : CTS.text)}`);
+  else ctsAsk();
+}
+async function ctsAsk(q){
+  const n = ++CTS.seq, r = ctsRect();
+  ctsSay('<span class="cts-think"><i></i><i></i><i></i></span><span class="cts-dim">ULTRON is looking at it…</span>');
+  let ans, err = '';
+  try { ans = await invokeLoud('cts_ask', {...r, question:q || CTS_ASK}); } catch(e){ err = String(e); }
+  if (n !== CTS.seq || !CTS.on) return;
+  if (err) return ctsSay(`<span class="cts-dim">${esc(err)}</span>`);
+  const box = document.createElement('div'); $('ctsOut').replaceChildren(box); reveal(box, ans || 'I couldn’t make it out.', 28);
+}
+async function ctsDo(what, btn){
+  if (!CTS.sel) return;
+  const r = ctsRect();
+  if (what === 'ask') return ctsAsk($('ctsQ').value.trim());
+  if (what === 'web'){ if (CTS.text){ invoke('launch', {target:'https://www.google.com/search?q=' + encodeURIComponent(CTS.text.slice(0, 200))}); ctsClose(); } return; }
+  if (what === 'copy'){ const ok = await invoke('cts_copy', r); btn.classList.toggle('done', !!ok); setTimeout(() => btn.classList.remove('done'), 1400); return; }
+  if (what === 'lens'){
+    const n = ++CTS.seq; ctsSay('<span class="cts-think"><i></i><i></i><i></i></span><span class="cts-dim">Sending what you circled to Google Lens…</span>');
+    const url = await invoke('cts_lens', r);
+    if (n !== CTS.seq || !CTS.on) return;
+    if (url){ invoke('launch', {target:url}); ctsClose(); return; }
+    // (Lens didn't hand back a page: the picture goes on the clipboard and Lens opens, to paste it into)
+    await invoke('cts_copy', r); invoke('launch', {target:'https://lens.google.com/'});
+    ctsSay('<span class="cts-dim">Google Lens didn’t answer directly, so the picture is on your clipboard: paste it into Lens with Ctrl V.</span>');
+  }
+}
+ctsStage.addEventListener('pointerdown', e => {
+  if (!CTS.on || e.button !== 0) return;
+  e.stopPropagation(); ctsClear();
+  CTS.drawing = true; CTS.pts = [ctsAt(e)]; cts.classList.add('inking');
+  try { ctsStage.setPointerCapture(e.pointerId); } catch(_){}
+});
+ctsStage.addEventListener('pointermove', e => {
+  if (!CTS.drawing) return;
+  const p = ctsAt(e), q = CTS.pts[CTS.pts.length - 1];
+  if (Math.hypot(p[0] - q[0], p[1] - q[1]) >= 2){ CTS.pts.push(p); ctsInk(); }
+});
+const ctsUp = () => { if (!CTS.drawing) return; CTS.drawing = false; cts.classList.remove('inking'); ctsPick(); };
+ctsStage.addEventListener('pointerup', ctsUp); ctsStage.addEventListener('pointercancel', ctsUp);
+cts.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.target === cts) ctsClose(); });       // (the dark margin round the frame)
+cts.addEventListener('click', e => {
+  e.stopPropagation();
+  if (e.target.closest('#ctsX')) return ctsClose();
+  const b = e.target.closest('[data-c]'); if (b) ctsDo(b.dataset.c, b);
+});
+$('ctsQ').addEventListener('keydown', e => { if (e.key === 'Enter' && $('ctsQ').value.trim()){ e.preventDefault(); ctsAsk($('ctsQ').value.trim()); } });
+// Escape: the frame first (draw again), then the whole thing
+addEventListener('keydown', e => {
+  if (!CTS.on || e.key !== 'Escape') return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  CTS.sel || CTS.drawing ? ctsClear(true) : ctsClose();
+}, true);
 
 /* ---------- ULTRON's lock screen ----------
    Settings, Look & feel, Lock screen: ULTRON. "Lock Screen" in ULTRON's menu (and "lock" typed into its search)
