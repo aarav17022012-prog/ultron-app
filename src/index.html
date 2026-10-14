@@ -603,24 +603,39 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 .flyr.playing .fl-eq i{animation-play-state:running}
 .fl-eq i:nth-child(2){animation-delay:-.4s; animation-duration:.8s} .fl-eq i:nth-child(3){animation-delay:-.7s; animation-duration:1.2s}
 @keyframes flEq{0%, 100%{height:3px} 50%{height:10px}}
-.fl-txt{position:relative; z-index:1; flex:1; min-width:0; height:62px; pointer-events:none}
-.fl-l{position:absolute; left:0; right:0; white-space:nowrap; transform-origin:0 50%}
-/* The line being sung is there whole, its words dim until each is sung: then it brightens and lifts a hair (the words'
-   times are spread over the line by their length, since only the line's start and end are known). A new line whips
-   in from the right with motion blur, word after word a moment apart, overshoots a touch and snaps sharp; the old one
-   whips off to the left the same way. The line waiting underneath follows it in. */
-.fl-l.cur{top:4px; font-size:var(--fs, 23px); font-weight:650; letter-spacing:-.012em; line-height:30px; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
-.fl-w{display:inline-block; color:rgba(255,255,255,.4); animation:flWhipIn .56s cubic-bezier(.16,1,.3,1) both, flSung .42s ease forwards;
-  animation-delay:calc(var(--k, 0) * 28ms), calc(var(--t, 0s) - var(--at, 0s))}
-.flyr:not(.playing) .fl-w{animation-play-state:running, paused}
-@keyframes flSung{to{color:#fff; translate:0 -1.5px}}
-@keyframes flWhipIn{0%{opacity:0; transform:translateX(64px) skewX(-14deg); filter:url(#mb14)} 28%{opacity:1; filter:url(#mb9)}
-  52%{transform:translateX(-4px) skewX(2deg); filter:url(#mb5)} 76%{transform:translateX(1px) skewX(0deg); filter:url(#mb2)} 100%{opacity:1; transform:none; filter:none}}
-@keyframes flWhipOut{0%{filter:none} 25%{filter:url(#mb2)} 50%{filter:url(#mb5)} 75%{filter:url(#mb9); opacity:.55}
-  100%{opacity:0; transform:translateX(-72px) skewX(14deg); filter:url(#mb14)}}
-.fl-l.next{top:38px; font-size:13.5px; font-weight:500; color:rgba(255,255,255,.55); overflow:hidden; text-overflow:ellipsis}
-.fl-l.nin{animation:flWhipIn .5s cubic-bezier(.16,1,.3,1) .14s both}
-.fl-l.out{animation:flWhipOut .3s cubic-bezier(.55,0,.8,.2) forwards}
+.fl-txt{position:relative; z-index:1; flex:1; min-width:0; height:62px; overflow:hidden; pointer-events:none; perspective:320px; perspective-origin:30% 45%}
+/* The lyrics on a small turning drum. The line being sung is at the front, large and white; the next one waits just
+   under it, small, dim and tilted away. When a new line starts, the drum turns: the sung line tips back over the top
+   and fades, the waiting one rolls forward into its place, growing to full size, and its words light up one after
+   another; the line after that rolls up from underneath. Nothing is blurred. A gap with no words shows three dots
+   that light up across it. */
+.fl-ln{position:absolute; left:0; right:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transform-origin:0 50%; backface-visibility:hidden; will-change:transform, opacity}
+.fl-ln.cur{top:2px; height:31px; line-height:31px; font-size:var(--fs, 22px); font-weight:700; letter-spacing:-.014em; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.fl-ln.next{top:37px; height:20px; line-height:20px; font-size:13.5px; font-weight:600; color:rgba(255,255,255,.46); transform:rotateX(-14deg); text-shadow:0 1px 2px rgba(0,0,0,.25)}
+/* the waiting line rolls forward into the front (from where it was, at its old size: --from) */
+.fl-ln.cur.up{animation:flForward .62s cubic-bezier(.2,.95,.25,1) both}
+@keyframes flForward{from{transform:translateY(35px) rotateX(-14deg) scale(var(--from, .62)); color:rgba(255,255,255,.46)}}
+/* a line put straight at the front (the first, or after a seek) turns into view from below */
+.fl-ln.cur.fresh{animation:flFresh .58s cubic-bezier(.2,.95,.25,1) both}
+@keyframes flFresh{from{transform:translateY(16px) rotateX(-55deg); opacity:0}}
+/* the sung line tips back over the top */
+.fl-ln.gone{animation:flGone .5s cubic-bezier(.55,0,.3,1) forwards}
+@keyframes flGone{to{transform:translateY(-24px) rotateX(68deg) scale(.9); opacity:0}}
+.fl-ln.next.gone{animation:flGoneNext .3s ease-in forwards}
+@keyframes flGoneNext{to{transform:translateY(10px) rotateX(-40deg); opacity:0}}
+/* the line after rolls up from underneath, a moment behind */
+.fl-ln.next.rise{animation:flRise .6s cubic-bezier(.2,.9,.3,1) .16s both}
+@keyframes flRise{from{transform:translateY(18px) rotateX(-70deg); opacity:0}}
+/* the words of a line coming to the front light up one after another */
+.fl-wd{display:inline-block; animation:flWord .5s ease both; animation-delay:calc(min(var(--k), 12) * 42ms + .12s)}
+@keyframes flWord{from{color:rgba(255,255,255,.42); transform:translateY(3px)}}
+.fl-dots{display:inline-flex; align-items:center; gap:7px; height:31px; vertical-align:top}
+.fl-dots i{width:8px; height:8px; border-radius:50%; background:#fff; opacity:.3}
+.fl-ln.cur .fl-dots{animation:flBreathe 2.6s ease-in-out infinite}
+.fl-ln.cur .fl-dots i{animation:flDot var(--seg, 1s) linear forwards; animation-delay:calc(var(--n) * var(--seg, 1s) - var(--at, 0s))}
+.flyr:not(.playing) .fl-ln.cur .fl-dots, .flyr:not(.playing) .fl-ln.cur .fl-dots i{animation-play-state:paused}
+@keyframes flDot{to{opacity:1}}
+@keyframes flBreathe{50%{transform:scale(1.12)}}
 .fl-meta{position:absolute; left:84px; right:46px; top:5px; z-index:1; font-size:10.5px; font-weight:600; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   opacity:0; transform:translateY(-4px); transition:opacity .25s, transform .3s var(--glide); pointer-events:none}
 .fl-x{position:absolute; right:12px; top:50%; z-index:2; width:24px; height:24px; margin-top:-12px; border:0; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:12px; padding:0;
@@ -632,7 +647,7 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 #srcLogo{display:none; width:16px; height:16px; flex:none; border-radius:4px; object-fit:contain}
 .has-logo > #srcLogo{display:block; animation:slFade .3s ease backwards} .has-logo > #srcIcon{display:none}
 .ico > img{width:18px; height:18px; border-radius:4px; object-fit:contain; display:block}
-.flyr:hover .fl-txt{margin-right:152px; overflow:hidden; -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent)}
+.flyr:hover .fl-txt{margin-right:152px; -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent)}
 /* its own controls: previous, play / pause, next. They spring in from the right, one after the other, when the pointer
    is over the bar; the middle one turns between its two signs; each dips when pressed. */
 .fl-ctl{position:absolute; right:46px; top:50%; z-index:2; display:flex; align-items:center; gap:7px; transform:translateY(-50%); pointer-events:none}
@@ -909,13 +924,17 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .wheel:not(.open) .wh-b{pointer-events:none}
 .wh-hub > *{position:absolute; left:0}
 /* the hub, from the top: the name of what's picked; a row with the search between Tile and Groups; ULTRON */
-/* the name: as the wheel turns (or a search finds something else), the old name smears off the way the wheel is going
-   and the new one whips in after it, both with motion blur */
+/* The name rolls over like an odometer: the old one's letters go up and out one after another, and the new one's
+   come up from below after them, each settling with a small bounce (the other way round when the wheel turns back). */
 .wh-name{top:calc(var(--cy) + 71px); width:240px; height:22px; margin-left:-120px; overflow:hidden; pointer-events:none;
   -webkit-mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)}
 .wh-name span{position:absolute; left:0; right:0; top:0; text-align:center; font-size:15px; font-weight:650; letter-spacing:-.01em; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  text-shadow:0 1px 2px rgba(0,0,0,.3); animation:mbIn .38s cubic-bezier(.2,.75,.25,1) both}
-.wh-name span.out{animation:mbOut .26s ease-in both}
+  text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.wh-name span i{display:inline-block; font-style:normal; white-space:pre; animation:whRollIn .5s cubic-bezier(.2,1.35,.35,1) both; animation-delay:calc(min(var(--c), 16) * 13ms)}
+.wh-name span.out i{animation:whRollOut .26s cubic-bezier(.5,0,.8,.3) both; animation-delay:calc(min(var(--c), 16) * 7ms)}
+@keyframes whRollIn{from{opacity:0; transform:translateY(calc(var(--roll, 1) * 16px)) scale(.92)}}
+@keyframes whRollOut{to{opacity:0; transform:translateY(calc(var(--roll, 1) * -16px)) scale(.92)}}
+
 .wh-row{top:calc(var(--cy) + 98px); display:flex; align-items:center; gap:6px; width:max-content; transform:translateX(-50%)}
 /* searching is always there: type a name and the rim fills with what matches */
 .wh-q{display:flex; align-items:center; gap:6px; width:146px; height:28px; padding:0 11px; border-radius:14px; background:rgba(255,255,255,.1);
@@ -3179,28 +3198,44 @@ function showFloat(on){
   flyr.classList.toggle('on', on); syncHit(); setTimeout(syncHit, 600);
 }
 let flLast = '', flArtSrc = '';
+let flAt = -2, flListKey = '';
+const flGap = text => !text || /^[\s♪♫]*$/.test(text);
+// a line for the front: its words each in a span of their own (they light up one after another), or the dots
+function flFront(text){
+  const el = document.createElement('div'); el.className = 'fl-ln cur';
+  if (flGap(text)) el.innerHTML = '<span class="fl-dots"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span>';
+  else el.innerHTML = text.split(/\s+/).filter(Boolean).map((w, k) => `<span class="fl-wd" style="--k:${k}">${esc(w)}</span>`).join(' ');
+  return el;
+}
+function flFit(el){                                                   // (a long line is made just small enough to fit)
+  let fs = 22; el.style.setProperty('--fs', fs + 'px');
+  const room = flTxt.clientWidth, wide = el.scrollWidth;
+  if (wide > room){ fs = Math.max(14, Math.floor(22 * room / wide)); el.style.setProperty('--fs', fs + 'px'); }
+  return fs;
+}
 function renderFloat(m){
   flyr.classList.toggle('playing', !!m.playing);
   $('flMeta').textContent = m.title ? m.title + (m.artist ? '  ·  ' + m.artist : '') : '';
   if (m.art !== flArtSrc){ flArtSrc = m.art; const a = $('flArt'); a.classList.remove('ok'); if (m.art){ a.onload = () => a.classList.add('ok'); a.src = m.art; } }
-  if (m.key === flLast) return;   // only play / pause changed: the words keep their places (their animations pause)
+  if (m.key === flLast) return;   // only play / pause changed
   flLast = m.key;
-  // the line that was sung (and the one that was waiting under it) whip away to the left
-  flTxt.querySelectorAll('.fl-l:not(.out)').forEach(l => { l.classList.add('out'); setTimeout(() => l.remove(), 330); });
-  const cur1 = document.createElement('div'); cur1.className = 'fl-l cur'; cur1.style.setProperty('--at', m.at.toFixed(3) + 's');
-  // when each word is sung: one after another across the line, a longer word taking a little longer
-  const words = (m.line || '♪').split(/\s+/).filter(Boolean), weight = words.map(w => 1 + Math.min(12, w.length) * .14);
-  const total = weight.reduce((x, y) => x + y, 0), span = Math.min(m.dur * .86, words.length * .5 + .2);
-  let when = 0;
-  words.forEach((w, i) => {
-    if (i) cur1.appendChild(document.createTextNode(' '));
-    const s = document.createElement('span'); s.className = 'fl-w'; s.textContent = w; s.style.setProperty('--t', when.toFixed(3) + 's'); s.style.setProperty('--k', Math.min(i, 9));
-    cur1.appendChild(s); when += span * weight[i] / total;
-  });
+  const li = m.li, text = m.lines[li] || '', after = m.lines[li + 1];
+  // one line on (the usual): the drum turns. Anything else (the first line, a seek, the bar coming back): put straight in.
+  const turn = m.listKey === flListKey && li === flAt + 1 && flyr.classList.contains('on');
+  flListKey = m.listKey; flAt = li;
+  const old = flTxt.querySelector('.fl-ln.cur:not(.gone)'), waiting = flTxt.querySelector('.fl-ln.next:not(.gone)');
+  if (old){ old.classList.remove('up', 'fresh'); old.classList.add('gone'); setTimeout(() => old.remove(), 520); }
+  if (waiting){ waiting.classList.remove('rise'); waiting.classList.add('gone'); setTimeout(() => waiting.remove(), 320); }
+  const cur1 = flFront(text);
+  cur1.classList.add(turn && waiting ? 'up' : 'fresh');
   flTxt.appendChild(cur1);
-  let fs = 23; cur1.style.setProperty('--fs', fs + 'px');                       // long lines get smaller, never cut off
-  while (fs > 14 && cur1.scrollWidth > flTxt.clientWidth){ fs--; cur1.style.setProperty('--fs', fs + 'px'); }
-  if (m.next){ const n = document.createElement('div'); n.className = 'fl-l next nin'; n.textContent = m.next; flTxt.appendChild(n); }
+  const fs = flFit(cur1);
+  cur1.style.setProperty('--from', (13.5 / fs).toFixed(3));
+  if (cur1.firstElementChild && cur1.firstElementChild.classList.contains('fl-dots')){ cur1.style.setProperty('--seg', (m.dur / 3).toFixed(3) + 's'); cur1.style.setProperty('--at', m.at.toFixed(3) + 's'); }
+  if (after != null){
+    const n = document.createElement('div'); n.className = 'fl-ln next rise'; n.textContent = flGap(after) ? '♪' : after;
+    flTxt.appendChild(n);
+  }
 }
 // its own controls press the notch's (so the two always agree), and show it at once
 $('flCtl').addEventListener('click', e => {
@@ -3246,18 +3281,20 @@ function floatTick(){
   const want = !!S.floatLyrics && !notch.classList.contains('open') && !!disp && !!lyr && !!(lyr.synced || lyr.plain);
   if (want !== floatShown){ floatShown = want; floatKey = ''; showFloat(want); }
   if (!want) return;
-  let line = '', next = '', dur = 4, at = 0, key;
+  let lines, li = 0, dur = 4, at = 0, key, listKey;
   if (lyr.synced){
-    const L = lyr.synced, pp = posNow() + lyrOffset + .3; let li = -1;
-    for (let i = 0; i < L.length; i++){ if (L[i][0] <= pp) li = i; else break; }
-    line = li >= 0 ? L[li][1] : '♪'; next = (L[li + 1] || [])[1] || '';
-    const st = li >= 0 ? L[li][0] : 0, en = L[li + 1] ? L[li + 1][0] : st + 4;
-    dur = Math.max(.6, Math.min(en - st, 12)); at = Math.max(0, pp - st); key = li + '|' + trackKey;
-  } else { line = disp.title || ''; next = disp.artist || ''; key = 'plain|' + trackKey; }
+    // (before the first line, a gap of dots stands at the top of the list)
+    const L = lyr.synced, pp = posNow() + lyrOffset + .3; let i0 = -1;
+    for (let i = 0; i < L.length; i++){ if (L[i][0] <= pp) i0 = i; else break; }
+    lines = ['', ...L.map(x => x[1])]; li = i0 + 1;
+    const st = i0 >= 0 ? L[i0][0] : 0, en = L[i0 + 1] ? L[i0 + 1][0] : st + 4;
+    dur = Math.max(.6, Math.min(en - st, 30)); at = Math.max(0, pp - st); key = i0 + '|' + trackKey;
+    listKey = 'synced|' + trackKey + '|' + L.length + '|' + ((L[0] || [])[1] || '');
+  } else { lines = [disp.title || '', disp.artist || '']; key = 'plain|' + trackKey; listKey = 'plain|' + trackKey + '|' + lines.join('|'); }
   const playing = !!disp.playing;
   if (key === floatKey && playing === floatPlay) return;
   floatKey = key; floatPlay = playing;
-  renderFloat({key, line, next, dur, at, playing, title:disp.title || '', artist:disp.artist || '', art:artEl.classList.contains('has-img') ? artImg.src : '', tint});
+  renderFloat({key, listKey, lines, li, dur, at, playing, title:disp.title || '', artist:disp.artist || '', art:artEl.classList.contains('has-img') ? artImg.src : '', tint});
 }
 setInterval(floatTick, 200);
 
@@ -6738,8 +6775,10 @@ function whName(i, text){
   const t = text != null ? text : it ? it.name : $('whQ').value.trim() ? 'Nothing by that name' : 'Nothing is open';
   if (box._t === t) return;
   box._t = t;
-  for (const old of box.children){ if (old.classList.contains('out')) continue; old.classList.add('out'); old.style.setProperty('--whip', WH.dir < 0 ? -1 : 1); setTimeout(() => old.remove(), 280); }
-  const nu = document.createElement('span'); nu.textContent = t; nu.style.setProperty('--whip', WH.dir < 0 ? -1 : 1); box.appendChild(nu);
+  const roll = WH.dir < 0 ? -1 : 1, ch = [...t], shown = ch.length > 34 ? [...ch.slice(0, 33).join('').trimEnd(), '…'] : ch;
+  for (const old of box.children){ if (old.classList.contains('out')) continue; old.classList.add('out'); old.style.setProperty('--roll', roll); setTimeout(() => old.remove(), 420); }
+  const nu = document.createElement('span'); nu.style.setProperty('--roll', roll);
+  nu.innerHTML = shown.map((c, k) => `<i style="--c:${k}">${esc(c)}</i>`).join(''); box.appendChild(nu);
 }
 // ULTRON at the hub is the character in the notch, drawn a second time on a see-through canvas of its own (the way
 // it is drawn beside the cursor when you pick text): frame() asks for it while the wheel is down.
