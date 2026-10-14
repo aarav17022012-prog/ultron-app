@@ -147,6 +147,7 @@ pub fn wifi_status(with_list: bool) -> Wifi {
         return w; // no wireless adapter or the WLAN service is off
     }
     w.available = true;
+    w.radio = true; // (netsh only says "Radio status" when it's off)
     for line in iface.lines() {
         let Some((k, v)) = kv(line) else {
             if line.trim().eq_ignore_ascii_case("Software Off") {
