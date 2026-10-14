@@ -44,7 +44,7 @@ pub fn duration(s: &str) -> Option<u64> {
 /// "7 pm", "7:30am", "19:00" -> seconds from now until then (today or tomorrow)
 pub fn until_clock(s: &str) -> Option<u64> {
     use windows::Win32::System::SystemInformation::GetLocalTime;
-    let l = lower(s).replace('.', "");
+    let l = lower(s).replace('.', "").replace([',', '!', '?', ';'], " ");
     let t = l.split_whitespace().collect::<Vec<_>>();
     for (i, w) in t.iter().enumerate() {
         let (num, mut ampm) = if let Some(n) = w.strip_suffix("am") { (n, Some(false)) } else if let Some(n) = w.strip_suffix("pm") { (n, Some(true)) } else { (*w, None) };
@@ -55,10 +55,18 @@ pub fn until_clock(s: &str) -> Option<u64> {
                 _ => None,
             };
         }
+        // "11:57", and the same said or cleaned up as "11 57 pm" or "1157 pm" (a colon is often lost on the way)
+        let next = t.get(i + 1).copied().unwrap_or("");
+        let after_next = t.get(i + 2).copied().unwrap_or("");
         let (h, m) = match num.split_once(':') {
             Some((h, m)) => (h.parse::<u32>().ok()?, m.parse::<u32>().ok()?),
             None => match num.parse::<u32>() {
-                Ok(h) if ampm.is_some() || l.contains("o'clock") => (h, 0),
+                Ok(h) if h < 24 && next.len() == 2 && next.parse::<u32>().is_ok_and(|m| m < 60) && matches!(after_next, "am" | "pm" | "o'clock") => {
+                    ampm = match after_next { "am" => Some(false), "pm" => Some(true), _ => None };
+                    (h, next.parse::<u32>().unwrap_or(0))
+                }
+                Ok(hm) if (100..=2359).contains(&hm) && hm % 100 < 60 && ampm.is_some() && (3..=4).contains(&num.len()) => (hm / 100, hm % 100),
+                Ok(h) if h < 24 && (ampm.is_some() || l.contains("o'clock")) => (h, 0),
                 _ => continue,
             },
         };
@@ -77,6 +85,35 @@ pub fn until_clock(s: &str) -> Option<u64> {
         return Some(d as u64);
     }
     None
+}
+
+/// The time of day `secs` from now, as hour (0-23) and minute.
+pub fn clock_after(secs: u64) -> (u32, u32) {
+    use windows::Win32::System::SystemInformation::GetLocalTime;
+    let st = unsafe { GetLocalTime() };
+    let at = (st.wHour as u64 * 3600 + st.wMinute as u64 * 60 + st.wSecond as u64 + secs) % 86400;
+    ((at / 3600) as u32, (at % 3600 / 60) as u32)
+}
+
+#[cfg(test)]
+mod clock_tests {
+    // (what's checked is the time of day it comes to, not how far off that is)
+    fn at(s: &str) -> (u64, u64) {
+        let d = super::until_clock(s).unwrap();
+        let st = unsafe { windows::Win32::System::SystemInformation::GetLocalTime() };
+        let t = (st.wHour as u64 * 3600 + st.wMinute as u64 * 60 + st.wSecond as u64 + d) % 86400;
+        (t / 3600, t % 3600 / 60)
+    }
+    #[test]
+    fn times_of_day() {
+        assert_eq!(at("set an alarm for 11:57 pm"), (23, 57));
+        assert_eq!(at("set an alarm for 11 57 pm"), (23, 57));
+        assert_eq!(at("set an alarm for 1157 pm"), (23, 57));
+        assert_eq!(at("wake me up at 6 am"), (6, 0));
+        assert_eq!(at("set an alarm for 7:05am"), (7, 5));
+        assert_eq!(at("set an alarm for 12 pm"), (12, 0));
+        assert_eq!(at("set an alarm for 12 30 am"), (0, 30));
+    }
 }
 
 pub fn human(secs: u64) -> String {

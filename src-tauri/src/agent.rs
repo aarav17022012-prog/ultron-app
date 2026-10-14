@@ -558,9 +558,11 @@ pub fn parse_step(piece: &str) -> Step {
     if l.starts_with("remind me") || l.contains("set a reminder") || l.starts_with("set a timer") || l.starts_with("timer for") || l.starts_with("start a timer")
         || l.starts_with("set an alarm") || l.starts_with("wake me")
     {
-        let (when, what) = match l.find(" to ") {
-            Some(i) if l.starts_with("remind") => (&l[..i], l[i + 4..].to_string()),
-            _ => (l.as_str(), String::new()),
+        // (the time is read from what was said as it was, with its colons: the cleaned-up wording drops them)
+        let src = if rl.contains("remind") || rl.contains("timer") || rl.contains("alarm") || rl.contains("wake") { rl.trim() } else { l.as_str() };
+        let (when, what) = match src.find(" to ") {
+            Some(i) if l.starts_with("remind") => (&src[..i], src[i + 4..].to_string()),
+            _ => (src, String::new()),
         };
         let secs = if when.contains(" at ") || l.starts_with("set an alarm") || l.starts_with("wake me") {
             crate::skills::until_clock(when)
@@ -569,7 +571,17 @@ pub fn parse_step(piece: &str) -> Step {
         };
         if let Some(secs) = secs {
             let kind = if l.starts_with("remind") || l.contains("reminder") { "reminder" } else if l.contains("alarm") || l.starts_with("wake") { "alarm" } else { "timer" };
-            return Step::Timer(secs, what, kind.into());
+            // (an alarm can repeat: it's said as "alarm:daily" and so on, for Clock)
+            let kind = if kind != "alarm" { kind.to_string() } else if l.contains("every day") || l.contains("everyday") || l.contains("daily") || l.contains("each day") {
+                "alarm:daily".into()
+            } else if l.contains("weekday") {
+                "alarm:weekdays".into()
+            } else if l.contains("weekend") {
+                "alarm:weekends".into()
+            } else {
+                "alarm".into()
+            };
+            return Step::Timer(secs, what, kind);
         }
     }
     match l.as_str() {
@@ -788,7 +800,7 @@ fn doing(s: &Step) -> String {
         Step::Rewrite(_, true) => "Rewriting your text".into(),
         Step::Rewrite(_, false) => "Reading your text".into(),
         Step::Screen(_) => "Reading your screen".into(),
-        Step::Timer(s, _, k) => format!("Setting a {} {k}", crate::skills::human(*s)),
+        Step::Timer(s, _, k) => format!("Setting a {} {}", crate::skills::human(*s), k.split(':').next().unwrap_or(k)),
         Step::Snap(d) => (if *d == 2 { "Moving the window" } else { "Snapping the window" }).into(),
         Step::CloseWindow => "Closing the window".into(),
         Step::Brightness(..) => "Changing the brightness".into(),
@@ -822,7 +834,7 @@ fn did(s: &Step, cmd_action: &str) -> String {
         Step::Rewrite(_, true) => "rewrote your text".into(),
         Step::Rewrite(_, false) => "read your text".into(),
         Step::Screen(_) => "read your screen".into(),
-        Step::Timer(s, _, k) => format!("set a {} {k}", crate::skills::human(*s)),
+        Step::Timer(s, _, k) => format!("set a {} {}", crate::skills::human(*s), k.split(':').next().unwrap_or(k)),
         Step::Snap(_) => "moved the window".into(),
         Step::CloseWindow => "closed the window".into(),
         Step::Brightness(..) => if cmd_action.is_empty() { "changed the brightness".into() } else { cmd_action.to_string() },
@@ -1644,6 +1656,27 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
             ghost::mood(app, "idle");
             cx.say = Some(out);
             Ok(String::new())
+        }
+        Step::Timer(secs, what, kind) if kind.starts_with("alarm") => {
+            // An alarm goes into Windows' own Clock app, where it rings like any other and stays listed. Only if Clock
+            // can't be worked does ULTRON keep it and ring it itself.
+            let days = kind.split_once(':').map(|x| x.1).unwrap_or("");
+            let (h, m) = crate::skills::clock_after(*secs);
+            let at = format!("{}:{:02} {}", if h % 12 == 0 { 12 } else { h % 12 }, m, if h < 12 { "AM" } else { "PM" });
+            let label = if what.trim().is_empty() { "ULTRON".to_string() } else { what.trim().chars().take(40).collect() };
+            let often = match days { "daily" => " every day", "weekdays" => " on weekdays", "weekends" => " at weekends", _ => "" };
+            match crate::clock::add_alarm(h, m, &label, days) {
+                Ok(_) => {
+                    cx.say = Some(format!("Alarm set for {at}{often}, in the Clock app."));
+                    Ok(format!("Added a {at} alarm to Clock"))
+                }
+                Err(why) => {
+                    crate::log_line(&format!("clock: couldn't add the alarm ({why}); ULTRON keeps it"));
+                    let _ = app.emit_to("main", "timer", json!({ "secs": secs, "label": what, "kind": "alarm" }));
+                    cx.say = Some(format!("I couldn't put it in the Clock app, so I'll ring it myself at {at}."));
+                    Ok(format!("Set a {at} alarm in ULTRON"))
+                }
+            }
         }
         Step::Timer(secs, what, kind) => {
             let _ = app.emit_to("main", "timer", json!({ "secs": secs, "label": what, "kind": kind }));

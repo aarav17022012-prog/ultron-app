@@ -344,7 +344,7 @@ unsafe extern "system" {
 /// The newest small picture of each window that has been in use (never written anywhere: they are
 /// for the wheel to show a window that has since been minimized, which can't be pictured any more).
 static SHOTS: Mutex<Vec<(isize, String)>> = Mutex::new(Vec::new());
-static KEEP: AtomicBool = AtomicBool::new(true);
+static KEEP: AtomicBool = AtomicBool::new(false);
 static SHOOTING: AtomicBool = AtomicBool::new(false);
 
 /// Whether pictures of windows are kept at all (Settings, Taskbar: show a window when the pointer rests on its app).

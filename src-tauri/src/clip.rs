@@ -99,13 +99,34 @@ pub fn set_image(w: u32, h: u32, bgra: &[u8]) -> bool {
             }
             let bi = BITMAPINFOHEADER { biSize: head as u32, biWidth: w as i32, biHeight: h as i32, biPlanes: 1, biBitCount: 32, ..Default::default() };
             std::ptr::copy_nonoverlapping(&bi as *const _ as *const u8, p, head);
-            // (bottom row first, as such pictures are kept)
+            // (bottom row first, as such pictures are kept; and every dot solid)
             for y in 0..h as usize {
                 let src = &bgra[(h as usize - 1 - y) * row..][..row];
-                std::ptr::copy_nonoverlapping(src.as_ptr(), p.add(head + y * row), row);
+                let dst = std::slice::from_raw_parts_mut(p.add(head + y * row), row);
+                dst.copy_from_slice(src);
+                dst.chunks_exact_mut(4).for_each(|d| d[3] = 255);
             }
             let _ = GlobalUnlock(mem);
             SetClipboardData(CF_DIB, Some(HANDLE(mem.0))).ok()?;
+            // the same picture as a PNG, which is what browsers look for first
+            let rgba: Vec<u8> = bgra.chunks_exact(4).flat_map(|d| [d[2], d[1], d[0], 255]).collect();
+            if let Some(img) = image::RgbaImage::from_raw(w, h, rgba) {
+                let mut png = std::io::Cursor::new(Vec::new());
+                if image::DynamicImage::ImageRgba8(img).write_to(&mut png, image::ImageFormat::Png).is_ok() {
+                    let png = png.into_inner();
+                    let fmt = RegisterClipboardFormatW(&HSTRING::from("PNG"));
+                    if fmt != 0 {
+                        if let Ok(m2) = GlobalAlloc(GMEM_MOVEABLE, png.len()) {
+                            let q = GlobalLock(m2) as *mut u8;
+                            if !q.is_null() {
+                                std::ptr::copy_nonoverlapping(png.as_ptr(), q, png.len());
+                                let _ = GlobalUnlock(m2);
+                                let _ = SetClipboardData(fmt, Some(HANDLE(m2.0)));
+                            }
+                        }
+                    }
+                }
+            }
             Some(())
         })()
         .is_some();

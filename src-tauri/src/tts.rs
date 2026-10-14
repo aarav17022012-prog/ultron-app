@@ -1,7 +1,7 @@
-//! ULTRON's voice: Piper (a neural text-to-speech engine) with the "Ryan" voice,
-//! running on this PC. The page shapes it into ULTRON's sound (a touch deeper,
-//! smoother, with a faint synthetic sheen). Kept loaded between sentences so a
-//! reply starts speaking quickly; unloaded after a while unused.
+//! ULTRON's voice: Piper (a neural text-to-speech engine), running on this PC, with one of two voices:
+//! "Lessac", a woman's voice (the one it starts with), or "Ryan", a man's. The page can shape either into
+//! ULTRON's own sound (deeper, with a faint synthetic sheen) or leave it natural. Kept loaded between
+//! sentences so a reply starts speaking quickly; unloaded after a while unused.
 
 use std::io::{BufRead, BufReader, Write};
 use std::os::windows::process::CommandExt;
@@ -14,7 +14,18 @@ use std::time::{Duration, Instant};
 use base64::Engine;
 use tauri::{AppHandle, Manager};
 
-const VOICE: &str = "en_US-ryan-high.onnx";
+/// The voices there are: name, file, and how it's spoken (speed, variation, rhythm, the pause after a sentence).
+const VOICES: [(&str, &str, [&str; 4]); 2] = [
+    ("lessac", "en_US-lessac-high.onnx", ["1.0", "0.667", "0.8", "0.22"]),
+    ("ryan", "en_US-ryan-high.onnx", ["0.93", "0.62", "0.82", "0.18"]),
+];
+/// Which one is speaking (Settings, Voice).
+static VOICE: Mutex<&'static str> = Mutex::new("lessac");
+
+fn chosen() -> &'static (&'static str, &'static str, [&'static str; 4]) {
+    let v = *VOICE.lock().unwrap();
+    VOICES.iter().find(|x| x.0 == v).unwrap_or(&VOICES[0])
+}
 const NO_WINDOW: u32 = 0x0800_0000;
 const BELOW_NORMAL: u32 = 0x0000_4000;
 const IDLE_UNLOAD: Duration = Duration::from_secs(15 * 60);
@@ -44,17 +55,33 @@ fn find(app: &AppHandle, rel: &[&str]) -> Option<PathBuf> {
 }
 
 pub fn available(app: &AppHandle) -> bool {
-    find(app, &["piper", "piper.exe"]).is_some() && find(app, &["voices", VOICE]).is_some()
+    find(app, &["piper", "piper.exe"]).is_some() && find(app, &["voices", chosen().1]).is_some()
+}
+
+/// Change the voice: the one that's loaded is let go, and the next sentence loads the new one.
+pub fn set_voice(app: &AppHandle, name: &str) {
+    let Some(v) = VOICES.iter().find(|x| x.0 == name) else { return };
+    let mut cur = VOICE.lock().unwrap();
+    if *cur == v.0 {
+        return;
+    }
+    *cur = v.0;
+    drop(cur);
+    if let Some(mut p) = app.state::<Tts>().proc.lock().unwrap().take() {
+        let _ = p.child.kill();
+    }
 }
 
 fn start(app: &AppHandle) -> Option<Proc> {
     let exe = find(app, &["piper", "piper.exe"])?;
-    let model = find(app, &["voices", VOICE])?;
+    let (_, file, how) = chosen();
+    // (if the chosen voice isn't on this PC, the other one speaks)
+    let model = find(app, &["voices", file]).or_else(|| VOICES.iter().find_map(|v| find(app, &["voices", v.1])))?;
     let mut child = Command::new(&exe)
         .current_dir(exe.parent()?)
         .args(["--model"])
         .arg(&model)
-        .args(["--json-input", "--length_scale", "0.93", "--noise_scale", "0.62", "--noise_w", "0.82", "--sentence_silence", "0.18"])
+        .args(["--json-input", "--length_scale", how[0], "--noise_scale", how[1], "--noise_w", how[2], "--sentence_silence", how[3]])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())

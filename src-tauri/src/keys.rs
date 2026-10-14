@@ -161,8 +161,8 @@ pub fn set(app: &AppHandle, on: bool) {
             // Windows' own Start can't have heard the key. All the same, if it is up in the next half second it
             // is sent away again (Escape, to it) and the keyboard is taken back, and a line is written, since that
             // would mean something here has stopped working.
-            for _ in 0..4 {
-                std::thread::sleep(std::time::Duration::from_millis(120));
+            for _ in 0..30 {
+                std::thread::sleep(std::time::Duration::from_millis(30));
                 if start_is_up() {
                     send(VK_ESCAPE.0, false);
                     send(VK_ESCAPE.0, true);
