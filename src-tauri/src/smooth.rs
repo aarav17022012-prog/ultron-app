@@ -112,6 +112,80 @@ fn boost_renderers() {
     }
 }
 
+/* ---------------- idle memory ----------------
+   Measured: with nothing open, ULTRON's processes hold about 1.3 GB, but in the 15 seconds after their working sets
+   are trimmed they touch only about 130 MB again. The rest (the brain's buffers, the page's caches, a model nobody
+   is talking to) just sits there. So once nothing has been open for a while, the page asks WebView2 for its low
+   memory level (its own caches and spare memory go back) and ULTRON's processes are trimmed, again every few
+   minutes while nothing opens. Whatever is needed comes back as it's used; the moment something opens, the page
+   goes back to its normal level. */
+
+static IDLE_GEN: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// ULTRON itself and every process it started (the page's, the brains'), not the taskbar guard.
+fn ours() -> Vec<u32> {
+    let me = unsafe { GetCurrentProcessId() };
+    let list = processes();
+    let parent: HashMap<u32, u32> = list.iter().map(|(p, pp, _)| (*p, *pp)).collect();
+    let mut out = vec![me];
+    for (pid, _, _) in &list {
+        let mut p = *pid;
+        for _ in 0..6 {
+            match parent.get(&p) {
+                Some(&pp) if pp == me => {
+                    out.push(*pid);
+                    break;
+                }
+                Some(&pp) if pp != 0 && pp != p => p = pp,
+                _ => break,
+            }
+        }
+    }
+    out
+}
+
+/// The page says whether anything is open (false) or it's been quiet a while (true).
+pub fn idle(app: &tauri::AppHandle, on: bool) {
+    let gen = IDLE_GEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    memory_level(app, on);
+    if !on {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(3));
+        let mut n = 0;
+        while IDLE_GEN.load(std::sync::atomic::Ordering::SeqCst) == gen {
+            for pid in ours() {
+                trim(pid);
+            }
+            if n == 0 {
+                crate::log_line("idle: memory handed back (nothing open)");
+            }
+            n += 1;
+            // (and again now and then: what the bar's clock and the character touch creeps back in)
+            for _ in 0..(4 * 60) {
+                if IDLE_GEN.load(std::sync::atomic::Ordering::SeqCst) != gen {
+                    return;
+                }
+                std::thread::sleep(Duration::from_secs(1));
+            }
+        }
+    });
+}
+
+/// WebView2's own memory level for the page: low while nothing is open, normal otherwise.
+fn memory_level(app: &tauri::AppHandle, low: bool) {
+    use tauri::Manager;
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL};
+    use wcore62::Interface;
+    let Some(w) = app.get_webview_window("main") else { return };
+    let _ = w.with_webview(move |pv| unsafe {
+        let Ok(core) = pv.controller().CoreWebView2() else { return };
+        let Ok(c19) = core.cast::<ICoreWebView2_19>() else { return };
+        let _ = c19.SetMemoryUsageTargetLevel(if low { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW } else { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL });
+    });
+}
+
 /// Keep ULTRON's drawing ahead (new page processes appear when windows open, so check now and then).
 pub fn start() {
     std::thread::spawn(|| {

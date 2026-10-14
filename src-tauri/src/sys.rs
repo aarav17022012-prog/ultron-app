@@ -411,3 +411,97 @@ fn rss(url: &str) -> Vec<NewsItem> {
         .take(12)
         .collect()
 }
+
+/* ---------------- holidays and festivals (the calendar) ---------------- */
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
+pub struct Holiday {
+    /// YYYY-MM-DD
+    pub date: String,
+    pub name: String,
+    /// a day off (true), or an observance / festival (false)
+    pub off: bool,
+}
+
+/// Google's public holiday calendar for each country the calendar offers (its holidays and its festivals).
+fn holiday_feed(country: &str) -> Option<&'static str> {
+    Some(match country {
+        "IN" => "en.indian",
+        "US" => "en.usa",
+        "GB" => "en.uk",
+        "CA" => "en.canadian",
+        "AU" => "en.australian",
+        "SG" => "en.singapore",
+        "AE" => "en.ae",
+        "PK" => "en.pk",
+        "ZA" => "en.sa",
+        "NG" => "en.ng",
+        "PH" => "en.philippines",
+        "DE" => "en.german",
+        "FR" => "en.french",
+        "JP" => "en.japanese",
+        "BR" => "en.brazilian",
+        "ES" => "en.spain",
+        "IT" => "en.italian",
+        "KR" => "en.south_korea",
+        _ => return None,
+    })
+}
+
+/// A country's holidays (about ten years of them), fetched once and kept for three weeks in ULTRON's folder.
+pub fn holidays(app: &tauri::AppHandle, country: &str) -> Vec<Holiday> {
+    use tauri::Manager;
+    let Some(feed) = holiday_feed(country) else { return Vec::new() };
+    let file = app.path().app_data_dir().ok().map(|d| d.join(format!("holidays-{country}.json")));
+    let cached: Option<Vec<Holiday>> = file.as_ref().and_then(|f| std::fs::read_to_string(f).ok()).and_then(|s| serde_json::from_str(&s).ok());
+    let fresh = file.as_ref().and_then(|f| std::fs::metadata(f).ok()).and_then(|m| m.modified().ok()).and_then(|t| t.elapsed().ok()).map(|age| age.as_secs() < 21 * 24 * 3600).unwrap_or(false);
+    if let (Some(c), true) = (&cached, fresh) {
+        return c.clone();
+    }
+    let id = format!("{feed}#holiday@group.v.calendar.google.com").replace('#', "%23").replace('@', "%40");
+    let got = ureq::get(&format!("https://calendar.google.com/calendar/ical/{id}/public/basic.ics")).timeout(std::time::Duration::from_secs(15)).call().ok().and_then(|r| r.into_string().ok());
+    let Some(text) = got else { return cached.unwrap_or_default() };
+    let list = parse_ics(&text);
+    if list.is_empty() {
+        return cached.unwrap_or_default();
+    }
+    if let Some(f) = file {
+        crate::keep(&f, serde_json::to_vec(&list).unwrap_or_default());
+    }
+    list
+}
+
+/// The all-day events of an iCalendar file: date, name, and whether it's a public holiday.
+fn parse_ics(text: &str) -> Vec<Holiday> {
+    // (long lines continue on the next line after a space)
+    let unfolded = text.replace("\r\n ", "").replace("\n ", "");
+    let mut out: Vec<Holiday> = Vec::new();
+    let mut cur: Option<Holiday> = None;
+    for line in unfolded.lines() {
+        let line = line.trim_end();
+        if line == "BEGIN:VEVENT" {
+            cur = Some(Holiday::default());
+        } else if line == "END:VEVENT" {
+            if let Some(h) = cur.take() {
+                if h.date.len() == 10 && !h.name.is_empty() {
+                    out.push(h);
+                }
+            }
+        } else if let Some(h) = cur.as_mut() {
+            if let Some(v) = line.strip_prefix("DTSTART;VALUE=DATE:").or_else(|| line.strip_prefix("DTSTART:")) {
+                let d: String = v.chars().take(8).collect();
+                if d.len() == 8 && d.chars().all(|c| c.is_ascii_digit()) {
+                    h.date = format!("{}-{}-{}", &d[..4], &d[4..6], &d[6..8]);
+                }
+            } else if let Some(v) = line.strip_prefix("SUMMARY:") {
+                h.name = v.replace("\\,", ",").replace("\\;", ";").trim().to_string();
+            } else if let Some(v) = line.strip_prefix("DESCRIPTION:") {
+                h.off = v.starts_with("Public holiday");
+            }
+        }
+    }
+    out.sort_by(|a, b| a.date.cmp(&b.date).then(b.off.cmp(&a.off)));
+    out.dedup_by(|a, b| a.date == b.date && a.name == b.name);
+    out
+}
+

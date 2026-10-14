@@ -120,35 +120,50 @@ pub fn ask(app: &AppHandle, x: i32, y: i32, w: i32, h: i32, question: &str) -> R
     crate::see::ask(app, &jpg, question).ok_or_else(|| "ULTRON couldn’t make it out this time.".into())
 }
 
-/// Look a piece up in Google Lens: the piece is sent to Google, and the address of its results comes
-/// back to be opened in your browser.
-pub fn lens(x: i32, y: i32, w: i32, h: i32) -> Result<String, String> {
-    let (pw, ph, px) = piece(x, y, w, h).ok_or("The picture has gone.")?;
-    let jpg = jpeg(&px, pw, ph, Some(1600), 90).ok_or("That part couldn’t be pictured.")?;
-    let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
-    let boundary = format!("----ultron{t}");
-    let mut body = Vec::with_capacity(jpg.len() + 512);
-    body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"encoded_image\"; filename=\"circled.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n").as_bytes());
-    body.extend_from_slice(&jpg);
-    body.extend_from_slice(format!("\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"processed_image_dimensions\"\r\n\r\n{pw},{ph}\r\n--{boundary}--\r\n").as_bytes());
-    let res = ureq::post(&format!("https://lens.google.com/v3/upload?hl=en&re=df&stcs={t}&ep=subb"))
-        .set("Content-Type", &format!("multipart/form-data; boundary={boundary}"))
-        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
-        .timeout(Duration::from_secs(25))
-        .send_bytes(&body)
-        .map_err(|e| format!("Google Lens didn’t answer ({e})"))?;
-    let at = res.get_url().to_string();
-    if at.contains("/search") && (at.contains("lens.google") || at.contains("google.com")) {
-        return Ok(at);
+/// Look the circled part up in Google Lens. Google keeps an uploaded picture with the connection that sent it:
+/// sent from here, your browser opened its results with an empty, broken picture (and Google refuses an upload
+/// posted from any page but its own). So it's done the way you would: the part is already on the clipboard
+/// (`copy`, before the search closes), Google's own "Search any image" box is opened in your browser, and once
+/// that page is up and in front, the picture is pasted into it. Google then uploads it in your own session.
+/// "pasted", or "opened" when the page didn't come up in time (then Ctrl V there does it), or "failed".
+pub fn lens_open() -> &'static str {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_V};
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW};
+    if !crate::apps::shell_open("https://www.google.com/?olud") {
+        return "failed";
     }
-    // (sometimes the way on is written into the page rather than given as a redirect)
-    let page = res.into_string().unwrap_or_default();
-    if let Some(i) = page.find("https://lens.google.com/search?") {
-        let rest = &page[i..];
-        let end = rest.find(|c: char| c == '"' || c == '\'' || c == '<' || c.is_whitespace()).unwrap_or(rest.len());
-        return Ok(rest[..end].replace("\\u0026", "&").replace("&amp;", "&"));
+    let title = || unsafe {
+        let fg = GetForegroundWindow();
+        let mut buf = [0u16; 300];
+        let n = GetWindowTextW(fg, &mut buf).max(0) as usize;
+        (fg, String::from_utf16_lossy(&buf[..n]))
+    };
+    // the page's own title is "Google"; browsers add their name after it ("Google - Google Chrome")
+    let is_page = |t: &str| {
+        let t = t.trim();
+        t == "Google" || ["Google - ", "Google – ", "Google — ", "Google and "].iter().any(|p| t.starts_with(p))
+    };
+    let t0 = std::time::Instant::now();
+    let mut since: Option<(windows::Win32::Foundation::HWND, std::time::Instant)> = None;
+    while t0.elapsed() < Duration::from_secs(12) {
+        std::thread::sleep(Duration::from_millis(120));
+        let (fg, t) = title();
+        if !is_page(&t) {
+            since = None;
+            continue;
+        }
+        match since {
+            Some((h, at)) if h == fg => {
+                // (a moment for the page to open its picture box, which takes a paste anywhere on it)
+                if at.elapsed() >= Duration::from_millis(1300) {
+                    crate::apps::send_keys(&[VK_CONTROL, VK_V]);
+                    return "pasted";
+                }
+            }
+            _ => since = Some((fg, std::time::Instant::now())),
+        }
     }
-    Err("Google Lens didn’t give an address back.".into())
+    "opened"
 }
 
 /// Put a piece on the clipboard as a picture.

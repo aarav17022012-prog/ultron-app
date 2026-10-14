@@ -26,6 +26,9 @@ native-tls = "0.2"
 mailparse = "0.15"
 
 windows-future = "0.2"
+# WebView2's own interfaces, for its memory level (the same versions Tauri uses)
+webview2-com = "0.39.1"
+wcore62 = { package = "windows-core", version = "0.62" }
 
 [dependencies.windows]
 version = "0.61"

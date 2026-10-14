@@ -300,16 +300,42 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
             return;
         }
     };
-    let Ok(mut state) = ctx.create_state() else {
+    let Ok(state) = ctx.create_state() else {
         set_status(&app, "error", "Voice engine failed to start", 0.0);
         return;
     };
+    drop(ctx); // (the state keeps the model; dropping the state lets it go)
     let threads = (std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4) / 2).clamp(2, 8) as i32;
     let voice = app.state::<Voice>();
     voice.ready.store(true, Ordering::SeqCst);
     set_status(&app, if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" }, "", 0.0);
 
-    for seg in rx {
+    // The speech model is about 350 MB once loaded, and in a quiet room it sits unused most of the day. After four
+    // minutes with nothing heard it's put away, and the next thing heard brings it back first (a fraction of a
+    // second: the file is still in Windows' cache). While something with words in it plays, it never goes quiet.
+    const QUIET: std::time::Duration = std::time::Duration::from_secs(240);
+    let mut held = Some(state);
+    let mut last = std::time::Instant::now();
+    loop {
+        let seg = match rx.recv_timeout(std::time::Duration::from_secs(20)) {
+            Ok(s) => s,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                if held.is_some() && last.elapsed() > QUIET {
+                    held = None;
+                    crate::smooth::trim(std::process::id());
+                    crate::log_line("voice: speech model put away (nothing heard for 4 minutes)");
+                }
+                continue;
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+        };
+        last = std::time::Instant::now();
+        if held.is_none() {
+            let t0 = std::time::Instant::now();
+            held = WhisperContext::new_with_params(path.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
+            crate::log_line(&format!("voice: speech model back in {} ms", t0.elapsed().as_millis()));
+        }
+        let Some(state) = held.as_mut() else { continue };
         let music =app.state::<crate::media::Media>().state.lock().unwrap().sessions.iter().any(|s| s.playing);
         // A song or a video with words in it is "speech" for as long as it plays, and each stretch was transcribed
         // carefully (a second or two on half the processor's cores) to find that it wasn't for ULTRON: over a core,
