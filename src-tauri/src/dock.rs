@@ -500,6 +500,7 @@ pub fn guard_if_asked() -> bool {
         }
     }
     give_back(args.get(i + 2).and_then(|s| s.parse::<isize>().ok()).unwrap_or(-1));
+    crate::notes::restore_left_over(); // (and the banners ULTRON's notifications had turned off)
     true
 }
 

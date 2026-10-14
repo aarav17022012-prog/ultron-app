@@ -16,7 +16,7 @@ use windows::Win32::Foundation::{HWND, LPARAM, RECT};
 use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
 use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetClassNameW, GetWindowRect, GetWindowThreadProcessId, IsWindowVisible};
 use windows::UI::Notifications::Management::{UserNotificationListener, UserNotificationListenerAccessStatus};
-use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds};
+use windows::UI::Notifications::{KnownNotificationBindings, NotificationKinds, UserNotification};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Call {
@@ -57,8 +57,7 @@ pub fn read(texts: &[String]) -> Option<(String, String)> {
 }
 
 /// The call that's ringing, if Windows has one in its notifications.
-fn ringing(listener: &UserNotificationListener) -> Option<Call> {
-    let list = listener.GetNotificationsAsync(NotificationKinds::Toast).ok()?.get().ok()?;
+fn ringing(list: &[UserNotification]) -> Option<Call> {
     let done = DONE.lock().unwrap().clone();
     let mut best: Option<(i64, Call)> = None;
     for n in list {
@@ -115,7 +114,10 @@ pub fn start(app: AppHandle) {
         }
         loop {
             std::thread::sleep(Duration::from_millis(900));
-            let now = ringing(&listener);
+            // (one look at Windows' list a turn, shared with ULTRON's own notifications when those are on)
+            let list: Vec<UserNotification> = listener.GetNotificationsAsync(NotificationKinds::Toast).ok().and_then(|a| a.get().ok()).map(|v| v.into_iter().collect()).unwrap_or_default();
+            crate::notes::poll(&app, &list);
+            let now = ringing(&list);
             let mut cur = CURRENT.lock().unwrap();
             if now != *cur {
                 match &now {

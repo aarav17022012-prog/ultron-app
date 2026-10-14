@@ -30,6 +30,7 @@ windows-future = "0.2"
 [dependencies.windows]
 version = "0.61"
 features = [
+  "Data_Xml_Dom",
   "Foundation",
   "Foundation_Collections",
   "Globalization",
@@ -66,6 +67,7 @@ features = [
   "Win32_System_Ole",
   "Win32_System_Com_StructuredStorage",
   "Win32_System_Power",
+  "Win32_System_Registry",
   "Win32_System_Shutdown",
   "Win32_System_SystemInformation",
   "Win32_System_Threading",
@@ -73,6 +75,7 @@ features = [
   "Win32_UI_Accessibility",
   "Win32_UI_HiDpi",
   "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Notifications",
   "Win32_UI_Shell",
   "Win32_UI_Shell_Common",
   "Win32_UI_Shell_PropertiesSystem",
