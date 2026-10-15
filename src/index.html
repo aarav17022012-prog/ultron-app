@@ -5,6 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ULTRON Notch</title>
 <script>
+/* ---------- what ULTRON keeps, kept twice ----------
+   Settings and everything else the page keeps (pins, the floating lyrics' place, notes, timers...) live in the web
+   engine's storage, which writes them out a little later; ended suddenly, ULTRON could lose its last changes and come
+   back with old ones. So every change is also written to a file of ULTRON's own (a moment later, all of it at once),
+   and at start, if that file is newer than what the engine has (or the engine lost it all), it's put back and the page
+   loaded once more. */
+(function keep(){
+  const T = window.__TAURI__; if (!T) return;
+  const ours = k => typeof k === 'string' && k.startsWith('ultron') && k !== 'ultron-saved-at';
+  const set0 = Storage.prototype.setItem, rem0 = Storage.prototype.removeItem;
+  const all = () => { const o = {}; for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (ours(k)) o[k] = localStorage.getItem(k); } return o; };
+  let t = 0, ready = false;
+  const write = () => { clearTimeout(t); t = setTimeout(() => { try { const o = all(); o['ultron-saved-at'] = localStorage.getItem('ultron-saved-at') || String(Date.now()); T.core.invoke('store_save', {data:JSON.stringify(o)}); } catch(_){} }, 350); };
+  Storage.prototype.setItem = function(k, v){ set0.call(this, k, v); if (this === localStorage && ours(k)){ set0.call(this, 'ultron-saved-at', String(Date.now())); if (ready) write(); } };
+  Storage.prototype.removeItem = function(k){ rem0.call(this, k); if (this === localStorage && ours(k)){ set0.call(this, 'ultron-saved-at', String(Date.now())); if (ready) write(); } };
+  T.core.invoke('store_load').then(txt => {
+    let f = null; try { f = txt ? JSON.parse(txt) : null; } catch(_){}
+    const mine = +(localStorage.getItem('ultron-saved-at') || 0), theirs = f ? +(f['ultron-saved-at'] || 0) : 0;
+    const lost = !localStorage.getItem('ultron-notch');
+    if (f && (theirs > mine || lost) && !sessionStorage.getItem('ultron-restored')){
+      for (const k of Object.keys(all())) if (!(k in f)) rem0.call(localStorage, k);
+      for (const [k, v] of Object.entries(f)) set0.call(localStorage, k, v);
+      sessionStorage.setItem('ultron-restored', '1');
+      T.core.invoke('page_log', {msg:'kept settings put back from the file (' + Object.keys(f).length + ' things)'});
+      location.reload(); return;
+    }
+    ready = true; write();
+  }).catch(() => { ready = true; });
+})();
 // surface page errors in the app's console (debug builds)
 addEventListener('error', e => window.__TAURI__?.core.invoke('page_log', {msg: `${e.message} @ ${e.filename}:${e.lineno}`}));
 addEventListener('unhandledrejection', e => window.__TAURI__?.core.invoke('page_log', {msg: 'unhandled: ' + e.reason}));
@@ -1435,7 +1464,7 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
 
 /* ---------- the lock screen's passcode: each step slides in, the dots seal into a lock when it's saved ---------- */
 .lk-pass .sw-l{min-width:0}
-#lkSay{display:block} #lkSay.swap{animation:slIn .4s var(--glide)}
+#lkSetSay{display:block} #lkSetSay.swap{animation:slIn .4s var(--glide)}
 .lk-box{position:relative; display:flex; align-items:center; justify-content:flex-end; flex:none; min-height:32px}
 .lk-st{display:flex; align-items:center; gap:8px; white-space:nowrap}
 .lk-st.in{animation:lkIn .45s var(--glide) backwards}
@@ -1824,7 +1853,7 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 
 /* ---------- closing: the curved corners at the bar go back up with the sheet, shrinking as its foot rises, instead of
    staying to the end and going at once ---------- */
-.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); transition:transform .42s cubic-bezier(.55,0,.2,1), --bt .9s ease, --bt2 .9s ease}
+.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); opacity:0; transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .22s ease .1s, --bt .9s ease, --bt2 .9s ease}   /* (gone a little before the sheet is: never the last thing left) */
 /* ---------- no shadow round the sheet: it's the bar's own glass, edged like the bar. (Its shadow fell on the bar beside
    it as a dark edge while it opened, then vanished at once: the "separate outline".) ---------- */
 .notch.glass.open, .notch.glass.call:not(.open){box-shadow:none}
@@ -1918,6 +1947,51 @@ body.fullscreen .barfil, body.barhid .barfil{opacity:0; transform:scaleY(0)}
 /* switching to or from it: the window melts over in a moment */
 .setw.reskin{animation:macSkin .45s cubic-bezier(.22,1,.36,1)}
 @keyframes macSkin{from{filter:blur(6px); opacity:.55}}
+
+/* ---------- Settings, Look & feel, Passcode: its row grows to fit (it's one of the rows that fold away, which were
+   kept to 130 px tall, and its long note beside the buttons made it taller: Change and Remove were cut off); when
+   there's no room beside the note, its buttons go under it, to the right ---------- */
+.sw-row.lk-pass{max-height:320px; flex-wrap:wrap; row-gap:10px}
+.lk-pass .sw-l{flex:1 1 250px}
+.lk-pass .lk-box{margin-left:auto}
+
+/* ---------- the curves, animated: a curve's radius itself grows and shrinks (a registered length, so the engine
+   eases it), so a corner opens out of a sharp one and closes back into one, rather than being squashed or faded.
+   The sheet's two corners at the bar: they open as it pours down, and close back as it rises, in step with it.
+   A maximised window's top corners (Rounded windows): they open when such a window comes to the front, and close
+   when it goes. ---------- */
+@property --er{syntax:'<length>'; inherits:false; initial-value:0px}
+@property --fr{syntax:'<length>'; inherits:false; initial-value:0px}
+.ears.glass{transform:translateX(-50%); --er:0px;
+  -webkit-mask:radial-gradient(circle at 0 100%, transparent calc(var(--er) - .4px), #000 calc(var(--er) + .4px)) left calc(12px - var(--er)) top 0 / calc(var(--er) + 1px) calc(var(--er) + 1px) no-repeat,
+    radial-gradient(circle at 100% 100%, transparent calc(var(--er) - .4px), #000 calc(var(--er) + .4px)) right calc(12px - var(--er)) top 0 / calc(var(--er) + 1px) calc(var(--er) + 1px) no-repeat;
+  transition:width .3s cubic-bezier(.3,.25,.2,1) .05s, margin-left .3s cubic-bezier(.3,.25,.2,1) .05s, --er .2s ease, opacity .1s ease .16s, visibility 0s .26s}
+.notch.glass.open + .ears.glass, .notch.glass.call + .ears.glass{transform:translateX(-50%); --er:12px; opacity:1;
+  transition:width .44s cubic-bezier(.22,1,.36,1), margin-left .44s cubic-bezier(.22,1,.36,1), --er .45s cubic-bezier(.22,1,.36,1) .04s, opacity .06s, visibility 0s}
+.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%); --er:0px; opacity:1; transition:--er .42s cubic-bezier(.55,0,.2,1), --bt .9s ease, --bt2 .9s ease}
+.barfil{transform:none; opacity:1; visibility:hidden; --fr:0px;
+  -webkit-mask:radial-gradient(circle at 100% 100%, transparent calc(var(--fr) - .4px), #000 calc(var(--fr) + .4px)) 0 0 / calc(var(--fr) + 1px) calc(var(--fr) + 1px) no-repeat,
+    radial-gradient(circle at 0 100%, transparent calc(var(--fr) - .4px), #000 calc(var(--fr) + .4px)) 100% 0 / calc(var(--fr) + 1px) calc(var(--fr) + 1px) no-repeat;
+  transition:--fr .32s cubic-bezier(.55,0,.75,.2), visibility 0s .32s}
+body.dynmax .barfil{transform:none; opacity:1; visibility:visible; --fr:12px; transition:--fr .5s cubic-bezier(.22,1,.36,1), visibility 0s}
+body.fullscreen .barfil, body.barhid .barfil{--fr:0px; visibility:hidden}
+/* Settings, Look & feel, Rounded windows: a little window beside the switch, whose corners round when it's on */
+.dw-demo{padding:0; margin-right:14px; background:none; box-shadow:none}
+.dw-demo i, .sw-row:has(.tg[data-set="dynWin"][aria-checked="true"]) .dw-demo i{width:30px; height:21px; border-radius:1.5px; background:rgba(255,255,255,.07) !important; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4) !important; animation:none !important;
+  transition:border-radius .55s cubic-bezier(.3,1.5,.5,1), box-shadow .3s}
+.sw-row:has(.tg[data-set="dynWin"][aria-checked="true"]) .dw-demo i{border-radius:8px; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.85) !important}
+
+
+/* ---------- the sheet's colour follows the window in front, like the bar's: its top is the bar's tint, and it deepens
+   into a fuller shade of the same colour (not grey), fading over from one window's to the next with the bar ---------- */
+.notch.glass.open::before, .notch.glass.call::before{
+  background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) calc(var(--bar) * .42), rgba(0,0,0,.1) var(--bar)),
+    linear-gradient(180deg, var(--bt) var(--bar), color-mix(in srgb, var(--bt2) 80%, var(--bt)) calc(var(--bar) + 60px), var(--bt2) calc(var(--bar) + 160px))}
+.notch.glass::before{transition:opacity .1s linear .3s, --bt .9s ease, --bt2 .9s ease}
+
+/* ---------- full screen (a video, a game): the notch stays away entirely, like the bar; it can't be opened there,
+   and its place can't be clicked ---------- */
+body.fullscreen .notch:not(.call), body.fullscreen .ears, body.fullscreen .barfil{opacity:0 !important; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility 0s .2s}
 
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
@@ -2672,7 +2746,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Dynamic windows<small>The window you’re in gets macOS’s red, yellow and green buttons in place of Windows’ own (close, minimise, maximise), and rounded corners</small></span><span class="dw-demo" aria-hidden="true"><i></i><i></i><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>ULTRON’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or ULTRON closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="nfQuiet"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="nfSound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
@@ -5724,6 +5798,7 @@ if (TAURI){
 /* ---------- open / close ---------- */
 let openedAt = 0;
 function setOpen(open, byVoice){
+  if (open && fullscreen && !notch.classList.contains('call')) return;   // (nothing comes over a full-screen app)
   // (opened again while it was being drawn shut: it opens back out from where it had got to)
   if (open && notch._shutT){ clearTimeout(notch._shutT); notch._shutT = 0; notch.classList.remove('shut1'); setTimeout(() => { if (!notch._shutT) notch.classList.remove('shut0'); }, 460); return; }
   if (open === notch.classList.contains('open')) return;
@@ -7302,7 +7377,7 @@ function syncHit(){
   syncWinHeight();
   const r = notchRect;
   const pad = notch.classList.contains('open') ? 0 : 6;
-  const rects = [{x:Math.floor(r.left - pad - 10), y:0, w:Math.ceil(r.width + pad * 2 + 20), h:Math.ceil(r.bottom + pad)}];
+  const rects = fullscreen && !notch.classList.contains('call') ? [] : [{x:Math.floor(r.left - pad - 10), y:0, w:Math.ceil(r.width + pad * 2 + 20), h:Math.ceil(r.bottom + pad)}];
   if (!fullscreen && !barHid) rects.push({x:0, y:0, w:innerWidth, h:32});
   if (tourOn || (window.LK && LK.on) || (window.CTS && CTS.on)) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
   if (bwWide.classList.contains('on')){ const w = bwWide.getBoundingClientRect(); rects.push({x:Math.floor(w.left - 4), y:Math.floor(w.top - 14), w:Math.ceil(w.width + 8), h:Math.ceil(w.height + 18)}); }
@@ -7403,7 +7478,7 @@ if (TAURI){
   listen('front-app', setAppName);
   listen('front-colour', barTint);
   listen('dyn-max', m => document.body.classList.toggle('dynmax', !!m && !!S.dynWin));
-  listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); syncHit(); });
+  listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); if (on && notch.classList.contains('open')){ openedAt = 0; setOpen(false); } syncHit(); });
   invoke('voice_status').then(st => { if (st){ lastVoice = st; setVoice(st); } });
   invoke('media_state').then(m => m && applyMedia(m));
   pushPrompt(); setInterval(pushPrompt, 60000);
@@ -8359,11 +8434,11 @@ hkPaint();
 /* ---------- the lock screen's passcode (Settings, Look & feel) ----------
    Set one; change it or remove it only after the current one is typed. Each step slides in where the last was,
    the dots pop in as you type, and saving seals them into a lock. */
-const LK_SAY = $('lkSay') ? $('lkSay').textContent : '';
+const LK_SAY = $('lkSetSay') ? $('lkSetSay').textContent : '';
 var LKS = {st:"", next:""};                      // (var: Settings paints before this line has run)
-function lkSay(t){ const s = $('lkSay'); if (!s || s.textContent === t) return; s.textContent = t; s.classList.remove('swap'); void s.offsetWidth; s.classList.add('swap'); }
+function lkSay(t){ const s = $('lkSetSay'); if (!s || s.textContent === t) return; s.textContent = t; s.classList.remove('swap'); void s.offsetWidth; s.classList.add('swap'); }
 function lkStep(st){
-  const box = $('lkBox'); if (!box) return;
+  const box = $('lkSetBox'); if (!box) return;
   LKS.st = st;
   const w0 = box.offsetWidth, old = box.querySelector('.lk-st:not(.out)');
   const field = ph => `<label class="lk-field"><input id="lkIn" type="password" maxlength="32" placeholder="${ph}" autocomplete="new-password" spellcheck="false" aria-label="${ph}"><span class="lk-dots"></span></label>`;
@@ -8385,16 +8460,16 @@ function lkPaint(){
   if (['old', 'new', 'saved', 'removed'].includes(LKS.st)) return;   // (in the middle of something: left as it is)
   const want = lkCode() ? 'has' : 'none'; if (LKS.st !== want) lkStep(want);
 }
-function lkBad(t){ const f = $('lkBox').querySelector('.lk-field'); if (f){ f.classList.remove('bad'); void f.offsetWidth; f.classList.add('bad'); } lkSay(t); $('lkIn')?.select(); }
-$('lkBox').addEventListener('input', e => {
+function lkBad(t){ const f = $('lkSetBox').querySelector('.lk-field'); if (f){ f.classList.remove('bad'); void f.offsetWidth; f.classList.add('bad'); } lkSay(t); $('lkIn')?.select(); }
+$('lkSetBox').addEventListener('input', e => {
   const inp = e.target.closest('#lkIn'); if (!inp) return;
   const f = inp.closest('.lk-field'), dots = f.querySelector('.lk-dots'), n = Math.min(12, [...inp.value].length), live = [...dots.querySelectorAll('i:not(.go)')];
   f.classList.remove('bad');
   for (let k = live.length; k < n; k++) dots.insertAdjacentHTML('beforeend', '<i></i>');
   for (let k = live.length; k > n; k--){ const d = live[k - 1]; d.classList.add('go'); setTimeout(() => d.remove(), 200); }
 });
-$('lkBox').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('lkBox').querySelector('.lk-st:not(.out) .chipb.pri')?.click(); if (e.key === 'Escape') $('lkBox').querySelector('[data-lk="cancel"]')?.click(); });
-$('lkBox').addEventListener('click', async e => {
+$('lkSetBox').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('lkSetBox').querySelector('.lk-st:not(.out) .chipb.pri')?.click(); if (e.key === 'Escape') $('lkSetBox').querySelector('[data-lk="cancel"]')?.click(); });
+$('lkSetBox').addEventListener('click', async e => {
   e.stopPropagation();
   const b = e.target.closest('[data-lk]'); if (!b) return;
   const k = b.dataset.lk, inp = $('lkIn'), v = inp ? inp.value : '';
