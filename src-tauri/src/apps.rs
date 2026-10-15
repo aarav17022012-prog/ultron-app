@@ -382,6 +382,59 @@ pub fn build_index() -> Vec<AppEntry> {
 
 /* ---------------- front app (for the menu bar) ---------------- */
 
+/// The colours of a window, for the menu bar's tint: the whole window (below the bar) shrunk to 32 x 20 by Windows,
+/// its average, and its main real colour (pixels weighted by how colourful they are, the very dark and very light
+/// left out) with how much of the window is in colour. None when it's minimised or too small to say.
+fn window_colour(h: HWND) -> Option<serde_json::Value> {
+    use windows::Win32::Foundation::RECT;
+    use windows::Win32::Graphics::Dwm::DWMWA_EXTENDED_FRAME_BOUNDS;
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, GetWindowRect, IsIconic, SM_CXSCREEN, SM_CYSCREEN};
+    unsafe {
+        if IsIconic(h).as_bool() {
+            return None;
+        }
+        let mut r = RECT::default();
+        if DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, &mut r as *mut RECT as *mut _, std::mem::size_of::<RECT>() as u32).is_err() {
+            GetWindowRect(h, &mut r).ok()?;
+        }
+        let (sw, sh) = (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
+        // (below the bar: 48 px covers it up to 150% scaling)
+        let r = RECT { left: r.left.max(0), top: r.top.max(48), right: r.right.min(sw), bottom: r.bottom.min(sh) };
+        if r.right - r.left < 60 || r.bottom - r.top < 60 {
+            return None;
+        }
+        let px = crate::backdrop::grab_small(r, 32, 20)?;
+        let (mut sum, mut acc, mut wsum) = ([0f64; 3], [0f64; 3], 0f64);
+        let n = (px.len() / 4) as f64;
+        for p in px.chunks_exact(4) {
+            let (b, g, r) = (p[0] as f64, p[1] as f64, p[2] as f64);
+            sum[0] += r;
+            sum[1] += g;
+            sum[2] += b;
+            let (mx, mn) = (r.max(g).max(b), r.min(g).min(b));
+            let v = mx / 255.0;
+            let s = if mx > 0.0 { (mx - mn) / mx } else { 0.0 };
+            if v > 0.16 && v < 0.97 && s > 0.3 {
+                let w = s * s;
+                acc[0] += r * w;
+                acc[1] += g * w;
+                acc[2] += b * w;
+                wsum += w;
+            }
+        }
+        let avg: Vec<u8> = sum.iter().map(|v| (v / n).round() as u8).collect();
+        let main: Vec<u8> = if wsum > 0.0 { acc.iter().map(|v| (v / wsum).round() as u8).collect() } else { avg.clone() };
+        Some(serde_json::json!({ "avg": avg, "acc": main, "cover": wsum / n }))
+    }
+}
+
+fn window_title(h: HWND) -> String {
+    use windows::Win32::UI::WindowsAndMessaging::GetWindowTextW;
+    let mut buf = [0u16; 256];
+    let n = unsafe { GetWindowTextW(h, &mut buf) };
+    String::from_utf16_lossy(&buf[..n.max(0) as usize])
+}
+
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
         unsafe {
@@ -393,10 +446,32 @@ pub fn start(app: AppHandle) {
         let mut cache: HashMap<isize, String> = HashMap::new();
         let mut last_name = String::new();
         let mut ticks = 0u32;
+        // the window in front (and its title: a browser's changes with the tab), and the looks at its colours still due
+        let (mut col_win, mut col_title, mut col_due): (isize, String, Vec<std::time::Instant>) = (0, String::new(), Vec::new());
         loop {
             let fg = unsafe { GetAncestor(GetForegroundWindow(), GA_ROOTOWNER) };
             if !fg.is_invalid() && window_pid(fg) != own {
                 apps.last_external_fg.store(fg.0 as isize, Ordering::SeqCst);
+                // Its colours for the bar: looked at a moment after it comes to the front (once it's drawn) and again a
+                // little later (once it has loaded); the desktop gives the bar its own tint back.
+                let desk = matches!(class_name(fg).as_str(), "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd");
+                let title = window_title(fg);
+                if fg.0 as isize != col_win || title != col_title {
+                    let fresh = fg.0 as isize != col_win;
+                    col_win = fg.0 as isize;
+                    col_title = title;
+                    let now = std::time::Instant::now();
+                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(300), now + Duration::from_millis(1700)] } else { vec![now + Duration::from_millis(700)] };
+                    if desk {
+                        let _ = app.emit_to("main", "front-colour", serde_json::Value::Null);
+                    }
+                }
+                if col_due.first().is_some_and(|t| std::time::Instant::now() >= *t) {
+                    col_due.remove(0);
+                    if let Some(c) = window_colour(fg) {
+                        let _ = app.emit_to("main", "front-colour", c);
+                    }
+                }
                 let name = match class_name(fg).as_str() {
                     "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" => "Ultron".to_string(),
                     _ => cache
@@ -411,6 +486,9 @@ pub fn start(app: AppHandle) {
                 }
             }
             ticks += 1;
+            if ticks == 15 && col_due.is_empty() && col_win != 0 {
+                col_title.clear();
+            }
             if ticks % 1200 == 0 {
                 *apps.index.write().unwrap() = build_index();
             }

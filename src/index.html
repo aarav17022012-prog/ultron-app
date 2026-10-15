@@ -1741,8 +1741,58 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
    above it, the same as the sheet's top, so it still reads as one piece). Its glass is never drawn over the bar's
    row; once open, nothing of it is there to be clicked either (so "Settings" and the rest work through it). ---------- */
 .notch.glass > .gw, .notch.glass::before{clip-path:inset(var(--bar) 0 0 0)}
-.notch.glass.open{clip-path:inset(var(--bar) -80px -80px -80px)}
 .notch.glass.call:not(.open) > .gw, .notch.glass.call:not(.open)::before{clip-path:none}
+
+/* ---------- the bar pours down into the sheet. The sheet is the bar's glass, shown only below the bar's foot, so it's
+   simply drawn full from the first frame and the growing edge shows it: no fading in, no sideways phase first. The
+   curved corners grow down with it. Closing, it draws back up into the bar and the glass goes once it's in. ---------- */
+.notch.glass.open > .gw, html.live .notch.glass.open > .gw, .notch.glass.call > .gw, html.live .notch.glass.call > .gw{opacity:1; transition:none}
+.notch.glass.open::before, .notch.glass.call::before{opacity:1; transition:--bt .9s ease, --bt2 .9s ease}
+.notch.glass:not(.open):not(.call) > .gw, html.live .notch.glass:not(.open):not(.call) > .gw{opacity:0; transition:opacity .08s linear .3s}
+.notch.glass:not(.open):not(.call)::before{opacity:0; transition:opacity .1s linear .3s, --bt .9s ease, --bt2 .9s ease}
+.notch.glass.open{transition:width .44s cubic-bezier(.22,1,.36,1), height .52s cubic-bezier(.22,1,.36,1), border-radius .5s var(--glide), box-shadow .5s var(--glide), margin-left .44s cubic-bezier(.22,1,.36,1)}
+.notch.glass.open.flow{transition:width .44s cubic-bezier(.22,1,.36,1), border-radius .5s var(--glide), box-shadow .5s var(--glide), margin-left .44s cubic-bezier(.22,1,.36,1)}
+.notch.glass:not(.open){transition:height .32s cubic-bezier(.3,.25,.2,1), width .3s cubic-bezier(.3,.25,.2,1) .05s, border-radius .4s var(--glide), box-shadow .3s ease, margin-left .3s cubic-bezier(.3,.25,.2,1) .05s, translate .5s var(--glide), opacity .3s}
+.ears.glass{transform:translateX(-50%) scaleY(0); transform-origin:50% 0;
+  transition:width .3s cubic-bezier(.3,.25,.2,1) .05s, margin-left .3s cubic-bezier(.3,.25,.2,1) .05s, transform .18s cubic-bezier(.3,.25,.2,1), opacity .1s ease .12s, visibility 0s .24s}
+.notch.glass.open + .ears.glass, .notch.glass.call + .ears.glass{transform:translateX(-50%) scaleY(1); opacity:1;
+  transition:width .44s cubic-bezier(.22,1,.36,1), margin-left .44s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1) .03s, opacity .08s, visibility 0s}
+.ears.glass::before{transition:--bt .9s ease, --bt2 .9s ease}
+/* (the sheet's box only stops covering the bar's row once the character has dropped out of the bar into it: cut
+   straight away, the character was sliced at the bar's line on its way down) */
+.notch.glass.open.hung{clip-path:inset(var(--bar) -80px -80px -80px)}
+/* the soft shine under the pointer on ULTRON's name: when the sheet opens it stretches down with it and fades,
+   rather than staying behind on the bar */
+.notch.glass.hover:not(.open):not(.call){background:transparent}
+.notch.glass::after, .notch.glass.open::after, .notch.glass.call::after{display:block; content:""; position:absolute; inset:0; z-index:-1; padding:0; -webkit-mask:none; mask:none; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(70% 120% at 50% 0%, rgba(255,255,255,.1), transparent 70%); opacity:0; transition:opacity .3s ease}
+.notch.glass.hover:not(.open):not(.call)::after{opacity:1}
+.notch.glass.open::after{opacity:0; transition:opacity .55s ease}
+
+/* ---------- the menu bar takes on the colour of the window in front (a deep, see-through shade of it: its main colour
+   if it has a clear one, else how light or dark it is), and fades from one window's to the next. The sheet's top and
+   its curved corners follow, so they still read as the bar's own glass. Only the glass's pseudo-elements carry the
+   fade (one small element each), so nothing else is restyled while it runs. ---------- */
+@property --bt{syntax:'<color>'; inherits:true; initial-value:rgba(16,16,20,.34)}
+@property --bt2{syntax:'<color>'; inherits:true; initial-value:rgba(14,14,20,.58)}
+.mbar.glass::before{--tint:var(--bt); transition:--bt .9s ease}
+.notch.glass.open::before, .notch.glass.call::before{
+  background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) calc(var(--bar) * .42), rgba(0,0,0,.1) var(--bar)),
+    linear-gradient(180deg, var(--bt) var(--bar), var(--bt2) calc(var(--bar) + 80px))}
+.ears.glass::before{background:linear-gradient(180deg, rgba(0,0,0,.095), rgba(0,0,0,.1) 1px), linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px)}
+
+/* ---------- the music tab's album glow sits on a dark base of its own: on bare glass its colours mixed with the
+   wallpaper's behind and came out muddy ---------- */
+#lyricsPane::before{content:""; position:absolute; left:-20px; top:-14px; width:calc(100% + 40px); height:190px; z-index:0; pointer-events:none; background:rgba(8,8,12,.55); opacity:0; transition:opacity .9s;
+  -webkit-mask-image:radial-gradient(ellipse 62% 58% at 24% 34%, #000 18%, rgba(0,0,0,.45) 52%, transparent 100%); mask-image:radial-gradient(ellipse 62% 58% at 24% 34%, #000 18%, rgba(0,0,0,.45) 52%, transparent 100%)}
+#lyricsPane.has-amb::before{opacity:1}
+#lyricsPane.swapping::before{opacity:.5}
+.amb{filter:blur(34px) saturate(1.25)}
+#lyricsPane.has-amb .amb{opacity:.62}
+
+/* ---------- (speed, nothing to see) tabs that aren't showing aren't laid out: while the sheet grows or shrinks, every
+   hidden tab was being laid out again on every frame ---------- */
+.pane:not(.active):not(.exit){content-visibility:hidden}
 
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
@@ -2741,7 +2791,7 @@ function aim(x, y){
   const ny = Math.max(-.5, Math.min(.5, (y - (petRect.top + petRect.height / 2)) / H * 1.4));
   if (nx !== mx || ny !== my) lastMove = performance.now() / 1000;
   mx = nx; my = ny;
-  if (y < 44){ shine.tx = x; shine.ts = 1; } else shine.ts = 0;
+  if (y < 44 && !notch.classList.contains('open')){ shine.tx = x; shine.ts = 1; } else shine.ts = 0;
   setHover();
 }
 addEventListener('pointermove', e => aim(e.clientX, e.clientY));
@@ -3034,13 +3084,13 @@ function wake(){ if (loopT){ clearTimeout(loopT); loopT = 0; requestAnimationFra
 requestAnimationFrame(pump);
 function frame(now){
   const open_ = notch.classList.contains('open'), whUp = !!(window.WH && WH.open);   // (the wheel is down: the character is drawn at its hub too)
+  const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
+  if (performance.now() < liveUntil) { measure(); syncHit(); }
+  flowStep(dt);
   if (Math.abs(shine.tx - shine.x) > .5 || Math.abs(shine.ts - shine.s) > .004){
     shine.x += (shine.tx - shine.x) * .16; shine.s += (shine.ts - shine.s) * .14;
     mbar.style.setProperty('--hx', shine.x.toFixed(1) + 'px'); mbar.style.setProperty('--hs', shine.s.toFixed(3));
   }
-  const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
-  flowStep(dt);
-  if (performance.now() < liveUntil) { measure(); syncHit(); }
   const w = canvas.clientWidth, h = canvas.clientHeight;
   let resized = false;
   // The drawing buffer isn't re-made on every frame while the character's box animates (that stalled the
@@ -5553,6 +5603,8 @@ function setOpen(open, byVoice){
   else if (performance.now() - openedAt < 450) return;
   if (!byVoice) openedByVoice = false;
   notch.classList.toggle('open', open); notch.setAttribute('aria-expanded', open);
+  clearTimeout(notch._hung); notch.classList.remove('hung');
+  if (open){ shine.ts = 0; notch._hung = setTimeout(() => { if (notch.classList.contains('open')) notch.classList.add('hung'); }, 560); }
   keepMeasuring(1100);
   if (open){ requestAnimationFrame(() => { trackPill(); fit(); }); hop = .6; setTimeout(warmAI, 650); }   // the brain wakes once the opening animation is done, not during it
   else { closeMenu(); syncBrowser(); fit(); clearTimeout(autoClose); }
@@ -6978,6 +7030,23 @@ mbar.querySelectorAll('.st').forEach(b => b.addEventListener('pointerdown', () =
 // the front app's name in the bar: one swap at a time; switch apps quickly and it simply goes
 // straight to the latest one when the current swap finishes (nothing overlaps or gets stuck)
 let nameShown = appName, nameBusy = false;
+// The bar's tint from the window in front: its main colour when it has a clear one (enough of the window in a real
+// colour), otherwise how light or dark it is; always a deep, see-through shade, so the bar's white text stays clear.
+// Nothing (the desktop) gives the bar's own tint back.
+function barTint(c){
+  let a = 'rgba(16,16,20,.34)', b = 'rgba(14,14,20,.58)';
+  if (c && c.avg){
+    const vivid = c.cover > .07, [r, g, bl] = (vivid ? c.acc : c.avg).map(v => v / 255);
+    const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+    if (d) h = mx === r ? 60 * (((g - bl) / d) % 6) : mx === g ? 60 * ((bl - r) / d + 2) : 60 * ((r - g) / d + 4);
+    s = Math.min(s, vivid ? .62 : .16);
+    const L = Math.max(.07, Math.min(.24, l * (vivid ? .45 : .38)));
+    a = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(L * 100)}% / .5)`;
+    b = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 90)}% ${Math.round(L * 72)}% / .66)`;
+  }
+  for (const el of [mbar, notch, earsEl]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
+}
 function setAppName(n){
   if (!n) return;
   appName = n;
@@ -7139,6 +7208,7 @@ if (TAURI){
   invoke('ai_status').then(st => { if (st){ aiStat = st; setVoice(lastVoice); } });
   pushAI(); document.body.classList.toggle('calm', !!S.reduceMotion); tickTimers();
   listen('front-app', setAppName);
+  listen('front-colour', barTint);
   listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); syncHit(); });
   invoke('voice_status').then(st => { if (st){ lastVoice = st; setVoice(st); } });
   invoke('media_state').then(m => m && applyMedia(m));

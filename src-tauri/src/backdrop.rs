@@ -54,7 +54,7 @@ fn blur(px: &mut [f32], w: usize, h: usize, r: usize) {
 }
 
 /// Copy a part of the screen straight into a small bitmap (Windows averages the pixels as it shrinks).
-fn grab_small(r: RECT, w: i32, h: i32) -> Option<Vec<u8>> {
+pub(crate) fn grab_small(r: RECT, w: i32, h: i32) -> Option<Vec<u8>> {
     use windows::Win32::Graphics::Gdi::*;
     unsafe {
         let sdc = GetDC(None);
