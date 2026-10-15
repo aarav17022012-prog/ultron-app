@@ -1822,6 +1822,103 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 .sw-row:has(.tg[data-set="dynWin"][aria-checked="true"]) .dw-demo i:nth-child(3){background:#28c840; box-shadow:inset 0 0 0 .5px #1aab29; animation-delay:.14s}
 @keyframes dwPop{from{transform:scale(.3)}}
 
+/* ---------- closing: the curved corners at the bar go back up with the sheet, shrinking as its foot rises, instead of
+   staying to the end and going at once ---------- */
+.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); transition:transform .42s cubic-bezier(.55,0,.2,1), --bt .9s ease, --bt2 .9s ease}
+/* ---------- no shadow round the sheet: it's the bar's own glass, edged like the bar. (Its shadow fell on the bar beside
+   it as a dark edge while it opened, then vanished at once: the "separate outline".) ---------- */
+.notch.glass.open, .notch.glass.call:not(.open){box-shadow:none}
+
+/* ---------- Dynamic windows: a maximised window's top corners curve into the bar (Windows never rounds a maximised
+   window): two small fillets of the bar's own glass under its ends, grown down when such a window comes to the
+   front and drawn back up when it goes. (Its bottom corners are rounded off by ULTRON's window helper.) ---------- */
+.barfil{position:fixed; z-index:6; left:0; top:calc(var(--bar) - 1px); width:100vw; height:13px; pointer-events:none; overflow:hidden;
+  -webkit-mask:radial-gradient(circle at 100% 100%, transparent 11.6px, #000 12.4px) 0 0 / 13px 13px no-repeat, radial-gradient(circle at 0 100%, transparent 11.6px, #000 12.4px) 100% 0 / 13px 13px no-repeat;
+  transform:scaleY(0); transform-origin:50% 0; opacity:0; transition:transform .3s cubic-bezier(.5,0,.75,0), opacity .2s ease .1s}
+.barfil::before{background:linear-gradient(180deg, rgba(0,0,0,.095), rgba(0,0,0,.1) 1px), linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .9s ease, --bt2 .9s ease}
+.barfil::after{display:none}
+body.dynmax .barfil{transform:none; opacity:1; transition:transform .45s cubic-bezier(.22,1,.36,1), opacity .12s}
+body.fullscreen .barfil, body.barhid .barfil{opacity:0; transform:scaleY(0)}
+
+/* ---------- Settings, the macOS skin (Look & feel, Settings style): System Settings as it is on a Mac, in dark mode.
+   The window's own red, yellow and green buttons at its top-left; a search field; an account card for ULTRON; the
+   sidebar's items each with a coloured square icon; the selected one picked out in grey (macOS's Graphite accent);
+   a toolbar with back and forward and the page's name; each page opening with its icon, big; settings in rounded
+   inset groups with thin dividers; switches, segments and buttons as macOS draws them. ---------- */
+.mac-tl, .mac-search, .mac-acct, .mac-tb, .mh-ic{display:none}
+.setw.mac{border-radius:14px; grid-template-columns:236px 1fr; --tint:rgba(30,30,33,.6); transition:opacity .25s, transform .62s cubic-bezier(.16,1.1,.3,1), filter .4s, visibility 0s, width .5s cubic-bezier(.22,1,.36,1), height .5s cubic-bezier(.22,1,.36,1)}
+.setw.mac.zoom{width:min(1020px, 96vw); height:min(700px, calc(100vh - 64px))}
+.setw.mac.glass.panel-glass::after{background:linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.07))}
+.setw.mac .sw-x{display:none}
+.setw.mac .sw-nav{padding:14px 10px; gap:1px; background:rgba(255,255,255,.035); box-shadow:inset -.5px 0 0 rgba(0,0,0,.5), inset -1.5px 0 0 rgba(255,255,255,.05); overflow-y:auto; scrollbar-width:none}
+.setw.mac .mac-tl{display:flex; gap:8px; padding:2px 8px 14px}
+.mac-tl button, .setw.mac .sw-nav .mac-tl button{position:relative; width:12px; height:12px; flex:none; padding:0; border:0; border-radius:50%; cursor:default; box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.mac-tl button:nth-child(1){background:#ff5f57} .mac-tl button:nth-child(2){background:#febc2e} .mac-tl button:nth-child(3){background:#28c840}
+.mac-tl button::before{position:absolute; inset:0; display:grid; place-items:center; font-size:10px; font-weight:800; line-height:12px; text-shadow:none; opacity:0; transition:opacity .12s}
+.mac-tl button:nth-child(1)::before{content:"×"; color:#4d0000} .mac-tl button:nth-child(2)::before{content:"−"; color:#985712} .mac-tl button:nth-child(3)::before{content:"+"; color:#0b650d}
+.mac-tl:hover button::before{opacity:1}
+.mac-tl button:active{filter:brightness(.82)}
+.setw.mac .mac-search{display:flex; align-items:center; gap:6px; height:28px; margin:0 4px 12px; padding:0 9px; border-radius:7px; background:rgba(255,255,255,.075); box-shadow:inset 0 0 0 .5px rgba(255,255,255,.1); transition:box-shadow .2s, background .2s}
+.setw.mac .mac-search:focus-within{background:rgba(255,255,255,.1); box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2), 0 0 0 3px rgba(255,255,255,.12)}
+.mac-search svg{width:13px; height:13px; flex:none; fill:none; stroke:rgba(255,255,255,.5); stroke-width:2.2; stroke-linecap:round}
+.mac-search input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:13px; user-select:text; -webkit-user-select:text}
+.mac-search input::placeholder{color:rgba(255,255,255,.42)}
+.setw.mac .sw-brand{display:flex; align-items:center; gap:10px; padding:4px 8px 12px; margin:0 0 6px; box-shadow:0 .5px 0 rgba(255,255,255,.08); border-radius:0}
+.setw.mac .sw-brand svg{width:38px; height:38px; padding:8px; border-radius:50%; background:linear-gradient(160deg, #5c5c63, #2b2b30); box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2), 0 1px 3px rgba(0,0,0,.35)}
+.setw.mac .sb-n{display:none}
+.setw.mac .mac-acct{display:flex; flex-direction:column; min-width:0}
+.mac-acct b{font-size:13px; font-weight:600; letter-spacing:0} .mac-acct small{font-size:11px; font-weight:450; color:rgba(255,255,255,.52)}
+.setw.mac .sw-nav button{height:28px; padding:0 8px; gap:9px; font-size:13px; font-weight:450; color:rgba(255,255,255,.9); border-radius:6px}
+.setw.mac .sw-nav button.dim{opacity:.32}
+.setw.mac .sw-nav button svg, .setw.mac .mh-ic svg{border-radius:5px; stroke:#fff; stroke-width:2; box-shadow:inset 0 0 0 .5px rgba(255,255,255,.18), 0 1px 1.5px rgba(0,0,0,.28); transform:none !important}
+.setw.mac .sw-nav button svg{width:20px; height:20px; padding:3px}
+.setw.mac [data-sec="voice"] > svg, .setw.mac .mh-ic[data-sec="voice"] svg{background:linear-gradient(#ff6d8a, #ff375f)}
+.setw.mac [data-sec="listen"] > svg, .setw.mac .mh-ic[data-sec="listen"] svg{background:linear-gradient(#ffb547, #ff9500)}
+.setw.mac [data-sec="brain"] > svg, .setw.mac .mh-ic[data-sec="brain"] svg{background:linear-gradient(#bd84ff, #8f46ec)}
+.setw.mac [data-sec="tasks"] > svg, .setw.mac .mh-ic[data-sec="tasks"] svg{background:linear-gradient(#4fd1d9, #22a3b5)}
+.setw.mac [data-sec="look"] > svg, .setw.mac .mh-ic[data-sec="look"] svg{background:linear-gradient(#55555b, #2c2c30)}
+.setw.mac [data-sec="taskbar"] > svg, .setw.mac .mh-ic[data-sec="taskbar"] svg{background:linear-gradient(#3e3e44, #1c1c1f)}
+.setw.mac [data-sec="notes"] > svg, .setw.mac .mh-ic[data-sec="notes"] svg{background:linear-gradient(#ff6a60, #ff3b30)}
+.setw.mac [data-sec="system"] > svg, .setw.mac .mh-ic[data-sec="system"] svg{background:linear-gradient(#a5a5aa, #7a7a7f)}
+.setw.mac [data-sec="cleaner"] > svg, .setw.mac .mh-ic[data-sec="cleaner"] svg{background:linear-gradient(#45d36b, #28a745)}
+.setw.mac [data-sec="privacy"] > svg, .setw.mac .mh-ic[data-sec="privacy"] svg{background:linear-gradient(#7d7aff, #5856d6)}
+.setw.mac [data-sec="about"] > svg, .setw.mac .mh-ic[data-sec="about"] svg{background:linear-gradient(#a5a5aa, #7a7a7f)}
+.setw.mac .sw-hl{left:10px; right:10px; height:28px; border-radius:6px; background:rgba(255,255,255,.12); box-shadow:none; transition:transform .38s cubic-bezier(.22,1,.36,1)}
+.setw.mac .sw-main{background:rgba(20,20,22,.38)}
+.setw.mac .mac-tb{position:absolute; z-index:4; top:0; left:0; right:0; height:52px; display:flex; align-items:center; gap:2px; padding:0 16px;
+  background:linear-gradient(rgba(30,30,33,.7), rgba(30,30,33,.45)); box-shadow:0 .5px 0 rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.04)}
+.mac-nav{width:28px; height:28px; padding:0; border:0; border-radius:6px; background:none; color:rgba(255,255,255,.85); display:grid; place-items:center; cursor:default; transition:background .15s, opacity .2s}
+.mac-nav:hover:not(:disabled){background:rgba(255,255,255,.08)} .mac-nav:disabled{opacity:.28}
+.mac-nav svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+#macTitle{margin-left:8px; font-size:14px; font-weight:650; letter-spacing:-.005em}
+#macTitle.swap{animation:slIn .32s var(--glide)}
+.setw.mac .sw-sec{top:52px; padding:22px 26px 26px}
+.setw.mac .sw-sec h2{display:flex; flex-direction:column; align-items:center; gap:10px; margin:2px 0 0; font-size:21px; font-weight:650; letter-spacing:-.01em; text-align:center}
+.setw.mac .mh-ic{display:grid; place-items:center}
+.setw.mac .mh-ic svg{width:52px; height:52px; padding:11px; border-radius:12px; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2), 0 4px 12px rgba(0,0,0,.35)}
+.setw.mac .sw-sec.on .mh-ic svg{animation:macIc .55s cubic-bezier(.3,1.4,.5,1) .05s backwards}
+@keyframes macIc{from{transform:scale(.6); opacity:0}}
+.setw.mac .sw-sub{margin:6px auto 20px; max-width:440px; font-size:12px; text-align:center; color:rgba(255,255,255,.55)}
+.setw.mac .sw-rows{border-radius:10px; background:rgba(255,255,255,.045); box-shadow:inset 0 0 0 .5px rgba(255,255,255,.09); overflow:hidden; margin-bottom:18px}
+.setw.mac .sw-row{position:relative; margin:0; border-radius:0; background:none; box-shadow:none; min-height:42px; padding:9px 14px}
+.setw.mac .sw-row:hover{background:rgba(255,255,255,.025)}
+.setw.mac .sw-row + .sw-row::before{content:""; position:absolute; left:14px; right:0; top:0; height:.5px; background:rgba(255,255,255,.1); pointer-events:none}
+.setw.mac .sw-l{font-size:13px; font-weight:450} .setw.mac .sw-l small{font-size:11px; color:rgba(255,255,255,.5)}
+.setw.mac .tg{width:38px; height:22px; background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12)}
+.setw.mac .tg::after{top:2px; left:2px; width:18px; height:18px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.1)}
+.setw.mac .tg[aria-checked="true"]{background:#98989d}
+.setw.mac .tg[aria-checked="true"]::after{transform:translateX(16px); background:#fff}
+.setw.mac .seg{padding:2px; border-radius:7px; background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 .5px rgba(255,255,255,.1)}
+.setw.mac .seg button{font-size:12px; font-weight:500; padding:3px 12px; border-radius:5px; color:rgba(255,255,255,.85)}
+.setw.mac .seg button[aria-checked="true"]{background:rgba(255,255,255,.24); color:#fff; text-shadow:none; box-shadow:0 1px 2px rgba(0,0,0,.35), inset 0 .5px 0 rgba(255,255,255,.15)}
+.setw.mac .chipb{border-radius:6px; padding:4px 12px; font-weight:500; background:rgba(255,255,255,.12); box-shadow:inset 0 .5px 0 rgba(255,255,255,.15), 0 .5px 1.5px rgba(0,0,0,.35)}
+.setw.mac .sw-key, .setw.mac .sw-mem > div{border-radius:10px}
+.setw.mac .chipb{white-space:nowrap; flex:none}
+.setw.mac .sw-mem{padding:4px 14px 8px}
+/* switching to or from it: the window melts over in a moment */
+.setw.reskin{animation:macSkin .45s cubic-bezier(.22,1,.36,1)}
+@keyframes macSkin{from{filter:blur(6px); opacity:.55}}
+
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
 .sl-swap{position:relative}
@@ -2554,7 +2651,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 <div class="setw glass panel-glass" id="setw" role="dialog" aria-label="ULTRON Settings">
   <i class="gw"></i>
   <nav class="sw-nav">
-    <div class="sw-brand"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg>Settings</div>
+    <div class="mac-tl"><button data-tl="close" aria-label="Close settings"></button><button data-tl="min" aria-label="Close settings"></button><button data-tl="zoom" aria-label="Make the window bigger"></button></div><label class="mac-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="macQ" placeholder="Search" spellcheck="false" autocomplete="off" aria-label="Search settings"></label><div class="sw-brand"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><span class="sb-n">Settings</span><span class="mac-acct"><b>ULTRON</b><small>Runs on this PC</small></span></div>
     <i class="sw-hl" id="swHl"></i>
     <button data-sec="voice"><svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg><span>Voice</span></button>
     <button data-sec="listen" class="on"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Listening</span></button>
@@ -2569,12 +2666,13 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button data-sec="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>About</span></button>
   </nav>
   <div class="sw-main">
+    <div class="mac-tb"><button class="mac-nav" data-mn="back" aria-label="Back" disabled><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button class="mac-nav" data-mn="fwd" aria-label="Forward" disabled><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="macTitle"></b></div>
     <button class="sw-x" id="swClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
     <section class="sw-sec" data-sec="voice"><h2>Voice</h2><p class="sw-sub">How ULTRON sounds when it talks back.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Speak replies<small>Answers out loud as the words appear</small></span><button class="tg" role="switch" data-set="speak" aria-label="speak"></button></div><div class="sw-row"><span class="sw-l">Voice<small>Both run on this PC</small></span><span class="seg" data-set="voiceName" role="radiogroup"><button data-v="lessac" role="radio">Woman</button><button data-v="ryan" role="radio">Man</button></span></div><div class="sw-row"><span class="sw-l">Sound<small>As the voice is, or ULTRON’s own: deeper, with a soft synthetic sheen</small></span><span class="seg" data-set="voiceStyle" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="ultron" role="radio">ULTRON</button><button data-v="windows" role="radio">Windows</button></span></div><div class="sw-row"><span class="sw-l">Speaking speed</span><input class="rng" type="range" min="0.85" max="1.2" step="0.01" data-set="voiceRate" aria-label="voiceRate"></div><div class="sw-row"><span class="sw-l">Volume</span><input class="rng" type="range" min="0.2" max="1" step="0.01" data-set="voiceVol" aria-label="voiceVol"></div><div class="sw-row"><span class="sw-l">Hear it<small>A short sample with these settings</small></span><button class="chipb" data-sx="testvoice">Play sample</button></div></div></section>
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Dynamic windows<small>The window you’re in gets macOS’s red, yellow and green buttons in place of Windows’ own (close, minimise, maximise), and rounded corners</small></span><span class="dw-demo" aria-hidden="true"><i></i><i></i><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#f6eee4" style="background:#f6eee4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#e9eef6" style="background:#e9eef6" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f7e6ea" style="background:#f7e6ea" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Dynamic windows<small>The window you’re in gets macOS’s red, yellow and green buttons in place of Windows’ own (close, minimise, maximise), and rounded corners</small></span><span class="dw-demo" aria-hidden="true"><i></i><i></i><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>ULTRON’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or ULTRON closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="nfQuiet"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="nfSound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
@@ -2753,7 +2851,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button class="ic" id="close" aria-label="Collapse"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 </div>
-<div class="ears glass" aria-hidden="true"><i class="gw"></i></div>
+<div class="ears glass" aria-hidden="true"><i class="gw"></i></div><div class="barfil glass" id="barFil" aria-hidden="true"><i class="gw"></i></div>
 
 <script src="three.min.js"></script>
 <script>
@@ -2766,7 +2864,7 @@ addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, [
 const $ = id => document.getElementById(id);
 
 /* ---------- settings (persisted per viewer) ---------- */
-const DEFAULTS = {follow:true, blink:true, eye:1, speed:1, sens:1, label:true, tint:'#ffffff', liveGlass:true, wake:true, speak:true, muted:false,
+const DEFAULTS = {setSkin:'ultron', follow:true, blink:true, eye:1, speed:1, sens:1, label:true, tint:'#ffffff', liveGlass:true, wake:true, speak:true, muted:false,
   hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false};
 let S = {...DEFAULTS};
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
@@ -3074,7 +3172,7 @@ function drawWave(cv, t, bars, gap, amp){
 /* ---------- loop ---------- */
 const clock = new THREE.Clock(), miniCv = $('mini'), waveCv = $('wave');
 let lastW = 0, lastH = 0, bufW = 0, bufH = 0, sizeAt = 0, activeTab = 'assistant', lastRender = 0, miniStill = false;
-let lastFrame = 0, lastAim = 0, lastPose = '', lastBig = '';
+let lastFrame = 0, lastAim = 0, lastPose = '', lastBig = '', measAt = 0;
 // how the character stands, to a fraction of a pixel (for "would drawing it again look any different?")
 const poseKey = c => {
   const q = (v, k) => Math.round(v * k / c), o = [];
@@ -3113,7 +3211,7 @@ requestAnimationFrame(pump);
 function frame(now){
   const open_ = notch.classList.contains('open'), whUp = !!(window.WH && WH.open);   // (the wheel is down: the character is drawn at its hub too)
   const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
-  if (performance.now() < liveUntil) { measure(); syncHit(); }
+  { const n = performance.now(); if (n < liveUntil && (n - measAt > 28 || liveUntil - n < 34)) { measAt = n; measure(); syncHit(); } }
   flowStep(dt);
   if (Math.abs(shine.tx - shine.x) > .5 || Math.abs(shine.ts - shine.s) > .004){
     shine.x += (shine.tx - shine.x) * .16; shine.s += (shine.ts - shine.s) * .14;
@@ -3340,7 +3438,8 @@ function applySetting(k){
   if (k.startsWith('dk')) whStyle();
   if (k === 'dkStart') startKey();
   if (k === 'spotKey') invoke('spot_key', {on:!!S.spotKey});
-  if (k === 'dynWin') invoke('dyn_windows', {on:!!S.dynWin});
+  if (k === 'dynWin'){ invoke('dyn_windows', {on:!!S.dynWin}); if (!S.dynWin) document.body.classList.remove('dynmax'); }
+  if (k === 'setSkin') applySkin(true);
   if (k === 'notes') nfMode();
   if (k === 'nfQuiet'){ nfBadge(); if (nfw.classList.contains('open')) nfQuietSet(); }
   if (k === 'hearSongs') songReq();
@@ -6819,11 +6918,64 @@ function showSec(k){
   if (cur){ cur.style.setProperty('--d', dir); cur.classList.remove('on'); cur.classList.add('off'); clearTimeout(cur._t); cur._t = setTimeout(() => cur.classList.remove('off'), 260); }
   nu.classList.remove('off'); nu.style.setProperty('--d', dir); void nu.offsetWidth; nu.classList.add('on'); nu.scrollTop = 0;
   setEl.querySelectorAll('.sw-nav button').forEach(b => b.classList.toggle('on', b.dataset.sec === k));
-  moveHl(); paintBrainInfo();
+  moveHl(); paintBrainInfo(); macPage(k);
   if (k === 'notes') nfAppsLoad();
   if (k === 'cleaner' && !CL.busy && (!CL.at || Date.now() - CL.at > 60000)) clScan();
   if (k === 'taskbar') hkPaint();
 }
+/* Settings' macOS skin: the page's name in the toolbar (it rolls over), back and forward through the pages seen, each
+   page's icon at its head (the sidebar's, big), the sidebar's search (pages without the words fade back; Enter goes to
+   the first that has them), and the window's own red, yellow and green buttons. */
+var MAC = {back:[], fwd:[], cur:'', moving:false};
+function macPage(k){
+  if (!window.MAC) return;                                  // (a page shown while the page is still loading)
+  const t = $('macTitle'), name = setEl.querySelector(`.sw-nav button[data-sec="${k}"] span`)?.textContent || '';
+  if (t && t.textContent !== name){ t.textContent = name; t.classList.remove('swap'); void t.offsetWidth; t.classList.add('swap'); }
+  if (!MAC.moving && MAC.cur && MAC.cur !== k){ MAC.back.push(MAC.cur); MAC.fwd = []; }
+  MAC.cur = k;
+  setEl.querySelector('[data-mn="back"]').disabled = !MAC.back.length;
+  setEl.querySelector('[data-mn="fwd"]').disabled = !MAC.fwd.length;
+}
+function applySkin(anim){
+  const on = S.setSkin === 'mac';
+  if (on && !setEl._macIcons){
+    setEl._macIcons = true;
+    setEl.querySelectorAll('.sw-sec').forEach(sec => {
+      const svg = setEl.querySelector(`.sw-nav button[data-sec="${sec.dataset.sec}"] svg`), h = sec.querySelector('h2');
+      if (svg && h) h.insertAdjacentHTML('afterbegin', `<span class="mh-ic" data-sec="${sec.dataset.sec}">${svg.outerHTML}</span>`);
+    });
+  }
+  if (setEl.classList.contains('mac') === on) return;
+  setEl.classList.toggle('mac', on); setEl.classList.remove('zoom');
+  if (anim && setEl.classList.contains('open')){ setEl.classList.remove('reskin'); void setEl.offsetWidth; setEl.classList.add('reskin'); }
+  requestAnimationFrame(() => { moveHl(); placeGlass(setEl); syncHit(); });
+}
+setEl.addEventListener('animationend', e => { if (e.animationName === 'macSkin') setEl.classList.remove('reskin'); });
+setEl.querySelector('.mac-tb').addEventListener('click', e => {
+  const b = e.target.closest('[data-mn]'); if (!b || b.disabled) return;
+  const from = b.dataset.mn === 'back' ? MAC.back : MAC.fwd, to = b.dataset.mn === 'back' ? MAC.fwd : MAC.back;
+  const k = from.pop(); if (!k) return;
+  to.push(MAC.cur); MAC.moving = true; showSec(k); MAC.moving = false; macPage(k);
+});
+setEl.querySelector('.mac-tl').addEventListener('click', e => {
+  const b = e.target.closest('[data-tl]'); if (!b) return;
+  if (b.dataset.tl === 'zoom'){ setEl.classList.toggle('zoom'); setTimeout(() => { placeGlass(setEl); syncHit(); }, 520); }
+  else closeSettings();
+});
+$('macQ').addEventListener('input', () => {
+  const q = $('macQ').value.trim().toLowerCase();
+  setEl.querySelectorAll('.sw-nav button').forEach(b => {
+    const sec = setEl.querySelector(`.sw-sec[data-sec="${b.dataset.sec}"]`);
+    b.classList.toggle('dim', !!q && !(b.textContent + ' ' + (sec ? sec.textContent : '')).toLowerCase().includes(q));
+  });
+});
+$('macQ').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter'){ const b = setEl.querySelector('.sw-nav button:not(.dim)'); if (b) showSec(b.dataset.sec); }
+  if (e.key === 'Escape'){ $('macQ').value = ''; $('macQ').dispatchEvent(new Event('input')); }
+});
+applySkin(false);
+macPage(setEl.querySelector('.sw-nav button.on')?.dataset.sec || 'listen');
 /* routines: what ULTRON does by itself, and when */
 async function paintRoutines(){
   const box = $('swRt'); if (!box) return;
@@ -7086,7 +7238,7 @@ function barTint(c){
     a = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(L * 100)}% / .5)`;
     b = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 90)}% ${Math.round(L * 72)}% / .66)`;
   }
-  for (const el of [mbar, notch, earsEl]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
+  for (const el of [mbar, notch, earsEl, $('barFil')]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
 }
 function setAppName(n){
   if (!n) return;
@@ -7250,6 +7402,7 @@ if (TAURI){
   pushAI(); document.body.classList.toggle('calm', !!S.reduceMotion); tickTimers();
   listen('front-app', setAppName);
   listen('front-colour', barTint);
+  listen('dyn-max', m => document.body.classList.toggle('dynmax', !!m && !!S.dynWin));
   listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); syncHit(); });
   invoke('voice_status').then(st => { if (st){ lastVoice = st; setVoice(st); } });
   invoke('media_state').then(m => m && applyMedia(m));
@@ -7966,6 +8119,8 @@ listen('spot-key-state', ok => { $('spkTaken').hidden = !!ok; });
 (() => { const g = notch.querySelector(':scope > .gw'), sw = screen.width || innerWidth, sh = screen.height || innerHeight;
   g.style.width = sw + 'px'; g.style.height = sh + 'px'; g.style.left = `calc(50% - ${sw / 2}px)`; g.style.top = '0px';
   // (the curved corners' glass too: they start a pixel above the bar's foot)
+  const bf = document.querySelector('#barFil > .gw');
+  if (bf){ bf.style.width = sw + 'px'; bf.style.height = sh + 'px'; bf.style.left = '0px'; bf.style.top = '-31px'; }
   const e = document.querySelector('.ears > .gw');
   if (e){ e.style.width = sw + 'px'; e.style.height = sh + 'px'; e.style.left = `calc(50% - ${sw / 2}px)`; e.style.top = '-31px'; } })();
 

@@ -851,7 +851,7 @@ fn start_key(app: AppHandle, on: bool) {
 #[tauri::command]
 fn dyn_windows(app: AppHandle, on: bool) {
     let main = app.get_webview_window("main").and_then(|w| hit::hwnd_of(&w)).map(|h| h.0 as isize).unwrap_or(0);
-    lights::set(on, main);
+    lights::set(&app, on, main);
 }
 
 /// Ctrl+Space opens ULTRON's Start from anywhere (Settings, Taskbar).

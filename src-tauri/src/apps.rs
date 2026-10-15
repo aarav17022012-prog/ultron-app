@@ -461,7 +461,7 @@ pub fn start(app: AppHandle) {
                     col_win = fg.0 as isize;
                     col_title = title;
                     let now = std::time::Instant::now();
-                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(300), now + Duration::from_millis(1700)] } else { vec![now + Duration::from_millis(700)] };
+                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(60), now + Duration::from_millis(450), now + Duration::from_millis(1500)] } else { vec![now + Duration::from_millis(400)] };
                     if desk {
                         let _ = app.emit_to("main", "front-colour", serde_json::Value::Null);
                     }
@@ -486,13 +486,13 @@ pub fn start(app: AppHandle) {
                 }
             }
             ticks += 1;
-            if ticks == 15 && col_due.is_empty() && col_win != 0 {
+            if ticks == 40 && col_due.is_empty() && col_win != 0 {
                 col_title.clear();
             }
-            if ticks % 1200 == 0 {
+            if ticks % 4000 == 0 {
                 *apps.index.write().unwrap() = build_index();
             }
-            std::thread::sleep(Duration::from_millis(400));
+            std::thread::sleep(Duration::from_millis(if col_due.is_empty() { 120 } else { 40 }));
         }
     });
 }
