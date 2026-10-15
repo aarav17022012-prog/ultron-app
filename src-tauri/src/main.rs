@@ -81,6 +81,20 @@ fn set_hit_rects(window: WebviewWindow, hits: State<Hits>, rects: Vec<Rect>) {
     hits.0.lock().unwrap().insert(window.label().to_string(), rects);
 }
 
+/// The log (ultron.log in the temp folder) is moved to ultron.old.log at start once it has grown past 2 MB,
+/// replacing the one before, so it never grows without end. A panic anywhere is written to it too.
+fn start_log() {
+    let log = std::env::temp_dir().join("ultron.log");
+    if std::fs::metadata(&log).map(|m| m.len() > 2_000_000).unwrap_or(false) {
+        let _ = std::fs::rename(&log, std::env::temp_dir().join("ultron.old.log"));
+    }
+    let before = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        log_line(&format!("panic: {info}"));
+        before(info);
+    }));
+}
+
 pub fn log_line(msg: &str) {
     use std::io::Write;
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("ultron.log")) {
@@ -1171,6 +1185,7 @@ fn main() {
     // running are stopped now, and the ones this ULTRON starts go when it goes
     kids::sweep();
     kids::watch();
+    start_log();
 
     tauri::Builder::default()
         .manage(Hits::default())

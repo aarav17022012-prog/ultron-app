@@ -54,10 +54,6 @@ fn find(app: &AppHandle, rel: &[&str]) -> Option<PathBuf> {
     bases.into_iter().map(|b| rel.iter().fold(b, |p, s| p.join(s))).find(|p| p.exists())
 }
 
-pub fn available(app: &AppHandle) -> bool {
-    find(app, &["piper", "piper.exe"]).is_some() && find(app, &["voices", chosen().1]).is_some()
-}
-
 /// Change the voice: the one that's loaded is let go, and the next sentence loads the new one.
 pub fn set_voice(app: &AppHandle, name: &str) {
     let Some(v) = VOICES.iter().find(|x| x.0 == name) else { return };
@@ -141,19 +137,6 @@ pub fn speak(app: &AppHandle, text: &str) -> Option<String> {
     let bytes = std::fs::read(&out).ok()?;
     let _ = std::fs::remove_file(&out);
     Some(base64::engine::general_purpose::STANDARD.encode(bytes))
-}
-
-/// Load the voice ahead of time (when you open ULTRON or start talking).
-pub fn warm(app: &AppHandle) {
-    let app = app.clone();
-    std::thread::spawn(move || {
-        let tts = app.state::<Tts>();
-        let mut g = tts.proc.lock().unwrap();
-        if g.is_none() && available(&app) {
-            *g = start(&app);
-            *tts.last_used.lock().unwrap() = Some(Instant::now());
-        }
-    });
 }
 
 /// Free the memory when ULTRON hasn't spoken for a while.

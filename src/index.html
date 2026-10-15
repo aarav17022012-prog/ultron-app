@@ -296,21 +296,21 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 .mu-ctl .pp{width:44px; height:44px; background:#fff; color:#000} .mu-ctl .pp:hover{background:#fff}
 .mu-ctl svg{width:16px; height:16px; fill:currentColor}
 .cl-list{display:flex; flex-direction:column; gap:4px; max-height:300px; overflow:auto; scrollbar-width:none}
-.cl-row{position:relative; flex:none; font-size:12.5px; line-height:1.38; max-height:calc(2.76em + 16px); padding:8px 30px 8px 10px; border-radius:10px; background:rgba(255,255,255,.07); cursor:default;
+.rp-clip .cl-row{position:relative; flex:none; font-size:12.5px; line-height:1.38; max-height:calc(2.76em + 16px); padding:8px 30px 8px 10px; border-radius:10px; background:rgba(255,255,255,.07); cursor:default;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; white-space:pre-wrap;
   animation:rowIn .35s var(--glide) backwards; transition:background .2s}
-.cl-row:hover{background:rgba(255,255,255,.14)}
+.rp-clip .cl-row:hover{background:rgba(255,255,255,.14)}
 .cl-x{display:block; padding:0}
-.cl-row.copied{background:rgba(255,255,255,.24)}
-.cl-row.sweep{animation:clSweep .3s cubic-bezier(.4,0,.6,1) forwards !important; pointer-events:none}
+.rp-clip .cl-row.copied{background:rgba(255,255,255,.24)}
+.rp-clip .cl-row.sweep{animation:clSweep .3s cubic-bezier(.4,0,.6,1) forwards !important; pointer-events:none}
 @keyframes clSweep{to{opacity:0; transform:translateX(30px) scale(.97); filter:blur(2px)}}
 .fadeaway{opacity:0 !important; transition:opacity .2s}
 .rp-clip.settle .empty-s{animation:ddRise .45s var(--glide) backwards}
-.cl-row.bye{height:0 !important; min-height:0; padding-top:0 !important; padding-bottom:0 !important; margin-top:-4px; opacity:0; transform:translateX(36px) scale(.94);
+.rp-clip .cl-row.bye{height:0 !important; min-height:0; padding-top:0 !important; padding-bottom:0 !important; margin-top:-4px; opacity:0; transform:translateX(36px) scale(.94);
   transition:height .38s var(--glide), padding .38s var(--glide), margin .38s var(--glide), opacity .22s, transform .38s var(--glide)}
 .cl-x{position:absolute; right:6px; top:6px; width:20px; height:20px; border-radius:50%; border:0; background:rgba(255,255,255,.14); color:#fff;
   font-size:11px; line-height:20px; text-align:center; opacity:0; transition:opacity .15s, background .15s; cursor:default}
-.cl-row:hover .cl-x{opacity:1} .cl-x:hover{background:rgba(255,80,80,.7)}
+.rp-clip .cl-row:hover .cl-x{opacity:1} .cl-x:hover{background:rgba(255,80,80,.7)}
 .nt{display:block; width:100%; height:180px; resize:none; border:0; outline:0; border-radius:12px; padding:10px 12px; background:rgba(0,0,0,.2);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); color:#fff; font:inherit; font-size:13.5px; line-height:1.45; text-shadow:inherit; transition:box-shadow .2s}
 .nt:focus{box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
@@ -397,7 +397,6 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 .nw-globe .m{transform-box:fill-box; transform-origin:center; animation:meridian 4s linear infinite}
 .nw-globe .m2{animation-delay:-2s}
 @keyframes meridian{0%{transform:scaleX(1); opacity:.15} 25%{opacity:1} 50%{transform:scaleX(0); opacity:1} 75%{opacity:1} 100%{transform:scaleX(-1); opacity:.15}}
-@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(255,69,58,.55)} 70%{box-shadow:0 0 0 7px rgba(255,69,58,0)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)}}
 .nw-ctl{display:inline-flex; gap:6px; align-items:center}
 .nw-sel{width:auto; height:28px; font-size:12px; padding:0 10px; border-radius:99px}
 .nw-ref{width:28px; height:28px; border:0; border-radius:50%; background:rgba(255,255,255,.12); display:grid; place-items:center; cursor:default; transition:background .15s}
@@ -1476,10 +1475,9 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
   color:transparent; caret-color:#fff; font:inherit; font-size:13px; letter-spacing:.32em; transition:box-shadow .2s, background .2s}
 .lk-field input::placeholder{color:rgba(255,255,255,.45); letter-spacing:0}
 .lk-field input:focus{background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
-.lk-dots{position:absolute; left:12px; top:0; bottom:0; display:flex; align-items:center; gap:4px; pointer-events:none}
-.lk-dots i{width:7px; height:7px; flex:none; border-radius:50%; background:#fff; animation:lkDot .32s var(--spring) backwards}
-.lk-dots i.go{animation:lkDotOut .18s ease-in forwards}
-@keyframes lkDot{from{transform:scale(0)}}
+.lk-field .lk-dots{position:absolute; left:12px; top:0; bottom:0; display:flex; align-items:center; gap:4px; pointer-events:none}
+.lk-field .lk-dots i{width:7px; height:7px; flex:none; border-radius:50%; background:#fff; animation:lkDot .32s var(--spring) backwards}
+.lk-field .lk-dots i.go{animation:lkDotOut .18s ease-in forwards}
 @keyframes lkDotOut{to{transform:scale(0); opacity:0}}
 .lk-field.bad{animation:pkNope .5s cubic-bezier(.36,.07,.19,.97)} .lk-field.bad input{box-shadow:inset 0 0 0 1.5px #ff453a}
 .lk-field.seal .lk-dots i{animation:lkSeal .42s cubic-bezier(.5,0,.4,1) forwards; animation-delay:calc(var(--i, 0) * 22ms)}
@@ -2553,7 +2551,6 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .in{animation:inUp .6s var(--spring)}
 .np .meta.in{animation-delay:.04s}
 @keyframes inUp{from{opacity:0; transform:translateY(9px); filter:blur(5px)}}
-@keyframes artIn{from{opacity:0; transform:scale(.8) rotate(25deg); filter:blur(4px)}}
 .lines.fresh .ln{animation:lnIn .55s .16s var(--soft) backwards}
 .lines.fresh .ln:nth-child(2){animation-delay:.22s} .lines.fresh .ln:nth-child(3){animation-delay:.28s}
 .lines.fresh .ln:nth-child(n+4){animation-delay:.34s}
@@ -2640,6 +2637,43 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .notch:not(.open) .panel *, .notch:not(.open) .panel *::before, .notch:not(.open) .panel *::after,
 .pane:not(.active):not(.exit) *, .dd:not(.open) *, .wifi:not(.open) *, .start:not(.open) *, .cal:not(.open) *, .setw:not(.open) *{animation-play-state:paused !important}
 @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important; transition-duration:.01ms!important} }
+/* ---------- the Mac finish: one layer over everything above ----------
+   Type is Inter (bundled, src/fonts; SF Pro can't ship on Windows), the closest free match for SF Pro: its optical
+   sizes tighten big text the way SF Display does. Menus use the Mac's sizes (13 px, 22 px rows); headings are
+   sentence case, never spaced capitals; the calculator's keys are round; scrollbars are thin and only show on a
+   list that scrolls. */
+@font-face{font-family:"Inter ULTRON"; src:url("fonts/InterVariable.woff2") format("woff2"); font-weight:100 900; font-style:normal; font-display:block}
+:root{--sf:"Inter ULTRON","SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  font-optical-sizing:auto; text-rendering:optimizeLegibility}
+input, textarea, select, button{font-family:inherit}
+/* the bar: titles at the Mac's size, the app's own name bold */
+.mbar{font-size:13px; font-weight:500; letter-spacing:0}
+.mt.app{font-weight:700; letter-spacing:-.003em}
+.st .pct{font-size:12px}
+/* menus: 13 px, rows 22 px tall, the highlight inset like a Mac's */
+.dd{font-size:13px}
+.dd .dd-c > button{padding:3px 10px; min-height:22px; border-radius:6px; letter-spacing:-.003em}
+.dd kbd{font-size:12px; letter-spacing:.02em}
+.dd hr{margin:5px 10px; background:rgba(255,255,255,.1)}
+/* a panel's title reads like Control Center's: bold, sentence case; what's beside it is quieter */
+.rp h4{margin:2px 4px 12px; font-size:15px; font-weight:700; letter-spacing:-.012em; text-transform:none; color:#fff}
+.rp h4 > span:not(.nw-live), .rp h4 > b{font-size:12px; font-weight:600; letter-spacing:0; color:rgba(255,255,255,.55)}
+.nw-live{font-size:15px; font-weight:700; letter-spacing:-.012em; text-transform:none}
+.ai-sec, .pick .hd, .menu .hd, .sk-g b, .fo-time small{text-transform:none; letter-spacing:0; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.5)}
+.wf-sub{text-transform:none; letter-spacing:0; font-size:12px}
+/* the calculator: round keys, 0 a long capsule */
+.cx-keys{gap:9px}
+.cx-k{height:auto; aspect-ratio:1; border-radius:50%; font-size:21px; font-weight:500; letter-spacing:0}
+.cx-k.fk{font-size:16px}
+.cx-k.zero{aspect-ratio:auto; border-radius:999px; text-align:left; padding-left:22px}
+.cx-k.sm{aspect-ratio:auto; height:32px; border-radius:999px; font-size:13px}
+.cx-k:hover{transform:none; filter:brightness(1.25)}
+.cx-res{font-weight:300; font-size:40px; letter-spacing:-.02em}
+/* thin scrollbars that keep out of the way, as on a Mac */
+::-webkit-scrollbar{width:9px; height:9px; background:transparent}
+::-webkit-scrollbar-thumb{border:2.5px solid transparent; border-radius:9px; background:rgba(255,255,255,.28) padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:rgba(255,255,255,.45)}
+::-webkit-scrollbar-button, ::-webkit-scrollbar-corner{display:none; background:transparent}
 </style>
 </head>
 <body>
@@ -2752,7 +2786,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="cleaner"><h2>Cleaner</h2><p class="sw-sub">Clears the junk Windows and your apps leave behind. Your files, sign-ins, passwords and settings aren’t touched.</p><div class="cl-stage" id="clStage"><div class="cl-head"><b id="clNum">…</b><span id="clCap">Looking for junk…</span></div><div class="cl-fall" id="clFall"></div><div class="cl-mach"><i class="cl-slot"></i><div class="cl-teeth"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i></div><i class="cl-light"></i></div><div class="cl-out" id="clOut"></div><div class="cl-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></div></div><div class="cl-rows" id="clRows"></div><div class="cl-acts"><button class="cl-go" id="clGo" type="button" data-clx="go" disabled><span>Clear</span></button><button class="chipb" type="button" data-clx="scan">Look again</button></div></section>
     <section class="sw-sec" data-sec="privacy"><h2>Privacy</h2><p class="sw-sub">Everything stays on this PC. Clear what it remembers.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Memory<small>What you've told ULTRON about yourself, kept on this PC. Say “remember that…” or “forget…”</small></span><button class="chipb" data-sx="memall">Forget all</button></div><div class="sw-mem" id="swMem"></div><div class="sw-row"><span class="sw-l">Conversations<small>What you and ULTRON have talked about, kept on this PC so it can pick up where you left off</small></span><button class="chipb" data-sx="forget">Forget</button></div><div class="sw-row"><span class="sw-l">Activity<small>The list of things ULTRON did for you</small></span><button class="chipb" data-sx="clearact">Clear</button></div><div class="sw-row"><span class="sw-l">Clipboard history<small>What the old Clipboard menu had saved. Nothing new is kept.</small></span><button class="chipb" data-sx="clearclip">Clear</button></div><div class="sw-row"><span class="sw-l">Lyrics timing<small>Your sync nudges for songs</small></span><button class="chipb" data-sx="clearlyr">Reset</button></div></div></section>
-    <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small>Version 0.3 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
+    <section class="sw-sec" data-sec="about"><h2>About</h2><div class="sw-rows"><div class="sw-about"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><b>ULTRON</b><small id="abVer">Version 1.0 · runs entirely on this PC</small></div><div class="sw-row"><span class="sw-l">Brain</span><span class="sw-val" id="abBrain">—</span></div><div class="sw-row"><span class="sw-l">Voice</span><span class="sw-val">Piper · Ryan, offline</span></div><div class="sw-row"><span class="sw-l">Hearing</span><span class="sw-val">Whisper small · RNNoise, offline</span></div><div class="sw-row"><span class="sw-l">Engine</span><span class="sw-val">llama.cpp · Vulkan + CPU</span></div><div class="sw-row"><span class="sw-l">Introduction<small>Watch ULTRON say hello again</small></span><button class="chipb" data-sx="intro">Replay</button></div></div></section>
   </div>
 </div>
 <div class="start glass panel-glass" id="start" role="dialog" aria-label="Start">
@@ -9202,6 +9236,9 @@ addEventListener('blur', () => {
   if (S.lockPass) lockHide();                                // (with Windows' sign-in wanted, switching away is the same as taking it away: Windows locks)
   else if (lkCode()) setTimeout(() => { if (LK.on) invoke('focus_main'); }, 300);          // (a passcode is wanted: the keyboard is taken back)
 });
+
+/* About shows the version the app was built as (tauri.conf.json) */
+window.__TAURI__?.app?.getVersion?.().then(v => { $('abVer').textContent = `Version ${v} · runs entirely on this PC`; }).catch(() => {});
 
 /* ---------- developer tools: only when ULTRON is started with ULTRON_DEV_INBOX=1 ----------
    Frame timings go to the log every few seconds, and lines starting with "!" in the inbox file
