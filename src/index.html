@@ -584,7 +584,7 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
 /* timer chip in the bar */
 /* ---------- floating lyrics: part of ULTRON's own overlay (like Settings), dragged anywhere ---------- */
-.flyr{position:fixed; z-index:24; left:0; top:0; width:600px; height:86px; border-radius:24px; display:flex; align-items:center; gap:14px; padding:0 20px 0 13px; overflow:hidden;
+.flyr{position:fixed; z-index:24; left:0; top:0; width:600px; height:96px; border-radius:24px; display:flex; align-items:center; gap:14px; padding:0 20px 0 13px; overflow:hidden;
   color:#fff; --tint:rgba(14, 14, 20, .42); --hs:0; text-shadow:0 1px 3px rgba(0,0,0,.45); cursor:grab; touch-action:none;
   --sx:0px; --sy:18px; --sb:44px; --so:.42; --lift:1; --tilt:0deg;
   box-shadow:inset 0 1px 1px rgba(255,255,255,.35), inset 0 0 24px rgba(255,255,255,.06), var(--sx) var(--sy) var(--sb) rgba(0,0,0,var(--so)), 0 2px 8px rgba(0,0,0,.2);
@@ -604,37 +604,32 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 .flyr.playing .fl-eq i{animation-play-state:running}
 .fl-eq i:nth-child(2){animation-delay:-.4s; animation-duration:.8s} .fl-eq i:nth-child(3){animation-delay:-.7s; animation-duration:1.2s}
 @keyframes flEq{0%, 100%{height:3px} 50%{height:10px}}
-.fl-txt{position:relative; z-index:1; flex:1; min-width:0; height:62px; overflow:hidden; pointer-events:none; perspective:320px; perspective-origin:30% 45%}
-/* The lyrics on a small turning drum. The line being sung is at the front, large and white; the next one waits just
-   under it, small, dim and tilted away. When a new line starts, the drum turns: the sung line tips back over the top
-   and fades, the waiting one rolls forward into its place, growing to full size, and its words light up one after
-   another; the line after that rolls up from underneath. Nothing is blurred. A gap with no words shows three dots
-   that light up across it. */
-.fl-ln{position:absolute; left:0; right:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transform-origin:0 50%; backface-visibility:hidden; will-change:transform, opacity}
-.fl-ln.cur{top:2px; height:31px; line-height:31px; font-size:var(--fs, 22px); font-weight:700; letter-spacing:-.014em; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.35)}
-.fl-ln.next{top:37px; height:20px; line-height:20px; font-size:13.5px; font-weight:600; color:rgba(255,255,255,.46); transform:rotateX(-14deg); text-shadow:0 1px 2px rgba(0,0,0,.25)}
-/* the waiting line rolls forward into the front (from where it was, at its old size: --from) */
-.fl-ln.cur.up{animation:flForward .62s cubic-bezier(.2,.95,.25,1) both}
-@keyframes flForward{from{transform:translateY(35px) rotateX(-14deg) scale(var(--from, .62)); color:rgba(255,255,255,.46)}}
-/* a line put straight at the front (the first, or after a seek) turns into view from below */
-.fl-ln.cur.fresh{animation:flFresh .58s cubic-bezier(.2,.95,.25,1) both}
-@keyframes flFresh{from{transform:translateY(16px) rotateX(-55deg); opacity:0}}
-/* the sung line tips back over the top */
-.fl-ln.gone{animation:flGone .5s cubic-bezier(.55,0,.3,1) forwards}
-@keyframes flGone{to{transform:translateY(-24px) rotateX(68deg) scale(.9); opacity:0}}
-.fl-ln.next.gone{animation:flGoneNext .3s ease-in forwards}
-@keyframes flGoneNext{to{transform:translateY(10px) rotateX(-40deg); opacity:0}}
-/* the line after rolls up from underneath, a moment behind */
-.fl-ln.next.rise{animation:flRise .6s cubic-bezier(.2,.9,.3,1) .16s both}
-@keyframes flRise{from{transform:translateY(18px) rotateX(-70deg); opacity:0}}
-/* the words of a line coming to the front light up one after another */
-.fl-wd{display:inline-block; animation:flWord .5s ease both; animation-delay:calc(min(var(--k), 12) * 42ms + .12s)}
-@keyframes flWord{from{color:rgba(255,255,255,.42); transform:translateY(3px)}}
-.fl-dots{display:inline-flex; align-items:center; gap:7px; height:31px; vertical-align:top}
-.fl-dots i{width:8px; height:8px; border-radius:50%; background:#fff; opacity:.3}
-.fl-ln.cur .fl-dots{animation:flBreathe 2.6s ease-in-out infinite}
-.fl-ln.cur .fl-dots i{animation:flDot var(--seg, 1s) linear forwards; animation-delay:calc(var(--n) * var(--seg, 1s) - var(--at, 0s))}
-.flyr:not(.playing) .fl-ln.cur .fl-dots, .flyr:not(.playing) .fl-ln.cur .fl-dots i{animation-play-state:paused}
+.fl-txt{position:relative; z-index:1; flex:1; min-width:0; height:80px; overflow:hidden; pointer-events:none;
+  -webkit-mask-image:linear-gradient(180deg, transparent, #000 15px, #000 calc(100% - 12px), transparent); mask-image:linear-gradient(180deg, transparent, #000 15px, #000 calc(100% - 12px), transparent)}
+/* The lyrics as a list that scrolls, like Spotify's. Every line is the same size and stays it (nothing grows, shrinks
+   or tilts); a long line wraps onto a second row. The line being sung sits a little below the top, the last one fading
+   out above it and the next ones below. Its words turn white one by one as they're sung (a soft edge sweeping across
+   each word in its own time); lines already sung stay softly lit, the ones to come are dim. When the next line
+   starts, the whole list scrolls up to it, smoothly. A gap with no words is three dots that light up across it. */
+.fl-list{position:absolute; left:0; right:0; top:0; transition:transform .62s cubic-bezier(.22,1,.36,1); will-change:transform}
+.fl-list.fresh{animation:flFade .45s ease}
+@keyframes flFade{from{opacity:0}}
+.fl-l{padding:2px 0; font-size:17.5px; line-height:24px; font-weight:700; letter-spacing:-.012em; color:rgba(255,255,255,.34); transition:color .5s ease}
+.fl-l.past{color:rgba(255,255,255,.6)}
+.fl-l.cur{color:#fff}
+.fl-l.cur:not(.still):not(.gap){text-shadow:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.fl-w{background:linear-gradient(90deg, #fff 46%, rgba(255,255,255,.34) 54%) 100% 0 / 220% 100% no-repeat; -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; text-shadow:none; animation:flW var(--d, .3s) linear forwards; animation-delay:calc(var(--t, 0s) - var(--at, 0s))}
+@keyframes flW{to{background-position:0 0}}
+.flyr:not(.playing) .fl-w{animation-play-state:paused}
+.fl-l:not(.cur) .fl-w{animation:none; background:none; -webkit-text-fill-color:currentColor}
+.fl-l.gap{height:28px; display:flex; align-items:center}
+.fl-dots{display:inline-flex; align-items:center; gap:6px}
+.fl-dots i{width:7px; height:7px; border-radius:50%; background:#fff; opacity:.3}
+.fl-l.past .fl-dots i{opacity:.5}
+.fl-l.cur .fl-dots{animation:flBreathe 2.6s ease-in-out infinite}
+.fl-l.cur .fl-dots i{animation:flDot var(--seg, 1s) linear forwards; animation-delay:calc(var(--n) * var(--seg, 1s) - var(--at, 0s))}
+.flyr:not(.playing) .fl-l.cur .fl-dots, .flyr:not(.playing) .fl-l.cur .fl-dots i{animation-play-state:paused}
 @keyframes flDot{to{opacity:1}}
 @keyframes flBreathe{50%{transform:scale(1.12)}}
 .fl-meta{position:absolute; left:84px; right:46px; top:5px; z-index:1; font-size:10.5px; font-weight:600; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -648,7 +643,8 @@ body.calm *, body.calm *::before, body.calm *::after{animation-duration:.01ms !i
 #srcLogo{display:none; width:16px; height:16px; flex:none; border-radius:4px; object-fit:contain}
 .has-logo > #srcLogo{display:block; animation:slFade .3s ease backwards} .has-logo > #srcIcon{display:none}
 .ico > img{width:18px; height:18px; border-radius:4px; object-fit:contain; display:block}
-.flyr:hover .fl-txt{margin-right:152px; -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - 26px), transparent)}
+.flyr:hover .fl-txt{-webkit-mask-image:linear-gradient(180deg, transparent, #000 15px, #000 calc(100% - 12px), transparent), linear-gradient(90deg, #000 calc(100% - 190px), transparent calc(100% - 156px));
+  -webkit-mask-composite:source-in; mask-image:linear-gradient(180deg, transparent, #000 15px, #000 calc(100% - 12px), transparent), linear-gradient(90deg, #000 calc(100% - 190px), transparent calc(100% - 156px)); mask-composite:intersect}
 /* its own controls: previous, play / pause, next. They spring in from the right, one after the other, when the pointer
    is over the bar; the middle one turns between its two signs; each dips when pressed. */
 .fl-ctl{position:absolute; right:46px; top:50%; z-index:2; display:flex; align-items:center; gap:7px; transform:translateY(-50%); pointer-events:none}
@@ -865,18 +861,6 @@ body.pk-out #pet{opacity:0; transition:opacity .22s}       /* (the character has
 .nb-dots i{width:5px; height:5px; border-radius:50%; background:#0c0c0e; animation:mlDot 1s ease-in-out infinite}
 .nb-dots i:nth-child(2){animation-delay:.15s} .nb-dots i:nth-child(3){animation-delay:.3s}
 .nb-say{margin-top:6px} .nb-say:first-child{margin-top:0}
-/* ---------- motion blur ----------
-   What a camera sees of a quick sideways move: a smear along the way it goes, and nothing up or down. CSS's own blur
-   spreads every way, so the smear is a sideways-only blur (the filters next to the wheel in the page) at a few
-   strengths, stepped through in a few hundredths of a second, as the frames of a film would show it. Something
-   arriving comes in smeared, a little slanted and behind where it lands, and sharpens; something leaving smears on
-   out. (--whip: 1 moves left to right, -1 right to left.) */
-@keyframes mbIn{0%{opacity:0; filter:url(#mb14); transform:translateX(calc(var(--whip, 1) * -16px)) skewX(calc(var(--whip, 1) * -12deg))} 22%{opacity:1; filter:url(#mb9)}
-  48%{filter:url(#mb5); transform:translateX(calc(var(--whip, 1) * 2px)) skewX(calc(var(--whip, 1) * -3deg))} 74%{filter:url(#mb2)} 100%{opacity:1; filter:none; transform:none}}
-@keyframes mbOut{0%{filter:none} 30%{filter:url(#mb2)} 55%{filter:url(#mb5); opacity:.85} 80%{filter:url(#mb9); opacity:.45}
-  100%{opacity:0; filter:url(#mb14); transform:translateX(calc(var(--whip, 1) * 18px)) skewX(calc(var(--whip, 1) * -10deg))}}
-@keyframes mbGlide{0%{filter:none} 18%{filter:url(#mb5)} 45%{filter:url(#mb9)} 75%{filter:url(#mb2)} 100%{filter:none}}
-@keyframes mbGlide2{0%{filter:none} 18%{filter:url(#mb5)} 45%{filter:url(#mb9)} 75%{filter:url(#mb2)} 100%{filter:none}}
 /* ---------- ULTRON's own taskbar: the wheel ----------
    There is no bar along the bottom. Windows' taskbar is gone and windows have the screen to its bottom edge; the
    taskbar is a wheel of glass kept above the screen, with only its lowest sliver showing under the notch. Reach for
@@ -912,12 +896,17 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .wh-b.sel .wh-bi{background:rgba(255,255,255,.2); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
 .wh-b.edge{pointer-events:none}
 .wh-b.lift{opacity:.35 !important}
-/* As you type: a bead the search has just found whips into its place with motion blur, the middle ones first; one
-   it has dropped smears away; one that stays but moves blurs as it slides along the rim. */
-.wh-b.in .wh-bi{animation:mbIn .44s cubic-bezier(.2,.75,.25,1) backwards; animation-delay:var(--d, 0ms)}
+/* As you type: a bead the search has just found comes out of the hub, where the search is, along its own spoke and
+   springs onto the rim (a touch past, and back), the middle ones first; one it has dropped sinks back towards the hub,
+   shrinking, and goes; one that stays but moves slides along the rim and dips a little on the way. No blur.
+   (--hx / --hy: the way to the hub from where the bead sits, set as it's placed.) */
+.wh-b.in .wh-bi{animation:whFound .56s cubic-bezier(.22,1.22,.36,1) backwards; animation-delay:var(--d, 0ms)}
+@keyframes whFound{from{opacity:0; transform:translate(var(--hx, 0px), var(--hy, 0px)) scale(.4)} 55%{opacity:1}}
 .wh-b.out{pointer-events:none}
-.wh-b.out .wh-bi{animation:mbOut .3s ease-in forwards}
-.wh-b.glide .wh-bi{animation:mbGlide .46s linear} .wh-b.glide2 .wh-bi{animation:mbGlide2 .46s linear}
+.wh-b.out .wh-bi{animation:whLost .28s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes whLost{to{opacity:0; transform:translate(calc(var(--hx, 0px) * .6), calc(var(--hy, 0px) * .6)) scale(.45)}}
+.wh-b.glide .wh-bi{animation:whSlide .46s cubic-bezier(.4,0,.2,1)} .wh-b.glide2 .wh-bi{animation:whSlide2 .46s cubic-bezier(.4,0,.2,1)}
+@keyframes whSlide{45%{transform:scale(.88)}} @keyframes whSlide2{45%{transform:scale(.88)}}
 .wh-bi img{width:26px; height:26px; object-fit:contain; opacity:0; transition:opacity .2s; pointer-events:none} .wh-bi img.ok{opacity:1}
 .wh-bi .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:14px; font-weight:700; color:rgba(255,255,255,.7)} .wh-bi img.ok + .fbk{display:none}
 .wh-bi > i{position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s, width .25s, margin .25s}
@@ -1621,29 +1610,6 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 .wm-rec .wm-o, .wm-rec .wm-h, .wm-rec .wm-sep{animation:wmIn .42s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 32ms)}
 @keyframes wmIn{from{opacity:0; transform:translateY(-5px)}}
 
-/* ---------- floating lyrics: the line lights up as it's sung, left to right in time with the song (a soft edge going
-   across it), and when it's done it lifts away while the next one, waiting small underneath, rises into its place.
-   Flat and calm: no drum, no tilt, no blur. */
-.fl-txt{perspective:none}
-.fl-ln.next{transform:none}
-.fl-sing{background:linear-gradient(90deg, #fff 0%, #fff 45%, rgba(255,255,255,.38) 55%, rgba(255,255,255,.38) 100%); background-size:220% 100%; background-position:100% 0;
-  -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
-  animation:flSing var(--dur, 4s) linear forwards; animation-delay:calc(-1 * var(--at, 0s))}
-@keyframes flSing{to{background-position:0 0}}
-.flyr:not(.playing) .fl-sing{animation-play-state:paused}
-.fl-ln.cur.still .fl-sing{animation:none; background-position:0 0}
-.fl-ln.cur{text-shadow:none}
-.fl-ln.cur.up{animation:flUp .62s cubic-bezier(.22,1,.36,1) both}
-@keyframes flUp{from{transform:translateY(35px) scale(var(--from, .62)); opacity:.55}}
-.fl-ln.cur.fresh{animation:flIn .5s cubic-bezier(.22,1,.36,1) both}
-@keyframes flIn{from{transform:translateY(10px); opacity:0}}
-.fl-ln.gone{animation:flLeave .4s cubic-bezier(.4,0,.6,1) forwards}
-@keyframes flLeave{35%{opacity:.2} to{transform:translateY(-22px); opacity:0}}   /* (it's mostly gone before the next line reaches it) */
-.fl-ln.next.gone{animation:flLeaveNext .22s ease-in forwards}
-@keyframes flLeaveNext{to{opacity:0}}
-.fl-ln.next.rise{animation:flNext .55s cubic-bezier(.22,1,.36,1) .14s both}
-@keyframes flNext{from{transform:translateY(12px); opacity:0}}
-
 /* ---------- the sheet's shadow: the bar's light one, deepening under its foot ---------- */
 .notch.glass.open, .notch.glass.call:not(.open){box-shadow:0 1px 10px rgba(0,0,0,.12), 0 18px 36px -16px rgba(0,0,0,.42)}
 
@@ -1770,6 +1736,13 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 .cl-pg i{display:block; height:3px; margin-bottom:5px; border-radius:2px; background:#c9c9d0}
 .cl-pg i:nth-child(2){width:70%} .cl-pg i:nth-child(3){width:85%}
 .cl-pg span{position:absolute; left:4px; right:4px; bottom:5px; font-size:6.5px; font-weight:700; color:#5a5a63; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; text-shadow:none}
+
+/* ---------- the opened sheet hangs from the bar's foot: it never covers anything on the bar (the bar's own glass shows
+   above it, the same as the sheet's top, so it still reads as one piece). Its glass is never drawn over the bar's
+   row; once open, nothing of it is there to be clicked either (so "Settings" and the rest work through it). ---------- */
+.notch.glass > .gw, .notch.glass::before{clip-path:inset(var(--bar) 0 0 0)}
+.notch.glass.open{clip-path:inset(var(--bar) -80px -80px -80px)}
+.notch.glass.call:not(.open) > .gw, .notch.glass.call:not(.open)::before{clip-path:none}
 
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
@@ -2446,12 +2419,6 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
     <button class="st clock" id="clock" aria-label="Calendar"></button>
   </div>
 </header>
-<svg class="mb-defs" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute; width:0; height:0"><defs>
-  <filter id="mb2" x="-20%" y="0" width="140%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="2 0"/></filter>
-  <filter id="mb5" x="-30%" y="0" width="160%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="5 0"/></filter>
-  <filter id="mb9" x="-45%" y="0" width="190%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9 0"/></filter>
-  <filter id="mb14" x="-60%" y="0" width="220%" height="100%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="14 0"/></filter>
-</defs></svg>
 <div class="wheel" id="wheel" aria-label="Taskbar"><div class="wh-tab" id="whTab" role="button" aria-label="Open the taskbar wheel"><svg viewBox="0 0 16 8"><path d="M2 2.5L8 6L14 2.5"/></svg></div><div class="wh-body" id="whBody">
   <div class="wh-tray glass" id="whTray"><i class="gw"></i><div class="wh-pods" id="whPods"></div></div>
   <div class="wh-disc glass" id="whDisc"><i class="gw"></i><div class="wh-hubbg"></div></div>
@@ -3760,18 +3727,41 @@ function showFloat(on){
 let flLast = '', flArtSrc = '';
 let flAt = -2, flListKey = '';
 const flGap = text => !text || /^[\s♪♫]*$/.test(text);
-// a line for the front: its words each in a span of their own (they light up one after another), or the dots
-function flFront(text){
-  const el = document.createElement('div'); el.className = 'fl-ln cur';
-  if (flGap(text)) el.innerHTML = '<span class="fl-dots"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span>';
-  else el.innerHTML = `<span class="fl-sing">${esc(text.replace(/\s+/g, ' ').trim())}</span>`;
-  return el;
+// The whole song is laid out once as a list; a new line marks itself and the list scrolls to it. The lyrics give each
+// line's start time only, so a line's time is shared out over its words by their length (and not slower than a slow
+// singer: a line followed by a long pause doesn't crawl).
+const FL_TOP = 20;                                                   // (where the line being sung sits, from the top)
+const FL_DOTS = '<span class="fl-dots"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span>';
+let flRows = [], flCur = -1;
+function flBuild(lines, plain){
+  flTxt.innerHTML = '<div class="fl-list fresh"></div>';
+  const list = flTxt.firstChild;
+  flRows = lines.map((t, i) => {
+    const d = document.createElement('div'); d.className = 'fl-l';
+    if (plain) d.classList.add('still');
+    if (!plain && flGap(t)){ d.classList.add('gap'); d.innerHTML = FL_DOTS; } else d.textContent = String(t || '').replace(/\s+/g, ' ').trim();
+    list.appendChild(d); return d;
+  });
+  flCur = -1;
 }
-function flFit(el){                                                   // (a long line is made just small enough to fit)
-  let fs = 22; el.style.setProperty('--fs', fs + 'px');
-  const room = flTxt.clientWidth, wide = el.scrollWidth;
-  if (wide > room){ fs = Math.max(14, Math.floor(22 * room / wide)); el.style.setProperty('--fs', fs + 'px'); }
-  return fs;
+function flWords(r, dur, at){
+  const words = r.textContent.split(' ').filter(Boolean);
+  const wt = words.map(w => w.replace(/[^\p{L}\p{N}]/gu, '').length + 2), sum = wt.reduce((x, y) => x + y, 0) || 1;
+  const span = Math.min(dur * .9, sum * .11);
+  let t = 0;
+  r.innerHTML = words.map((w, k) => { const d = span * wt[k] / sum, h = `<span class="fl-w" style="--t:${t.toFixed(3)}s; --d:${Math.max(.1, d).toFixed(3)}s">${esc(w)}</span>`; t += d; return h; }).join(' ');
+  r.style.setProperty('--at', at.toFixed(3) + 's');
+}
+function flSetCur(li, dur, at, jump){
+  const list = flTxt.firstChild; if (!list) return;
+  flRows.forEach((r, i) => { r.classList.toggle('past', i < li); r.classList.toggle('cur', i === li); });
+  flCur = li;
+  const r = flRows[li];
+  if (r && r.classList.contains('gap')){ r.style.setProperty('--seg', (dur / 3).toFixed(3) + 's'); r.style.setProperty('--at', at.toFixed(3) + 's'); r.innerHTML = FL_DOTS; }
+  else if (r && !r.classList.contains('still')) flWords(r, dur, at);
+  const y = (r ? r.offsetTop : 0) - FL_TOP;
+  if (jump){ list.style.transition = 'none'; list.style.transform = `translateY(${-y}px)`; void list.offsetWidth; list.style.transition = ''; }
+  else list.style.transform = `translateY(${-y}px)`;
 }
 function renderFloat(m){
   flyr.classList.toggle('playing', !!m.playing);
@@ -3779,26 +3769,11 @@ function renderFloat(m){
   if (m.art !== flArtSrc){ flArtSrc = m.art; const a = $('flArt'); a.classList.remove('ok'); if (m.art){ a.onload = () => a.classList.add('ok'); a.src = m.art; } }
   if (m.key === flLast) return;   // only play / pause changed
   flLast = m.key;
-  const li = m.li, text = m.lines[li] || '', after = m.lines[li + 1];
-  // one line on (the usual): the drum turns. Anything else (the first line, a seek, the bar coming back): put straight in.
-  const turn = m.listKey === flListKey && li === flAt + 1 && flyr.classList.contains('on');
-  flListKey = m.listKey; flAt = li;
-  const old = flTxt.querySelector('.fl-ln.cur:not(.gone)'), waiting = flTxt.querySelector('.fl-ln.next:not(.gone)');
-  if (old){ old.classList.remove('up', 'fresh'); old.classList.add('gone'); setTimeout(() => old.remove(), 520); }
-  if (waiting){ waiting.classList.remove('rise'); waiting.classList.add('gone'); setTimeout(() => waiting.remove(), 320); }
-  const cur1 = flFront(text);
-  cur1.classList.add(turn && waiting ? 'up' : 'fresh');
-  flTxt.appendChild(cur1);
-  const fs = flFit(cur1);
-  cur1.style.setProperty('--from', (13.5 / fs).toFixed(3));
-  if (cur1.firstElementChild && cur1.firstElementChild.classList.contains('fl-dots')){ cur1.style.setProperty('--seg', (m.dur / 3).toFixed(3) + 's'); cur1.style.setProperty('--at', m.at.toFixed(3) + 's'); }
-  // (sung across in the line's own time, from where the song is in it now; words without timing are shown lit)
-  else if (String(m.listKey).startsWith('plain')) cur1.classList.add('still');
-  else { cur1.style.setProperty('--dur', Math.max(.8, m.dur * .94).toFixed(3) + 's'); cur1.style.setProperty('--at', m.at.toFixed(3) + 's'); }
-  if (after != null){
-    const n = document.createElement('div'); n.className = 'fl-ln next rise'; n.textContent = flGap(after) ? '♪' : after;
-    flTxt.appendChild(n);
-  }
+  // a new song (or new lyrics for it): the list is laid out afresh and put straight in place; otherwise it scrolls
+  const fresh = m.listKey !== flListKey || !flTxt.querySelector('.fl-list');
+  if (fresh) flBuild(m.lines, String(m.listKey).startsWith('plain'));
+  flListKey = m.listKey; flAt = m.li;
+  flSetCur(m.li, m.dur, m.at, fresh);
 }
 // its own controls press the notch's (so the two always agree), and show it at once
 $('flCtl').addEventListener('click', e => {
@@ -7524,6 +7499,7 @@ function whPlace(grow){
     } else el.classList.remove('out');
     keep.add(it.key);
     el.dataset.i = i; el._a = a; el.setAttribute('aria-label', it.name);
+    el.style.setProperty('--hx', (-Rb * Math.sin(a) * .42).toFixed(1) + 'px'); el.style.setProperty('--hy', (-Rb * Math.cos(a) * .42).toFixed(1) + 'px');
     el.style.transform = `rotate(${(-a).toFixed(4)}rad) translateY(${Rb}px) rotate(${a.toFixed(4)}rad) scale(${i === WH.sel ? 1.2 : 1})`;
     el.style.opacity = Math.max(0, Math.min(1, (1.4 - off) / .2)).toFixed(2);
     el.className = 'wh-b' + (it.run ? ' run' : '') + (it.act ? ' act' : '') + (i === WH.sel ? ' sel' : '') + (off > 1.36 ? ' edge' : '') + (el.classList.contains('in') ? ' in' : '') + (el.classList.contains('lift') ? ' lift' : '')
