@@ -3278,9 +3278,11 @@ function glassDraw(g, a){
   // Under the sheet (and its corner fillets): right below the bar is whatever window is there, a different picture from
   // the bar's strip of wallpaper, and the two met in a hard line. The bar's own last rows are carried on down over the
   // sheet's first 56 px, fading out, so the sheet carries on from the bar and only then shows what's behind it.
-  if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass');
+  // (the bar's own picture too: it's stretched up from a small picture, so its last rows used to blend in the window below
+  //  and come out lighter than the sheet starting under them)
+  if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass, .mbar.glass');
   if (g._band){
-    const k = c.height / Math.max(1, innerHeight), yb = Math.round(32 * k), h = Math.max(2, Math.round(56 * k)), src = Math.max(1, Math.round(3 * k));
+    const k = c.height / Math.max(1, innerHeight), yb = Math.round(32 * k), h = Math.max(2, Math.round(56 * k)), src = 1;
     const b = glassBand || (glassBand = document.createElement('canvas')), bx = b.getContext('2d');
     if (b.width !== c.width || b.height !== h){ b.width = c.width; b.height = h; }
     bx.globalCompositeOperation = 'copy'; bx.drawImage(glassBmp, 0, yb - src, c.width, src, 0, 0, c.width, h);
