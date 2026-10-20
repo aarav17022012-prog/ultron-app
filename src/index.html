@@ -59,8 +59,8 @@ button{font:inherit; color:inherit}
 .glass::before{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; border-radius:inherit;
   background:radial-gradient(160px 70px at var(--hx,30%) var(--hy,0%), rgba(255,255,255,calc(.2 * var(--hs, 1))), transparent 70%),
     linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%, rgba(0,0,0,.1)), var(--tint, rgba(20,20,26,.3))}
-.glass::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; padding:1.2px;
-  background:linear-gradient(135deg, rgba(255,255,255,.75), rgba(255,255,255,.1) 30%, rgba(255,255,255,.04) 62%, rgba(255,255,255,.5));
+.glass::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; padding:.8px;
+  background:linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.16) 22%, rgba(255,255,255,.11) 60%, rgba(255,255,255,.2));
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude}
 html.live .glass > .gw{transition:none}
 .gw > .gwc{position:absolute; left:0; top:0; width:100vw; height:100vh; display:none; pointer-events:none}
@@ -68,7 +68,7 @@ html.live .gw > .gwc{display:block}
 .glass.panel-glass{box-shadow:inset 0 1px 1px rgba(255,255,255,.3), inset 0 0 24px rgba(255,255,255,.06), 0 24px 60px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.2)}
 /* (the rim of a panel: an even thin line all the way round, catching more light at two corners. The bar's own rim
    fades out along the sides, which on a tall panel left whole edges with no outline at all.) */
-.glass.panel-glass::after{padding:1px; background:linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,0) 32%, rgba(255,255,255,0) 68%, rgba(255,255,255,.34)), linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.2))}
+.glass.panel-glass::after{padding:.8px; background:linear-gradient(180deg, rgba(255,255,255,.46), rgba(255,255,255,.17) 20%, rgba(255,255,255,.12) 62%, rgba(255,255,255,.22))}
 
 /* ---------- the first-run tour: ULTRON's own cursor flies to each thing on the bar and explains it ---------- */
 .tour{position:fixed; inset:0; z-index:60; cursor:default}
@@ -2645,20 +2645,22 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
   background:linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,.2) 45%, rgba(0,0,0,0)); transition:opacity .5s ease}
 .shelf.on .sh-scrim{opacity:1}
 .shelf.down .sh-scrim, .shelf.pick .sh-scrim{opacity:0; transition:opacity .36s ease .05s}
-.sh-tray{position:absolute; left:0; bottom:14px; border-radius:30px; pointer-events:auto; --tint:rgba(18,18,24,.3);
+.sh-tray{position:absolute; left:0; bottom:14px; border-radius:34px; pointer-events:auto; --tint:rgba(18,18,24,.28);
   box-shadow:inset 0 1px 1px rgba(255,255,255,.42), inset 0 -1px 1px rgba(255,255,255,.08), inset 0 0 30px rgba(255,255,255,.07), 0 30px 70px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.22);
-  transform:translateY(calc(100% + 40px)); transition:transform .6s var(--glide), width .45s var(--glide), height .45s var(--glide), left .45s var(--glide)}
-.sh-tray::after{background:linear-gradient(160deg, rgba(255,255,255,.8), rgba(255,255,255,.12) 24%, rgba(255,255,255,0) 50%, rgba(255,255,255,.1) 78%, rgba(255,255,255,.5)) !important}
-.shelf.on .sh-tray{transform:none}
-.shelf.down .sh-tray, .shelf.pick .sh-tray{transform:translateY(calc(100% + 40px)); transition:transform .42s cubic-bezier(.5,0,.75,0) .06s}
+  transform:translateY(var(--ty, 300px)); transition:transform .62s var(--glide), width .45s var(--glide), height .45s var(--glide), left .45s var(--glide)}
+/* (its glass doesn't ride up with it: the picture behind stays where it is on screen while the tray slides over it) */
+.sh-tray > .gw{transform:translateY(calc(var(--ty, 300px) * -1)); transition:transform .62s var(--glide)}
+.shelf.on .sh-tray, .shelf.on .sh-tray > .gw{transform:none}
+.shelf.down .sh-tray, .shelf.pick .sh-tray{transform:translateY(var(--ty, 300px)); transition:transform .42s cubic-bezier(.5,0,.75,0) .06s}
+.shelf.down .sh-tray > .gw, .shelf.pick .sh-tray > .gw{transform:translateY(calc(var(--ty, 300px) * -1)); transition:transform .42s cubic-bezier(.5,0,.75,0) .06s}
 .sh-c{position:absolute; padding:0; border:0; background:none; color:inherit; cursor:default; pointer-events:auto; outline:none;
   transform-origin:50% 100%; transform:translateX(var(--sx, 0px)); transition:transform .42s var(--glide), opacity .3s;
   animation:shUp .64s calc(var(--d) + 90ms) var(--glide) backwards}
 @keyframes shUp{from{transform:translateY(80px) scale(.9); opacity:0} 35%{opacity:1}}
 .sh-c.done.hot{z-index:5; transform:translateX(var(--sx, 0px)) translateY(-10px) scale(1.06)}
-.sh-f{position:absolute; inset:0; border-radius:7px; overflow:hidden; background:#141418;
-  box-shadow:0 18px 36px -10px rgba(0,0,0,.6), 0 4px 10px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.16); transition:box-shadow .3s}
-.sh-c.done.hot .sh-f{box-shadow:0 26px 52px -12px rgba(0,0,0,.7), 0 8px 18px rgba(0,0,0,.3), 0 0 0 2px rgba(255,255,255,.85)}
+.sh-f{position:absolute; inset:0; border-radius:4px; overflow:hidden; background:#141418;
+  box-shadow:0 18px 36px -10px rgba(0,0,0,.6), 0 4px 10px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.18); transition:box-shadow .42s var(--glide)}
+.sh-c.done.hot .sh-f{box-shadow:0 30px 60px -12px rgba(0,0,0,.72), 0 10px 22px rgba(0,0,0,.32), 0 0 0 1.6px rgba(255,255,255,.9)}
 .sh-ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:linear-gradient(180deg, #2a2a30, #1a1a1e)}
 .sh-ph img{width:30%; max-width:52px; aspect-ratio:1; object-fit:contain}
 .sh-ph b{font-size:28px; font-weight:600; color:rgba(255,255,255,.8)}
@@ -2693,7 +2695,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
    and its centre plays or pauses; a press dips the wheel. It's dragged anywhere by its body. */
 #flyr{width:214px; height:356px; padding:12px; border-radius:38px; flex-direction:column; justify-content:flex-start; gap:16px; --tint:rgba(16,16,22,.26);
   box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 -1px 1px rgba(255,255,255,.12), inset 0 0 34px rgba(255,255,255,.07), var(--sx) var(--sy) var(--sb) rgba(0,0,0,var(--so)), 0 2px 8px rgba(0,0,0,.2)}
-#flyr::after{background:linear-gradient(155deg, rgba(255,255,255,.85), rgba(255,255,255,.14) 26%, rgba(255,255,255,0) 52%, rgba(255,255,255,.12) 80%, rgba(255,255,255,.55)) !important}
+#flyr::after{padding:.8px; background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.18) 18%, rgba(255,255,255,.12) 64%, rgba(255,255,255,.24)) !important}
 #flyr .fl-screen{position:relative; z-index:1; width:100%; height:156px; flex:none; border-radius:18px; overflow:hidden; background:#0b0b0f;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), inset 0 10px 22px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.18)}
 #flyr .fl-art{position:absolute; inset:-14px; width:auto; height:auto; border-radius:0; background:#111; box-shadow:none; transform:none; z-index:0}
@@ -2765,7 +2767,10 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .wa-btns{display:flex; gap:8px; width:100%} .wa-btns .chipb{flex:1; padding:8px 12px; font-size:12.5px}
 .wf-ask.busy [data-wa="join"]{opacity:.7}
 /* the notch: the wallpaper's glass only (what's behind it on screen doesn't show through, nor the window's colour) */
-html.live .notch.glass > .gw > .gwc, html.live .ears.glass > .gw > .gwc{display:none}
+/* (under the bar the sheet is the wallpaper's glass, like the bar; below it, what's behind shows, fading in, so there's no seam) */
+.notch.glass > .gw > .gwc{-webkit-mask:linear-gradient(transparent var(--bar), #000 calc(var(--bar) + 44px)); mask:linear-gradient(transparent var(--bar), #000 calc(var(--bar) + 44px))}
+/* (while the sheet is open the bar is the sheet's colour, not the window's: one piece, no line where they meet) */
+body:has(.notch.glass.open) .mbar.glass::before, body:has(.notch.glass.open) #barFil::before{--bt:rgba(16,16,20,.34); --bt2:rgba(14,14,20,.58)}
 /* the voice-typing shortcut in the notch's settings */
 .row .hk-wrap{margin-left:auto}
 
@@ -8304,9 +8309,11 @@ listen('dock-wins', l => { if (DK.on) dockWins(l || []); });
    (how it looks: see the styles). The moment the pointer touches the edge the window is made nearly as tall as the
    screen and the windows' places are asked for; when it has rested there a moment (not while a button is held:
    that's a drag) the tray and the cards come up. Each card's live picture is Windows' own, drawn over the page where
-   the card is (thumbs.rs): while anything moves, where each card is goes to it every frame. */
-var SH = {on:false, armed:false, armT:0, leaveT:0, shrinkT:0, flying:false, x:0, top:0, seq:0, wins:[], rects:new Map(), hot:null, syncTo:0, syncing:false};
+   the card is (thumbs.rs) and moved by Windows itself, frame by frame, with the same timing and easing as its card:
+   the page only says where each goes and how. */
+var SH = {on:false, armed:false, armT:0, leaveT:0, shrinkT:0, flying:false, x:0, top:0, seq:0, wins:[], rects:new Map(), hot:null};
 const shelfEl = $('shelf'), shCards = $('shCards'), shTip = $('shTip'), shTray = $('shTray');
+const SH_GLIDE = [.22, 1, .36, 1], SH_SINK = [.5, 0, .75, 0], SH_FLY = [.2, .85, .22, 1];
 const shelfCan = () => S.dkShelf !== false && DK.on && !fullscreen && !WH.open && !tourOn && !(window.LK && LK.on) && !(window.CTS && CTS.on)
   && !(window.Pick && Pick.on) && !document.body.classList.contains('intro');
 function shelfWatch(x, y, down){
@@ -8335,7 +8342,7 @@ async function shelfPrep(){
   const rects = (await invoke('dock_rects', {ids:wins.map(w => w.id)})) || [];
   if (seq !== SH.seq) return;
   SH.rects = new Map(rects.map(([id, r, min]) => [id, {r, min}]));
-  if (SH.on && !SH.flying){ shelfLay(); shelfSync(500); }
+  if (SH.on && !SH.flying){ shelfLay(); shelfPics(450); }
 }
 function shelfShrinkLater(){
   clearTimeout(SH.shrinkT);
@@ -8351,6 +8358,20 @@ const shelfTall = () => new Promise(res => {
   const f = () => { if (ok()){ removeEventListener('resize', f); res(); } };
   addEventListener('resize', f); setTimeout(() => { removeEventListener('resize', f); res(); }, 400);
 });
+// Where a card's picture is, as the card is drawn: resting; pointed at (lifted 10 px and 6% larger from its foot,
+// as .sh-c.done.hot); pushed aside for a neighbour (--sx); or below, smaller and gone (as shUp starts and shDown ends).
+function shelfAt(c, k){
+  const [x, y, w, h] = c._r, sx = parseFloat(c.style.getPropertyValue('--sx')) || 0;
+  const grown = (s, dy, o) => [x + sx + w * (1 - s) / 2, y + h * (1 - s) + dy, w * s, h * s, o];
+  if (k === 'from') return grown(.9, 80, 0);
+  if (k === 'down') return grown(.92, 80, 0);
+  return c.classList.contains('hot') && c.classList.contains('done') ? grown(1.06, -10, 1) : grown(1, 0, 1);
+}
+const shelfDelay = c => parseFloat(c.style.getPropertyValue('--d')) || 0;
+function shelfPics(ms, list){
+  const cards = list || [...shCards.querySelectorAll('.sh-c')];
+  if (cards.length) invoke('thumbs_go', {items:cards.map(c => ({id:c._w.id, to:shelfAt(c), ms, ease:SH_GLIDE}))});
+}
 async function shelfShow(){
   await shelfTall();
   if (SH.on || !shelfCan()) return;
@@ -8372,79 +8393,64 @@ async function shelfShow(){
     shCards.appendChild(c);
   }
   shelfLay(true);
+  const cards = [...shCards.querySelectorAll('.sh-c')];
+  // the pictures start below, small and clear, and rise into their places with their cards (shUp: .64 s after --d + 90 ms)
+  invoke('thumbs_go', {only:true, items:cards.map(c => ({id:c._w.id, from:shelfAt(c, 'from'), to:shelfAt(c), ms:640, oms:230, delay:shelfDelay(c) + 90, ease:SH_GLIDE}))});
   void shTray.offsetWidth; shelfEl.classList.add('on');
-  syncHit(); wake(); shelfSync(1300);
+  syncHit(); wake();
 }
 // The cards' sizes and places: in one row while they fit at a good size, otherwise in two or three rows (like
 // Mission Control), each card the shape of its window; the tray fits round them.
 function shelfLay(first){
   const cards = [...shCards.querySelectorAll('.sh-c')], n = cards.length; if (!n) return;
-  const W = Math.min(innerWidth - 140, 1440), gap = 20, gapY = 54, maxH = Math.min(440, innerHeight * .5);
+  const W = Math.min(innerWidth - 140, 1440), gap = 22, gapY = 54, maxH = Math.min(440, innerHeight * .5);
   const asp = cards.map(c => { const r = (SH.rects.get(c._w.id) || {}).r; return r && r[3] > 40 ? Math.max(.6, Math.min(2.4, r[2] / r[3])) : 1.6; });
   let best = null;
   for (let rows = 1; rows <= 3; rows++){
     const per = Math.ceil(n / rows), lines = [];
     for (let i = 0; i < n; i += per) lines.push(asp.slice(i, i + per));
-    const wide = Math.max(...lines.map(l => l.reduce((s, a) => s + a, 0) + (l.length - 1) * gap / 150));
-    let H = Math.min(150, (W - (per - 1) * gap) / Math.max(...lines.map(l => l.reduce((s, a) => s + a, 0))), (maxH - (lines.length - 1) * gapY) / lines.length);
+    const H = Math.min(150, (W - (per - 1) * gap) / Math.max(...lines.map(l => l.reduce((s, a) => s + a, 0))), (maxH - (lines.length - 1) * gapY) / lines.length);
     if (!best || H > best.H + 6) best = {H, lines, per};
-    void wide;
   }
-  const H = Math.max(60, best.H), per = best.per, rowsN = best.lines.length;
-  const blockH = rowsN * H + (rowsN - 1) * gapY;
-  const bottom0 = 14 + 46;                                   // (the bottom row's foot: tray's foot + the icons under the cards)
-  let trayW = 0;
+  const H = Math.max(60, best.H), per = best.per, rowsN = best.lines.length, blockH = rowsN * H + (rowsN - 1) * gapY, bottom0 = 14 + 46;
   const rowW = best.lines.map(l => l.reduce((s, a) => s + a * H, 0) + (l.length - 1) * gap);
   cards.forEach((c, i) => {
     const row = Math.floor(i / per), k = i - row * per, line = best.lines[row];
     let x = innerWidth / 2 - rowW[row] / 2;
     for (let j = 0; j < k; j++) x += line[j] * H + gap;
     const w = asp[i] * H, top = innerHeight - bottom0 - blockH + row * (H + gapY);
-    c._cx = x + w / 2; c._top = top;
-    c.style.left = Math.round(x) + 'px'; c.style.top = Math.round(top) + 'px'; c.style.width = Math.round(w) + 'px'; c.style.height = Math.round(H) + 'px';
+    c._cx = x + w / 2; c._top = top; c._r = [Math.round(x), Math.round(top), Math.round(w), Math.round(H)];
+    c.style.left = c._r[0] + 'px'; c.style.top = c._r[1] + 'px'; c.style.width = c._r[2] + 'px'; c.style.height = c._r[3] + 'px';
     if (first) c.style.setProperty('--d', Math.round(Math.hypot(c._cx - SH.x, (innerHeight - top) * .6) / innerWidth * 260) + 'ms');
   });
-  trayW = Math.max(...rowW) + 44;
-  const trayH = blockH + 18 + 46, trayL = Math.round(innerWidth / 2 - trayW / 2), trayT = innerHeight - 14 - trayH;
+  const trayW = Math.max(...rowW) + 48, trayH = blockH + 20 + 46, trayL = Math.round(innerWidth / 2 - trayW / 2), trayT = innerHeight - 14 - trayH;
   shTray.style.left = trayL + 'px'; shTray.style.width = Math.round(trayW) + 'px'; shTray.style.height = Math.round(trayH) + 'px';
+  shTray.style.setProperty('--ty', Math.round(trayH + 40) + 'px');
   const gw = shTray.querySelector('.gw');
   gw.style.left = -trayL + 'px'; gw.style.top = -trayT + 'px'; gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
   SH.top = trayT - 50;
 }
-// the live pictures, put where the cards are (each frame while anything moves, for `ms`)
-function shelfSync(ms){
-  SH.syncTo = Math.max(SH.syncTo, performance.now() + ms);
-  if (!SH.syncing){ SH.syncing = true; requestAnimationFrame(shelfSyncF); }
-}
-function shelfSyncF(){
-  if (!SH.on && !SH.flying){ SH.syncing = false; return; }
-  const items = [];
-  for (const c of shCards.querySelectorAll('.sh-c')){
-    const f = c.firstChild.getBoundingClientRect(), o = +getComputedStyle(c).opacity;
-    items.push({id:c._w.id, x:f.left, y:f.top, w:f.width, h:f.height, o});
-  }
-  invoke('thumbs_set', {items});
-  if (performance.now() < SH.syncTo) requestAnimationFrame(shelfSyncF); else SH.syncing = false;
-}
 function shelfHot(c){
   if (SH.hot === c) return;
   SH.hot = c;
-  const cards = [...shCards.querySelectorAll('.sh-c')], h = cards.indexOf(c), hr = c && Math.round(c._top);
-  cards.forEach((x, i) => { x.classList.toggle('hot', x === c); x.style.setProperty('--sx', h < 0 || i === h || Math.round(x._top) !== hr ? '0px' : (Math.sign(i - h) * 16 / Math.pow(Math.abs(i - h), .7)).toFixed(1) + 'px'); });
-  shelfSync(520);
+  const cards = [...shCards.querySelectorAll('.sh-c')], h = cards.indexOf(c), hr = c && c._top;
+  cards.forEach((x, i) => { x.classList.toggle('hot', x === c); x.style.setProperty('--sx', h < 0 || i === h || x._top !== hr ? '0px' : (Math.sign(i - h) * 14 / Math.pow(Math.abs(i - h), .7)).toFixed(1) + 'px'); });
+  shelfPics(420, cards.filter(x => x.classList.contains('done')));
   if (!c){ shTip.classList.remove('on'); return; }
   const w = c._w, ic = iconCache.get(w.launch);
   shTip.innerHTML = `${ic ? `<img src="${ic}" alt="">` : ''}<span>${esc(w.title || w.name)}</span>`;
   shTip.style.setProperty('--tx', Math.round(c._cx) + 'px');
-  shTip.style.setProperty('--ty', Math.round(c._top - 10 - c.offsetHeight * .03 - 40) + 'px');
+  shTip.style.setProperty('--ty', Math.round(c._top - c._r[3] * .06 - 10 - 40) + 'px');
   shTip.classList.add('on');
 }
 // pressed: the card grows from where it is into the window itself (placed at the window's size and drawn back down to
-// the card's, then let go: its live picture goes with it), the rest sink, and the window comes to the front under it
+// the card's, then let go), its live picture growing with it; the rest sink; and the window comes to the front under it
 function shelfFly(c){
   if (SH.flying) return;
   const w = c._w, r = (SH.rects.get(w.id) || {}).r;
   SH.flying = true; clearTimeout(SH.leaveT); SH.leaveT = 0; shTip.classList.remove('on');
+  const rest = [...shCards.querySelectorAll('.sh-c')].filter(x => x !== c);
+  invoke('thumbs_go', {items:rest.map(x => ({id:x._w.id, to:shelfAt(x, 'down'), ms:300, ease:SH_SINK}))});
   shelfEl.classList.add('pick'); c.classList.add('fly');
   if (r && r[2] > 40 && r[3] > 40){
     const b = c.getBoundingClientRect();
@@ -8454,8 +8460,11 @@ function shelfFly(c){
     void c.offsetWidth;
     c.style.transition = 'transform .5s cubic-bezier(.2,.85,.22,1)';
     c.style.transform = 'none';
-  } else { c.style.transition = 'transform .3s var(--glide), opacity .25s'; c.style.transform = 'translateY(-40px) scale(1.1)'; c.style.opacity = '0'; }
-  shelfSync(700);
+    invoke('thumbs_go', {items:[{id:w.id, to:[r[0], r[1], r[2], r[3], 1], ms:500, ease:SH_FLY}]});
+  } else {
+    c.style.transition = 'transform .3s var(--glide), opacity .25s'; c.style.transform = 'translateY(-40px) scale(1.1)'; c.style.opacity = '0';
+    invoke('thumbs_go', {items:[{id:w.id, to:shelfAt(c, 'down'), ms:300, ease:SH_SINK}]});
+  }
   setTimeout(() => invoke('dock_act', {id:w.id, what:'focus'}), 380);
   setTimeout(() => shelfHide(true), 640);
 }
@@ -8464,18 +8473,22 @@ function shelfHide(now){
   SH.on = false; SH.hot = null; clearTimeout(SH.leaveT); SH.leaveT = 0; shTip.classList.remove('on');
   if (now){ SH.flying = false; invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; }
   else {
+    const cards = [...shCards.querySelectorAll('.sh-c')];
+    // (the pictures go down with their cards: shDown, .34 s after --d * .3)
+    invoke('thumbs_go', {items:cards.map(c => ({id:c._w.id, to:shelfAt(c, 'down'), ms:340, delay:shelfDelay(c) * .3, ease:SH_SINK}))});
     shelfEl.classList.add('down');
-    SH.flying = true; shelfSync(420);                         // (the pictures go down with their cards)
-    setTimeout(() => { SH.flying = false; if (!SH.on){ invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; } }, 460);
+    SH.flying = true;
+    setTimeout(() => { SH.flying = false; if (!SH.on){ invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; } }, 480);
   }
   syncHit(); shelfShrinkLater();
 }
-shCards.addEventListener('animationend', e => { if (e.animationName === 'shUp'){ e.target.classList.add('done'); if (e.target === SH.hot) shelfSync(520); } });
+shCards.addEventListener('animationend', e => { if (e.animationName === 'shUp'){ e.target.classList.add('done'); if (e.target === SH.hot) shelfPics(420, [e.target]); } });
 shCards.addEventListener('pointerover', e => { const c = e.target.closest('.sh-c'); if (c && !SH.flying) shelfHot(c); });
 shCards.addEventListener('pointerleave', () => { if (!SH.flying) shelfHot(null); });
 shCards.addEventListener('click', e => { const c = e.target.closest('.sh-c'); if (c) shelfFly(c); });
 shelfEl.querySelector('.sh-scrim').addEventListener('pointerdown', () => { if (!SH.flying) shelfHide(); });
 shTray.addEventListener('pointerdown', e => { if (!SH.flying && e.target === shTray) shelfHide(); });
+
 
 
 whDisc.addEventListener('pointerenter', () => { if (!WH.open && S.dkOpen !== 'click'){ clearTimeout(WH.openT); WH.openT = setTimeout(whOpen, 70); } });
