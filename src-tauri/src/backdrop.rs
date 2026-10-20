@@ -106,8 +106,15 @@ fn paused() -> bool {
     HOLD.load(Ordering::SeqCst) || OTHERS.load(Ordering::SeqCst) || ticks() < SNAP_UNTIL.load(Ordering::SeqCst)
 }
 
+/// Whether ULTRON is left out of captures right now (so it's only switched when it changes: each switch made Windows
+/// redraw the whole overlay, a flash, every time a menu opened or closed).
+static OUT: AtomicBool = AtomicBool::new(false);
+
 /// Leave ULTRON out of screen captures, or put it back.
 fn exclude(on: bool) {
+    if OUT.swap(on, Ordering::SeqCst) == on {
+        return;
+    }
     let v = WIN.load(Ordering::SeqCst);
     if v != 0 {
         unsafe {
@@ -237,6 +244,12 @@ fn finish(shot: &[u8], w: usize, hh: usize) -> Option<String> {
     Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out.into_inner())))
 }
 
+/// (developer runs only) ULTRON back in screen captures for a while, its glass held as it is: for pictures of it.
+pub fn dev_show() {
+    SNAP_UNTIL.store(ticks() + 20_000, Ordering::SeqCst);
+    exclude(false);
+}
+
 /// What's behind ULTRON's overlay, one picture at a time: the slow way, for while only the bar shows.
 fn capture(app: &AppHandle) -> Option<String> {
     let _busy = BUSY.lock().ok()?;
@@ -245,15 +258,14 @@ fn capture(app: &AppHandle) -> Option<String> {
     }
     let (h, r) = window(app)?;
     let (w, hh) = small_size(r);
-    // leave ULTRON out of this one capture (it stays on screen the whole time)
+    // ULTRON is left out of captures (and stays out until a screenshot or a recording wants it back: see paused)
     let shot = unsafe {
-        let set = SetWindowDisplayAffinity(h, WDA_EXCLUDEFROMCAPTURE);
-        static ONCE: std::sync::Once = std::sync::Once::new();
-        ONCE.call_once(|| crate::log_line(&format!("live glass: exclude-from-capture {:?}", set)));
-        std::thread::sleep(Duration::from_millis(34)); // two frames for the compositor to take it out
-        let px = grab_small(r, w as i32, hh as i32);
-        let _ = SetWindowDisplayAffinity(h, WDA_NONE);
-        px?
+        if !OUT.load(Ordering::SeqCst) {
+            let _ = h;
+            exclude(true);
+            std::thread::sleep(Duration::from_millis(34)); // two frames for the compositor to take it out
+        }
+        grab_small(r, w as i32, hh as i32)?
     };
     finish(&shot, w, hh)
 }
@@ -398,8 +410,10 @@ pub fn start(app: AppHandle) {
             let every = EVERY.load(Ordering::SeqCst);
             let fast = every > 0 && every <= FAST && !paused();
             if !fast && feed.take().is_some() {
-                LIVE.store(false, Ordering::SeqCst);
-                exclude(false); // (back in everyone's screenshots)
+                LIVE.store(false, Ordering::SeqCst); // (ULTRON stays out of captures: the slow pictures need that too)
+            }
+            if every == 0 {
+                exclude(false); // (no glass to look behind: back in everyone's screenshots)
             }
             if every == 0 || paused() {
                 std::thread::sleep(Duration::from_millis(if every == 0 { 300 } else { 60 }));
@@ -416,7 +430,6 @@ pub fn start(app: AppHandle) {
                             LIVE.store(true, Ordering::SeqCst);
                             (dims, shown, spent, since) = (small_size(r), 0, Duration::ZERO, Instant::now());
                         } else {
-                            exclude(false);
                             retry = Instant::now() + Duration::from_secs(30);
                             crate::log_line("live glass: the live feed isn't available on this screen; refreshing the slow way");
                         }
@@ -438,7 +451,6 @@ pub fn start(app: AppHandle) {
                         Err(()) => {
                             feed = None;
                             LIVE.store(false, Ordering::SeqCst);
-                            exclude(false);
                             retry = Instant::now() + Duration::from_millis(500);
                             continue;
                         }

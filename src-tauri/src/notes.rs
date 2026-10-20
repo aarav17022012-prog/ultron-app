@@ -98,6 +98,11 @@ struct St {
     notes: HashMap<u32, Note>,
     waits: HashMap<u32, u8>,
     icons: HashMap<String, String>,
+    /// notifications you cleared or dismissed that Windows still lists for a moment (it clears them a little later):
+    /// they aren't taken for new ones in the meantime
+    cleared: HashSet<u32>,
+    /// "clear all" was pressed at this moment (Windows' time): anything older that turns up is one of those
+    clear_before: i64,
 }
 static ST: LazyLock<Mutex<St>> = LazyLock::new(Default::default);
 /// app id -> its toast activator, as found (None: it has none)
@@ -120,6 +125,7 @@ pub fn poll(app: &AppHandle, list: &[UserNotification]) {
             return;
         }
         let ids: HashSet<u32> = list.iter().filter_map(|n| n.Id().ok()).collect();
+        st.cleared.retain(|i| ids.contains(i));
         let gone: Vec<u32> = st.notes.keys().copied().filter(|i| !ids.contains(i)).collect();
         for i in &gone {
             st.notes.remove(i);
@@ -128,7 +134,12 @@ pub fn poll(app: &AppHandle, list: &[UserNotification]) {
         if !gone.is_empty() {
             let _ = app.emit_to("main", "note-gone", &gone);
         }
-        let fresh: Vec<u32> = ids.into_iter().filter(|i| !st.notes.contains_key(i)).collect();
+        let before = st.clear_before;
+        let fresh: Vec<u32> = ids
+            .into_iter()
+            .filter(|i| !st.notes.contains_key(i) && !st.cleared.contains(i))
+            .filter(|i| before == 0 || list.iter().find(|n| n.Id().ok() == Some(*i)).and_then(|n| n.CreationTime().ok()).map(|t| t.UniversalTime > before).unwrap_or(true))
+            .collect();
         (fresh, !st.primed)
     };
     if fresh.is_empty() {
@@ -526,7 +537,12 @@ pub fn dismiss(app: &AppHandle, id: u32) {
     if let Ok(l) = UserNotificationListener::Current() {
         let _ = l.RemoveNotification(id);
     }
-    if ST.lock().unwrap().notes.remove(&id).is_some() {
+    let had = {
+        let mut st = ST.lock().unwrap();
+        st.cleared.insert(id);
+        st.notes.remove(&id).is_some()
+    };
+    if had {
         let _ = app.emit_to("main", "note-gone", [id]);
     }
 }
@@ -549,6 +565,11 @@ pub fn clear(app: &AppHandle, aumid: Option<String>) {
     let mut st = ST.lock().unwrap();
     for id in &ids {
         st.notes.remove(id);
+        st.cleared.insert(*id);
+    }
+    if aumid.is_none() {
+        // (Windows' time: 100 ns steps since 1601)
+        st.clear_before = unix_ms() as i64 * 10_000 + 116_444_736_000_000_000;
     }
     drop(st);
     if !ids.is_empty() {

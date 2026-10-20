@@ -1217,7 +1217,51 @@ fn steps_ready(app: &AppHandle) {
     *SLOT_HOLDS.lock().unwrap() = "steps";
 }
 
+/// "what's 23 x 47", "15% of 240", "square root of 144": worked out exactly (a small brain only guesses at sums).
+fn quick_math(q: &str) -> Option<String> {
+    let mut e = q.to_lowercase().trim().trim_end_matches(['?', '.', '!', '=']).trim().to_string();
+    for p in ["what is ", "what's ", "whats ", "calculate ", "compute ", "how much is ", "solve ", "evaluate ", "work out "] {
+        if let Some(r) = e.strip_prefix(p) {
+            e = r.trim().to_string();
+            break;
+        }
+    }
+    let e = e
+        .replace(" percent of ", "% of ")
+        .replace("% of ", "/100*")
+        .replace("square root of ", "sqrt ")
+        .replace(" plus ", "+")
+        .replace(" minus ", "-")
+        .replace(" multiplied by ", "*")
+        .replace(" times ", "*")
+        .replace(" divided by ", "/")
+        .replace(" x ", "*")
+        .replace(" into ", "*");
+    let e = match e.strip_prefix("sqrt ") {
+        Some(n) => format!("sqrt({})", n.trim()),
+        None => e,
+    };
+    // numbers and signs only (any other word means it isn't a sum)
+    let bare = e.replace("sqrt", "");
+    if !bare.chars().any(|c| c.is_ascii_digit()) || !bare.chars().all(|c| c.is_ascii_digit() || " .+-*/^%()".contains(c)) {
+        return None;
+    }
+    if !(bare.chars().any(|c| "+-*/^%".contains(c)) || e.contains("sqrt")) {
+        return None;
+    }
+    let v = crate::tools::eval(&e).ok()?;
+    if !v.is_finite() {
+        return None;
+    }
+    let shown = if (v - v.round()).abs() < 1e-9 && v.abs() < 1e15 { format!("{}", v.round() as i64) } else { format!("{:.6}", v).trim_end_matches('0').trim_end_matches('.').to_string() };
+    Some(format!("That's {shown}."))
+}
+
 pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
+    // a sum is worked out exactly, at once
+    if let Some(r) = quick_math(user) {
+        return Some(Reply { reply: r, action: String::new(), icon: "chat", ok: true });
+    }
     let ai = app.state::<Ai>();
     // everyday chat goes to the quick brain on the graphics card (about a second);
     // questions that need real thinking go to the smart brain (Qwen3 4B on most PCs)
@@ -1273,7 +1317,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     if let Some(c) = &cloud {
         // (a service gets the ordinary conversation prompt: it needs no lean one to be quick)
         let msgs = if many { steps_messages(app, user, web.as_deref()) } else { build_messages(app, user, web.as_deref()) };
-        match crate::cloud::chat(c, &msgs, max.max(160), if many { 0.3 } else { 0.5 }, cap, |f| emit(f), cancelled) {
+        match crate::cloud::chat(c, &msgs, max.max(160), 0.3, cap, |f| emit(f), cancelled) {
             Ok(t) => {
                 text = Some(t);
                 via = "cloud";
@@ -1300,7 +1344,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
                 quick_ready(app);
             }
             let msgs = if many { steps_messages(app, user, web.as_deref()) } else if thinking { thinking_messages(app, user) } else { build_messages(app, user, brief_web.as_deref()) };
-            let t = generate_in(app, &msgs, max, if many { 0.3 } else if quick.is_some() { 0.4 } else { 0.6 }, None, quick, cap, |f| emit(f))?;
+            let t = generate_in(app, &msgs, max, if many { 0.3 } else if quick.is_some() { 0.25 } else { 0.4 }, None, quick, cap, |f| emit(f))?;
             if let (Some(p), false) = (quick, many) {
                 *QUICK_HOLDS.lock().unwrap() = (p, "chat"); // (its memory still starts with the chat opening)
             }

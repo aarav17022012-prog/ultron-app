@@ -2641,59 +2641,6 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .notch:not(.open) .panel *, .notch:not(.open) .panel *::before, .notch:not(.open) .panel *::after,
 .pane:not(.active):not(.exit) *, .dd:not(.open) *, .wifi:not(.open) *, .start:not(.open) *, .cal:not(.open) *, .setw:not(.open) *{animation-play-state:paused !important}
 @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important; transition-duration:.01ms!important} }
-/* ---------- the shelf (ULTRON's taskbar on): rest the pointer on the very bottom edge for a second and the open windows come up ----------
-   Minimal and tidy, like Alt Tab: a row of even, rounded dark tiles just above the bottom edge (two rows only when
-   there are many windows), each with that window live inside it (Windows' own picture, thumbs.rs, fitted to the
-   tile, never overlapping another). Pointing at one lifts it a touch and lights its edge, and a small name tag
-   glides over to it. Pressing it, the picture grows into the window as the window comes to the front. */
-.shelf{position:fixed; inset:0; z-index:42; pointer-events:none; visibility:hidden}
-.shelf.on{visibility:visible}
-.sh-scrim{position:absolute; left:0; right:0; bottom:0; height:230px; pointer-events:auto; opacity:0;
-  background:linear-gradient(to top, rgba(0,0,0,.4), rgba(0,0,0,.14) 55%, rgba(0,0,0,0)); transition:opacity .35s ease}
-.shelf.on .sh-scrim{opacity:1}
-.shelf.down .sh-scrim, .shelf.pick .sh-scrim{opacity:0; transition:opacity .26s ease}
-.sh-tray{display:none}
-.sh-c{position:absolute; padding:0; border:0; background:none; color:inherit; cursor:default; pointer-events:auto; outline:none;
-  transform:translateX(var(--sx, 0px)); transition:transform .32s var(--glide), opacity .18s ease;
-  animation:shUp .44s var(--d) var(--glide) backwards}
-@keyframes shUp{from{transform:translateY(18px); opacity:0} 45%{opacity:1}}
-.sh-c.done.hot{z-index:5; transform:translateX(var(--sx, 0px)) translateY(-4px)}
-.sh-f{position:absolute; inset:0; border-radius:12px; overflow:hidden; background:rgba(26,26,30,.95);
-  box-shadow:0 12px 28px -8px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); transition:background .28s ease, box-shadow .32s var(--glide)}
-.sh-c.done.hot .sh-f{background:rgba(44,44,50,.97); box-shadow:0 18px 38px -10px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.36)}
-/* (where the picture goes inside the tile, an icon and name show only where Windows has no picture to give, a
-    minimized window's say: they come in under the picture after it has faded up, so they never flash before it) */
-.sh-ph{position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-radius:4px; background:#202024;
-  opacity:0; animation:shPh .25s calc(var(--d) + 440ms) ease forwards}
-@keyframes shPh{to{opacity:1}}
-.sh-ph img{width:28%; max-width:30px; aspect-ratio:1; object-fit:contain}
-.sh-ph b{font-size:18px; font-weight:600; color:rgba(255,255,255,.8)}
-.sh-ph em{max-width:88%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:normal; font-size:10.5px; font-weight:600; color:rgba(255,255,255,.58)}
-.sh-ic{display:none}
-.shelf.down .sh-c:not(.fly){animation:shDown .26s calc(var(--d) * .3) cubic-bezier(.5,0,.75,0) forwards}
-.shelf.pick .sh-c:not(.fly){animation:shDown .24s cubic-bezier(.5,0,.75,0) forwards}
-@keyframes shDown{to{transform:translateY(14px); opacity:0}}
-.sh-c.fly{z-index:9; animation:none; opacity:0}
-/* the name tag: the app's icon, the window's title, the app's name quieter after it; it glides from tile to tile and
-   its words come up fresh each time */
-.sh-tip{position:absolute; left:0; top:0; display:flex; align-items:center; gap:8px; max-width:440px; height:30px; padding:0 12px 0 9px; border-radius:9px;
-  background:rgba(24,24,28,.96); box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 10px 26px -6px rgba(0,0,0,.55);
-  font-size:12.5px; font-weight:600; letter-spacing:-.006em; color:#fff; white-space:nowrap;
-  opacity:0; transform:translate(calc(var(--tx, 0px) - 50%), calc(var(--ty, 0px) + 6px)) scale(.97);
-  transition:opacity .18s ease, transform .34s var(--glide)}
-.sh-tip.on{opacity:1; transform:translate(calc(var(--tx, 0px) - 50%), var(--ty, 0px))}
-.sh-tip img{width:16px; height:16px; flex:none; object-fit:contain}
-.sh-tip .t{min-width:0; overflow:hidden; text-overflow:ellipsis}
-.sh-tip .a{flex:none; font-weight:500; color:rgba(255,255,255,.48)}
-.sh-tip.swap img, .sh-tip.swap .t, .sh-tip.swap .a{animation:tipSwap .3s var(--glide) backwards}
-.sh-tip.swap .a{animation-delay:.04s}
-@keyframes tipSwap{from{opacity:0; transform:translateY(5px)}}
-.sh-none{position:absolute; left:50%; bottom:30px; padding:8px 14px; border-radius:9px; background:rgba(24,24,28,.96); box-shadow:0 0 0 1px rgba(255,255,255,.1);
-  font-size:12.5px; font-weight:600; transform:translateX(-50%); animation:shNone .4s var(--glide) backwards}
-@keyframes shNone{from{opacity:0; transform:translate(-50%, 16px)}}
-.shelf.down .sh-none{animation:shNoneOut .25s ease-in forwards}
-@keyframes shNoneOut{to{opacity:0; transform:translate(-50%, 16px)}}
-
 /* ---------- the floating player, an iPod ----------
    A small body of ULTRON's liquid glass: a screen on top and a click wheel under it. The screen shows the lyrics as
    they're sung over the album art (soft and dark behind them); pointing at the player, the lyrics lift away and the
@@ -2789,6 +2736,11 @@ body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.3
 .cts.on .cts-hint svg .c{animation:ctsDraw 2.3s var(--glide) infinite}
 .flyr:not(.on) .fl-eq i, .notch:not(.open) .eqart i, .dd:not(.open) .mu-art, .dd:not(.open) .mi .eq i, .setw:not(.open) .sw-about svg{animation-play-state:paused !important}
 
+/* (the wheel while you type a search: places don't slide, they turn over where they are) */
+.wheel.qflip .wh-b{transition:opacity .3s}
+
+#fileBtn[hidden]{display:none !important}
+
 /* ---------- the Mac finish: one layer over everything above ----------
    Type is Inter (bundled, src/fonts; SF Pro can't ship on Windows), the closest free match for SF Pro: its optical
    sizes tighten big text the way SF Display does. Menus use the Mac's sizes (13 px, 22 px rows); headings are
@@ -2842,7 +2794,7 @@ input, textarea, select, button{font-family:inherit}
     <button class="mt" data-menu="settings">Settings</button>
   </div>
   <div class="mr">
-    <button class="st flb" id="fileBtn" aria-label="Make files smaller" aria-expanded="false"><svg viewBox="0 0 24 24"><path class="fa" d="M8 4l4 4 4-4"/><path d="M5 12h14"/><path class="fb" d="M8 20l4-4 4 4"/></svg><i class="fdot"></i></button>
+    <button class="st flb" id="fileBtn" aria-label="Make files smaller" aria-expanded="false" hidden><svg viewBox="0 0 24 24"><path class="fa" d="M8 4l4 4 4-4"/><path d="M5 12h14"/><path class="fb" d="M8 20l4-4 4 4"/></svg><i class="fdot"></i></button>
     <button class="st rcb" id="recBtn" aria-label="Record the screen" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle class="rdot" cx="12" cy="12" r="3.6"/></svg><span id="recTime" hidden></span></button>
     <button class="st mlb" id="mailBtn" aria-label="Email" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13.5" rx="2.6"/><path class="flap" d="M3.8 7.4L12 13.2L20.2 7.4"/></svg><i class="mdot"></i></button>
     <button class="st aib" id="aiBtn" aria-label="AI Tools" aria-expanded="false"><svg class="spk" viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/><path d="M18.5 14.5c.3 1.6.9 2.2 2.5 2.5-1.6.3-2.2.9-2.5 2.5-.3-1.6-.9-2.2-2.5-2.5 1.6-.3 2.2-.9 2.5-2.5z"/></svg><span>AI</span><i class="tdot"></i></button>
@@ -2867,7 +2819,6 @@ input, textarea, select, button{font-family:inherit}
     <div class="wh-grip"></div></div>
   <div class="wh-drag" id="whDrag"><img alt=""></div>
 </div></div>
-<div class="shelf" id="shelf" aria-label="Open windows"><div class="sh-scrim"></div><div class="sh-tray glass panel-glass" id="shTray"><i class="gw"></i></div><div class="sh-cards" id="shCards"></div><div class="sh-tip" id="shTip"></div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
   <div class="sp-pic"><img id="spPic" alt=""><div class="sp-when"><b id="spTime"></b><span id="spDate"></span></div></div>
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
@@ -2934,7 +2885,7 @@ input, textarea, select, button{font-family:inherit}
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
     <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">The character in the notch.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
-    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Windows rise from the bottom edge<small>Rest the pointer on the bottom of the screen and every open window comes up. Press one to go to it</small></span><button class="tg" role="switch" data-set="dkShelf" aria-label="dkShelf"></button></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
+    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>ULTRON’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or ULTRON closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="nfQuiet"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="nfSound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small>Opens ULTRON when you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="cleaner"><h2>Cleaner</h2><p class="sw-sub">Clears the junk Windows and your apps leave behind. Your files, sign-ins, passwords and settings aren’t touched.</p><div class="cl-stage" id="clStage"><div class="cl-head"><b id="clNum">…</b><span id="clCap">Looking for junk…</span></div><div class="cl-fall" id="clFall"></div><div class="cl-mach"><i class="cl-slot"></i><div class="cl-teeth"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i></div><i class="cl-light"></i></div><div class="cl-out" id="clOut"></div><div class="cl-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></div></div><div class="cl-rows" id="clRows"></div><div class="cl-acts"><button class="cl-go" id="clGo" type="button" data-clx="go" disabled><span>Clear</span></button><button class="chipb" type="button" data-clx="scan">Look again</button></div></section>
@@ -7244,7 +7195,7 @@ let savedName = ''; try { savedName = localStorage.getItem('ultron-name') || '';
 if (savedName) setUserName(savedName);
 else invoke('user_name').then(n => { if (n) setUserName(n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()); });
 
-function closePanels(keepShelf){ if (!keepShelf && window.SH && SH.on) shelfHide(true); closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeNotes(); closeRec(); closeFiles(); whClose(); closeSpot(true); }
+function closePanels(){ closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeNotes(); closeRec(); closeFiles(); whClose(); closeSpot(true); }
 
 /* ---------- settings window ---------- */
 const setEl = $('setw'), swHl = $('swHl');
@@ -7650,7 +7601,6 @@ function syncHit(){
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
-  if (window.SH && SH.on) rects.push({x:0, y:Math.max(0, Math.floor(SH.top)), w:innerWidth, h:Math.ceil(innerHeight - Math.max(0, SH.top))});
   if (window.NF && NF.shown.length) rects.push({x:Math.floor(innerWidth - 10 - NF_W - 8), y:32, w:NF_W + 16, h:Math.ceil(NF.h + 18)});
   for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel')]) if (el.classList.contains('open') && el.id !== 'wheel'){
     // layout size, not the on-screen size: while a panel animates in it's scaled down, which left dead spots
@@ -7718,7 +7668,7 @@ function enter(){
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); shelfWatch(p[0], p[1], !!p[2]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
@@ -7733,7 +7683,7 @@ if (TAURI){
   addEventListener('blur', () => setTimeout(() => {
     if (document.hasFocus()) return;
     if (Pick && Pick.on){ closeDD(); return; }             // you've gone to select the text: the panel waits for you
-    closeDD(); closePanels(true);                          // (the shelf goes when the pointer leaves it, not with the focus)
+    closeDD(); closePanels();
     if (!openedByVoice && activeTab !== 'browser') setOpen(false);
   }, 160));
   invoke('wallpaper').then(setWall); listen('wallpaper', setWall);
@@ -8030,7 +7980,7 @@ var DK = {on:false, busy:false, wins:[], apps:[], tiled:false, asked:new Set()};
 var WH = {open:false, over:false, mode:'open', only:'', items:[], live:new Map(), sel:0, mid:0, R:250, D:190, cy:-28, rest:-180, step:.277, closeT:0, openT:0, iconT:0, peekT:0, peekFor:'', dir:0,
   tray:false, drag:null, dragged:0, gl:null, gw:whDisc.querySelector('.gw'), gwT:whTray.querySelector('.gw')};
 const dkWait = ms => new Promise(r => setTimeout(r, ms));
-for (const [k, v] of Object.entries({dkSize:'m', dkTint:'clear', dkOpen:'hover', dkPins:true, dkShelf:true, dkGap:10, dkStart:'win', lock:'win', lockPass:false, spotKey:true, notes:'win', nfQuiet:false, nfSound:true, nfTime:'m'})) if (S[k] === undefined) S[k] = v;
+for (const [k, v] of Object.entries({dkSize:'m', dkTint:'clear', dkOpen:'hover', dkPins:true, dkGap:10, dkStart:'win', lock:'win', lockPass:false, spotKey:true, notes:'win', nfQuiet:false, nfSound:true, nfTime:'m'})) if (S[k] === undefined) S[k] = v;
 if (!Array.isArray(S.groups)) S.groups = [];
 paintSettings();                                           // (the Taskbar section's switches show what was just filled in)
 
@@ -8312,7 +8262,7 @@ async function dockOn(quiet){
     if (!startApps) startApps = (await invoke('start_apps')) || [];
     pinnedApps();
     await invoke('dock_set', {on:true});                    // (Windows' taskbar slides away, and its strip of the screen goes to your windows)
-    invoke('dock_keep', {on:false});                       // (no pictures of windows are kept: the shelf shows Windows' live ones)
+    invoke('dock_keep', {on:false});                       // (no pictures of windows are kept)
     DK.on = true; whGeom();
     WH.open = false; wheel.classList.remove('open');
     dockWins((await invoke('dock_list')) || []);
@@ -8334,168 +8284,7 @@ async function dockOff(){
   } finally { DK.busy = false; }
 }
 listen('dock-wins', l => { if (DK.on) dockWins(l || []); });
-/* ---------- the shelf: with ULTRON's taskbar on, the pointer resting on the bottom edge brings every open window up ----------
-   (how it looks: see the styles). The moment the pointer touches the edge the window is made nearly as tall as the
-   screen and the windows' places are asked for; when it has rested there a moment (not while a button is held:
-   that's a drag) the tray and the cards come up. Each card's live picture is Windows' own, drawn over the page where
-   the card is (thumbs.rs) and moved by Windows itself, frame by frame, with the same timing and easing as its card:
-   the page only says where each goes and how. */
-var SH = {on:false, armed:false, armT:0, leaveT:0, shrinkT:0, flying:false, x:0, top:0, seq:0, wins:[], rects:new Map(), hot:null};
-const shelfEl = $('shelf'), shCards = $('shCards'), shTip = $('shTip'), shTray = $('shTray');
-const SH_GLIDE = [.22, 1, .36, 1], SH_SINK = [.5, 0, .75, 0], SH_FLY = [.2, .85, .22, 1];
-const shelfCan = () => S.dkShelf !== false && DK.on && !fullscreen && !WH.open && !tourOn && !(window.LK && LK.on) && !(window.CTS && CTS.on)
-  && !(window.Pick && Pick.on) && !document.body.classList.contains('intro');
-function shelfWatch(x, y, down){
-  if (SH.on){
-    if (SH.flying) return;
-    if (y < SH.top - 30){ if (!SH.leaveT) SH.leaveT = setTimeout(() => { SH.leaveT = 0; shelfHide(); }, 170); }
-    else if (SH.leaveT){ clearTimeout(SH.leaveT); SH.leaveT = 0; }
-    return;
-  }
-  // (the very last row of the screen, held there a full second: passing by, or resting near the bottom, does nothing)
-  if (y < (screen.height || innerHeight) - 1 || down){
-    if (SH.armed){ SH.armed = false; clearTimeout(SH.armT); }
-    return;
-  }
-  if (SH.armed || !shelfCan()) return;
-  SH.armed = true; SH.x = x;
-  SH.armT = setTimeout(() => { if (SH.armed){ SH.armed = false; if (shelfCan()) shelfPrep().then(() => { if (shelfCan()) shelfShow(); else shelfShrinkLater(); }); } }, 1000);
-}
-async function shelfPrep(){
-  clearTimeout(SH.shrinkT);
-  // (2 px short of the screen: a window the size of the screen in front is taken by Windows for a full-screen app,
-  //  and ULTRON stands down for those)
-  const tall = Math.round(screen.height || 864) - 2;
-  if (winH < tall){ winH = tall; invoke('set_window_height', {h:tall}); }
-  const wins = DK.wins.slice(), seq = ++SH.seq;
-  SH.wins = wins;
-  const rects = (await invoke('dock_rects', {ids:wins.map(w => w.id)})) || [];
-  if (seq !== SH.seq) return;
-  SH.rects = new Map(rects.map(([id, r, min]) => [id, {r, min}]));
-}
-function shelfShrinkLater(){
-  clearTimeout(SH.shrinkT);
-  SH.shrinkT = setTimeout(() => {
-    if (SH.on || SH.armed || (window.LK && LK.on) || (window.CTS && CTS.on) || winH === 700) return;
-    winH = 700; invoke('set_window_height', {h:700}); syncHit();
-  }, 1200);
-}
-// (the page is as tall as the screen once Windows has resized the window: wait for that before placing anything)
-const shelfTall = () => new Promise(res => {
-  const ok = () => innerHeight >= (screen.height || 864) - 4;
-  if (ok()) return res();
-  const f = () => { if (ok()){ removeEventListener('resize', f); res(); } };
-  addEventListener('resize', f); setTimeout(() => { removeEventListener('resize', f); res(); }, 400);
-});
-// Where a tile's picture is: fitted inside it (c._t, from the tile's corner), and lifted 4 px when the tile is pointed at
-// (as .sh-c.done.hot); pushed aside for a neighbour (--sx); or a little below and gone (as shUp starts and shDown ends).
-function shelfAt(c, k){
-  const [x, y] = c._r, [px, py, pw, ph] = c._t, sx = parseFloat(c.style.getPropertyValue('--sx')) || 0;
-  const at = (dy, o) => [x + sx + px, y + py + dy, pw, ph, o];
-  if (k === 'from') return at(18, 0);
-  if (k === 'down') return at(14, 0);
-  return at(c.classList.contains('hot') && c.classList.contains('done') ? -4 : 0, 1);
-}
-const shelfDelay = c => parseFloat(c.style.getPropertyValue('--d')) || 0;
-function shelfPics(ms, list){
-  const cards = list || [...shCards.querySelectorAll('.sh-c')];
-  if (cards.length) invoke('thumbs_go', {items:cards.map(c => ({id:c._w.id, to:shelfAt(c), ms, ease:SH_GLIDE}))});
-}
-async function shelfShow(){
-  await shelfTall();
-  if (SH.on || !shelfCan()) return;
-  SH.on = true; SH.hot = null; shCards.textContent = ''; shTip.classList.remove('on');
-  shelfEl.classList.remove('down', 'pick');
-  const wins = SH.wins;
-  if (!wins.length){
-    shelfEl.classList.add('on');
-    shCards.innerHTML = '<div class="sh-none">No windows are open</div>';
-    SH.top = innerHeight - 110; syncHit();
-    setTimeout(() => { if (SH.on && !shCards.querySelector('.sh-c')) shelfHide(); }, 1400);
-    return;
-  }
-  for (const w of wins){
-    const c = document.createElement('button'), ic = iconCache.get(w.launch), letter = esc((w.name || '?').trim().charAt(0).toUpperCase());
-    c.className = 'sh-c'; c._w = w; c.setAttribute('aria-label', w.title || w.name);
-    c.innerHTML = `<span class="sh-f"><span class="sh-ph">${ic ? `<img src="${ic}" alt="">` : `<b>${letter}</b>`}<em>${esc(w.name || '')}</em></span></span>`
-      + `<span class="sh-ic">${ic ? `<img src="${ic}" alt="">` : `<b>${letter}</b>`}</span>`;
-    shCards.appendChild(c);
-  }
-  shelfLay(true);
-  const cards = [...shCards.querySelectorAll('.sh-c')];
-  // the pictures start a little below, clear, and rise into their places with their cards (shUp: .42 s after --d)
-  invoke('thumbs_go', {only:true, items:cards.map(c => ({id:c._w.id, from:shelfAt(c, 'from'), to:shelfAt(c), ms:440, oms:190, delay:shelfDelay(c), ease:SH_GLIDE}))});
-  void shTray.offsetWidth; shelfEl.classList.add('on');
-  syncHit(); wake();
-}
-// The tiles: all the same size, in one row just above the bottom edge (two rows when more than fit at 124 px wide),
-// as wide as fits up to 156 px; each window's picture fitted inside its tile, 6 px in, the window's own shape.
-function shelfLay(first){
-  const cards = [...shCards.querySelectorAll('.sh-c')], n = cards.length; if (!n) return;
-  const W = Math.min(innerWidth - 200, 1300), gap = 12;
-  const rows = n > Math.floor((W + gap) / (124 + gap)) ? 2 : 1, per = Math.ceil(n / rows);
-  const TW = Math.round(Math.min(156, (W - (per - 1) * gap) / per)), TH = Math.round(TW * .62);
-  const top0 = innerHeight - 20 - (rows * TH + (rows - 1) * gap);
-  cards.forEach((c, i) => {
-    const row = Math.floor(i / per), k = i - row * per, inRow = Math.min(per, n - row * per);
-    const x = Math.round(innerWidth / 2 - (inRow * TW + (inRow - 1) * gap) / 2 + k * (TW + gap)), y = top0 + row * (TH + gap);
-    const r = (SH.rects.get(c._w.id) || {}).r, a = r && r[3] > 40 ? Math.max(.5, Math.min(3, r[2] / r[3])) : 1.6, iw = TW - 12, ih = TH - 12;
-    let pw = iw, ph = iw / a; if (ph > ih){ ph = ih; pw = ih * a; }
-    c._r = [x, y, TW, TH]; c._t = [Math.round((TW - pw) / 2), Math.round((TH - ph) / 2), Math.round(pw), Math.round(ph)]; c._cx = x + TW / 2; c._top = y;
-    c.style.left = x + 'px'; c.style.top = y + 'px'; c.style.width = TW + 'px'; c.style.height = TH + 'px';
-    const holder = c.querySelector('.sh-ph');
-    if (holder){ holder.style.left = c._t[0] + 'px'; holder.style.top = c._t[1] + 'px'; holder.style.width = c._t[2] + 'px'; holder.style.height = c._t[3] + 'px'; }
-    if (first) c.style.setProperty('--d', Math.round(Math.hypot(c._cx - SH.x, (innerHeight - y) * .5) / innerWidth * 220) + 'ms');
-  });
-  SH.top = top0 - 46;
-}
-function shelfHot(c){
-  if (SH.hot === c) return;
-  const was = SH.hot; SH.hot = c;
-  const cards = [...shCards.querySelectorAll('.sh-c')], h = cards.indexOf(c), hr = c && c._top;
-  cards.forEach((x, i) => { x.classList.toggle('hot', x === c); x.style.setProperty('--sx', h < 0 || i === h || x._top !== hr ? '0px' : (Math.sign(i - h) * 6 / Math.pow(Math.abs(i - h), .7)).toFixed(1) + 'px'); });
-  shelfPics(320, cards.filter(x => x.classList.contains('done')));
-  if (!c){ shTip.classList.remove('on'); return; }
-  const w = c._w, ic = iconCache.get(w.launch), title = (w.title || w.name || '').trim(), app = (w.name || '').trim();
-  shTip.innerHTML = `${ic ? `<img src="${ic}" alt="">` : ''}<span class="t">${esc(title)}</span>${app && !title.toLowerCase().includes(app.toLowerCase()) ? `<span class="a">${esc(app)}</span>` : ''}`;
-  shTip.classList.remove('swap'); if (was) { void shTip.offsetWidth; shTip.classList.add('swap'); }
-  shTip.style.setProperty('--tx', Math.round(c._cx) + 'px');
-  shTip.style.setProperty('--ty', Math.round(c._top - 4 - 38) + 'px');
-  shTip.classList.add('on');
-}
-// pressed: its live picture grows from the tile into the window itself while the tile fades, the rest sink, and the
-// window comes to the front under the picture
-function shelfFly(c){
-  if (SH.flying) return;
-  const w = c._w, r = (SH.rects.get(w.id) || {}).r;
-  SH.flying = true; clearTimeout(SH.leaveT); SH.leaveT = 0; shTip.classList.remove('on');
-  const rest = [...shCards.querySelectorAll('.sh-c')].filter(x => x !== c);
-  invoke('thumbs_go', {items:rest.map(x => ({id:x._w.id, to:shelfAt(x, 'down'), ms:240, ease:SH_SINK}))});
-  shelfEl.classList.add('pick'); c.classList.add('fly');
-  invoke('thumbs_go', {items:[{id:w.id, to:r && r[2] > 40 && r[3] > 40 ? [r[0], r[1], r[2], r[3], 1] : shelfAt(c, 'down'), ms:r ? 480 : 240, ease:r ? SH_FLY : SH_SINK}]});
-  setTimeout(() => invoke('dock_act', {id:w.id, what:'focus'}), 360);
-  setTimeout(() => shelfHide(true), 620);
-}
-function shelfHide(now){
-  if (!SH.on) return;
-  SH.on = false; SH.hot = null; clearTimeout(SH.leaveT); SH.leaveT = 0; shTip.classList.remove('on');
-  if (now){ SH.flying = false; invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; }
-  else {
-    const cards = [...shCards.querySelectorAll('.sh-c')];
-    // (the pictures go down with their cards: shDown, .26 s after --d * .3)
-    invoke('thumbs_go', {items:cards.map(c => ({id:c._w.id, to:shelfAt(c, 'down'), ms:260, delay:shelfDelay(c) * .3, ease:SH_SINK}))});
-    shelfEl.classList.add('down');
-    SH.flying = true;
-    setTimeout(() => { SH.flying = false; if (!SH.on){ invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; } }, 360);
-  }
-  syncHit(); shelfShrinkLater();
-}
-shCards.addEventListener('animationend', e => { if (e.animationName === 'shUp'){ e.target.classList.add('done'); if (e.target === SH.hot) shelfPics(320, [e.target]); } });
-shCards.addEventListener('pointerover', e => { const c = e.target.closest('.sh-c'); if (c && !SH.flying){ clearTimeout(SH.offT); shelfHot(c); } });
-shCards.addEventListener('pointerout', e => { if (SH.flying || (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.sh-c'))) return; clearTimeout(SH.offT); SH.offT = setTimeout(() => { if (!SH.flying) shelfHot(null); }, 160); });
-shCards.addEventListener('click', e => { const c = e.target.closest('.sh-c'); if (c) shelfFly(c); });
-shelfEl.querySelector('.sh-scrim').addEventListener('pointerdown', () => { if (!SH.flying) shelfHide(); });
-shTray.addEventListener('pointerdown', e => { if (!SH.flying && e.target === shTray) shelfHide(); });
+
 
 
 
@@ -8544,7 +8333,9 @@ wheel.addEventListener('contextmenu', e => {                 // (the right butto
 });
 $('whRim').addEventListener('pointerover', e => { const b = e.target.closest('.wh-b'); if (b && !WH.drag && !b.classList.contains('out')){ const i = +b.dataset.i; WH.dir = Math.sign(i - WH.sel); whName(i); } });
 $('whPods').addEventListener('pointerover', e => { const p = e.target.closest('.wh-pod'); if (!p || WH.drag) return; const g = S.groups[+p.dataset.g]; WH.dir = 0; whName(null, g ? g.apps.map(whAppName).join(', ') : 'A new group'); });
-$('whQ').addEventListener('input', () => whRender('first', true));
+// (while you type, nothing slides round the rim: each place turns over to its new app where it is, and the apps that
+//  no longer match shrink away; see .wheel.qflip)
+$('whQ').addEventListener('input', () => { wheel.classList.add('qflip'); whRender('first', true); clearTimeout(WH.qfT); WH.qfT = setTimeout(() => wheel.classList.remove('qflip'), 560); });
 $('whQ').addEventListener('keydown', e => {
   e.stopPropagation();
   if (e.key === 'Enter') whAct(WH.sel);
@@ -9327,12 +9118,13 @@ function nfQuietSet(){
 // everything cleared: each app slides off in turn, the list draws in, and "No notifications" settles in its place
 // (the list keeps its height while they go, then draws in once, straight to the size of "No notifications": shrinking
 //  to nothing first and growing again for the empty state was the double movement)
+// (clearing: the whole list lifts away and fades as one, then the panel eases to its new size while "No notifications"
+//  comes up in it; it used to fold each app away in turn inside a fixed-height panel and then jump)
 function nfToEmpty(){
-  const groups = [...nfIn.querySelectorAll('.nf-grp')], h0 = nfIn.offsetHeight;
-  nfIn.style.height = h0 + 'px';
+  const h0 = nfIn.offsetHeight, list = nfIn.querySelector('.nf-list');
   nfIn.querySelector('.nf-clear')?.classList.add('going');
-  groups.forEach((g, i) => setTimeout(() => { g.style.height = g.offsetHeight + 'px'; void g.offsetWidth; g.classList.add('going'); }, i * 50));
-  setTimeout(() => { nfIn.style.height = ''; nfPaint(true, h0); }, 330 + groups.length * 50);
+  if (list) list.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(-12px)'}], {duration:240, easing:'cubic-bezier(.4,0,.2,1)', fill:'forwards'});
+  setTimeout(() => nfPaint(true, h0), 220);
 }
 // A pile opens like a fanned deck: the top card stays where it is and the ones under it slide out from beneath it
 // to their places, while the list grows to fit; closing gathers them back under it. (It used to replay every card's
@@ -9727,6 +9519,7 @@ if (TAURI) invoke('dev_mode').then(on => {
     else if (cmd === 'ask'){ setOpen(true); setTimeout(() => { askIn.value = arg; sendTyped(); }, 700); }
     else if (cmd === 'menu'){ const b = mbar.querySelector(`.mt[data-menu="${arg}"]`); if (b) openDD(b); }
     else if (cmd === 'closemenu'){ closeDD(); closePanels(); }
+    else if (cmd === 'show') invoke('dev_show');
     else if (cmd === 'glass'){ devNoGlass = arg === 'off'; if (devNoGlass) document.documentElement.classList.remove('live'); }   // (for screen captures only: never saved)
     else if (cmd === 'tab') selectTab(arg);
     else if (cmd === 'note') note = arg;

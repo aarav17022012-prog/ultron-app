@@ -163,6 +163,43 @@ static CACHE: std::sync::Mutex<Vec<(String, Option<String>)>> = std::sync::Mutex
 
 /// Facts to answer the question with, or None when it doesn't need (or couldn't get) any.
 /// The same question again (a follow-up, a retry) is answered from memory instantly.
+/// A question of fact ("who…", "when…", "how many…", "is…"), not one about you or ULTRON.
+fn factual(q: &str) -> bool {
+    let l = q.to_lowercase();
+    let starts = [
+        "who ", "who's ", "what ", "what's ", "when ", "where ", "which ", "why ", "how many ", "how much ", "how old ", "how tall ", "how far ", "how long ",
+        "how big ", "how does ", "how do ", "is ", "are ", "was ", "were ", "did ", "does ", "do ", "can ", "has ", "have ", "tell me about ",
+    ];
+    let mine = [" you ", " your ", " yours ", " me ", " my ", " i ", " i'm ", " mine ", " ultron "];
+    let padded = format!(" {} ", l.trim_end_matches(['?', '.', '!']));
+    starts.iter().any(|s| l.starts_with(s)) && l.split_whitespace().count() >= 3 && !mine.iter().any(|p| padded.contains(p))
+}
+
+/// The top results of a web search for it (titles and what they say), to answer from.
+fn snippets(q: &str) -> Option<String> {
+    let r = crate::tools::web_search(&serde_json::json!({ "query": q })).ok()?;
+    let mut out = Vec::new();
+    let mut title = String::new();
+    for line in r.lines() {
+        let t = line.trim();
+        if t.starts_with("Results for") || t.starts_with("Use read_webpage") || t.is_empty() {
+            continue;
+        }
+        if line.starts_with("   ") {
+            if !title.is_empty() && !t.is_empty() {
+                out.push(format!("{title}: {t}"));
+            }
+            if out.len() >= 4 {
+                break;
+            }
+        } else {
+            // "1. Title — link": the title only
+            title = t.splitn(2, ". ").nth(1).unwrap_or(t).split(" — ").next().unwrap_or("").trim().to_string();
+        }
+    }
+    (!out.is_empty()).then(|| out.join("\n").chars().take(900).collect())
+}
+
 pub fn lookup(q: &str) -> Option<String> {
     let k = q.to_lowercase().trim().trim_end_matches(['?', '.', '!']).to_string();
     if let Some((_, v)) = CACHE.lock().unwrap().iter().find(|(c, _)| *c == k) {
@@ -181,7 +218,9 @@ fn lookup_now(q: &str) -> Option<String> {
     if let Some(w) = weather(q) {
         return Some(w);
     }
-    let (s, kind) = subject(q)?;
+    let Some((s, kind)) = subject(q) else {
+        return if factual(q) { snippets(q) } else { None };
+    };
     let s1 = s.clone();
     let w = std::thread::spawn(move || wiki(&s1));
     let n = kind.news.then(|| {
