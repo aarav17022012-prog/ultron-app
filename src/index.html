@@ -928,13 +928,16 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
    springs onto the rim (a touch past, and back), the middle ones first; one it has dropped sinks back towards the hub,
    shrinking, and goes; one that stays but moves slides along the rim and dips a little on the way. No blur.
    (--hx / --hy: the way to the hub from where the bead sits, set as it's placed.) */
-.wh-b.in .wh-bi{animation:whFound .56s cubic-bezier(.22,1.22,.36,1) backwards; animation-delay:var(--d, 0ms)}
-@keyframes whFound{from{opacity:0; transform:translate(var(--hx, 0px), var(--hy, 0px)) scale(.4)} 55%{opacity:1}}
+/* (searching: an app that comes in turns in edge-on, like a card being flipped over; one that goes shrinks to nothing
+    where it is; one that moves to a new place turns over once as it goes) */
+.wh-b.in .wh-bi{animation:whFlipIn .5s cubic-bezier(.22,1,.36,1) backwards; animation-delay:var(--d, 0ms)}
+@keyframes whFlipIn{from{opacity:0; transform:perspective(220px) rotateY(-96deg) scale(.86)} 45%{opacity:1}}
 .wh-b.out{pointer-events:none}
-.wh-b.out .wh-bi{animation:whLost .28s cubic-bezier(.5,0,.75,0) forwards}
-@keyframes whLost{to{opacity:0; transform:translate(calc(var(--hx, 0px) * .6), calc(var(--hy, 0px) * .6)) scale(.45)}}
+.wh-b.out .wh-bi{animation:whShrink .3s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes whShrink{to{opacity:0; transform:scale(0)}}
 .wh-b.glide .wh-bi{animation:whSlide .46s cubic-bezier(.4,0,.2,1)} .wh-b.glide2 .wh-bi{animation:whSlide2 .46s cubic-bezier(.4,0,.2,1)}
-@keyframes whSlide{45%{transform:scale(.88)}} @keyframes whSlide2{45%{transform:scale(.88)}}
+@keyframes whSlide{50%{transform:perspective(220px) rotateY(90deg) scale(.9)} 50.01%{transform:perspective(220px) rotateY(-90deg) scale(.9)}}
+@keyframes whSlide2{50%{transform:perspective(220px) rotateY(90deg) scale(.9)} 50.01%{transform:perspective(220px) rotateY(-90deg) scale(.9)}}
 .wh-bi img{width:26px; height:26px; object-fit:contain; opacity:0; transition:opacity .2s; pointer-events:none} .wh-bi img.ok{opacity:1}
 .wh-bi .fbk{position:absolute; inset:auto; width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font-size:14px; font-weight:700; color:rgba(255,255,255,.7)} .wh-bi img.ok + .fbk{display:none}
 .wh-bi > i{position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:#fff; opacity:0; transition:opacity .25s, width .25s, margin .25s}
@@ -1980,8 +1983,13 @@ body.fullscreen .barfil, body.barhid .barfil{--fr:0px; visibility:hidden}
 /* ---------- the sheet's colour follows the window in front, like the bar's: its top is the bar's tint, and it deepens
    into a fuller shade of the same colour (not grey), fading over from one window's to the next with the bar ---------- */
 .notch.glass.open::before, .notch.glass.call::before{
-  background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) calc(var(--bar) * .42), rgba(0,0,0,.1) var(--bar)),
+  background:linear-gradient(180deg, rgba(0,0,0,.26) var(--bar), rgba(0,0,0,0) calc(var(--bar) + 18px)),
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) calc(var(--bar) * .42), rgba(0,0,0,.1) var(--bar)),
     linear-gradient(180deg, var(--bt) var(--bar), color-mix(in srgb, var(--bt2) 80%, var(--bt)) calc(var(--bar) + 60px), var(--bt2) calc(var(--bar) + 160px))}
+/* (where the sheet meets the bar it starts as dark as the bar's foot and eases into its own glass over 18 px: the
+    two used to meet in a step, a lighter band right under the bar, measured 12-28 levels brighter) */
+.ears.glass::before{background:linear-gradient(180deg, rgba(0,0,0,.26), rgba(0,0,0,0) 18px), linear-gradient(180deg, rgba(0,0,0,.095), rgba(0,0,0,.1) 1px), linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px)}
+body.sheet .mbar.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%), var(--tint, rgba(20,20,26,.3))}
 .notch.glass::before{transition:opacity .1s linear .3s, --bt .9s ease, --bt2 .9s ease}
 
 /* ---------- full screen (a video, a game): the notch stays away entirely, like the bar; it can't be opened there,
@@ -2634,63 +2642,49 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .notch:not(.open) .panel *, .notch:not(.open) .panel *::before, .notch:not(.open) .panel *::after,
 .pane:not(.active):not(.exit) *, .dd:not(.open) *, .wifi:not(.open) *, .start:not(.open) *, .cal:not(.open) *, .setw:not(.open) *{animation-play-state:paused !important}
 @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important; transition-duration:.01ms!important} }
-/* ---------- the shelf (ULTRON's taskbar on): rest the pointer on the bottom edge and every open window rises ----------
-   A tray of ULTRON's liquid glass comes up from the bottom edge, and on it every open window, live (Windows' own
-   pictures of them, a playing video moving too: thumbs.rs draws them over the page, the page moves them with its
-   cards frame by frame), in rows like Mission Control, rising in a ripple from where the pointer touched. Pointing
-   at one lifts it and names it; pressing it, it grows into the window itself as the window comes to the front. */
+/* ---------- the shelf (ULTRON's taskbar on): rest the pointer on the very bottom edge for a second and the open windows come up ----------
+   Minimal: one row of small live pictures of the windows (Windows' own, thumbs.rs) just above the bottom edge, on a
+   faint shade; no glass, no tray. Pointing at one lifts it a little and names it; pressing it, it grows into the
+   window as the window comes to the front. Windows moves each picture with its card (same timing and easing). */
 .shelf{position:fixed; inset:0; z-index:42; pointer-events:none; visibility:hidden}
 .shelf.on{visibility:visible}
-.sh-scrim{position:absolute; left:0; right:0; bottom:0; height:min(42vh, 380px); pointer-events:auto; opacity:0;
-  background:linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,.2) 45%, rgba(0,0,0,0)); transition:opacity .5s ease}
+.sh-scrim{position:absolute; left:0; right:0; bottom:0; height:180px; pointer-events:auto; opacity:0;
+  background:linear-gradient(to top, rgba(0,0,0,.36), rgba(0,0,0,.12) 55%, rgba(0,0,0,0)); transition:opacity .35s ease}
 .shelf.on .sh-scrim{opacity:1}
-.shelf.down .sh-scrim, .shelf.pick .sh-scrim{opacity:0; transition:opacity .36s ease .05s}
-.sh-tray{position:absolute; left:0; bottom:10px; border-radius:34px; pointer-events:auto; --tint:rgba(18,18,24,.28);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.42), inset 0 -1px 1px rgba(255,255,255,.08), inset 0 0 30px rgba(255,255,255,.07), 0 30px 70px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.22);
-  transform:translateY(var(--ty, 300px)); transition:transform .62s var(--glide), width .45s var(--glide), height .45s var(--glide), left .45s var(--glide)}
-/* (its glass doesn't ride up with it: the picture behind stays where it is on screen while the tray slides over it) */
-.sh-tray > .gw{transform:translateY(calc(var(--ty, 300px) * -1)); transition:transform .62s var(--glide)}
-.shelf.on .sh-tray, .shelf.on .sh-tray > .gw{transform:none}
-.shelf.down .sh-tray, .shelf.pick .sh-tray{transform:translateY(var(--ty, 300px)); transition:transform .42s cubic-bezier(.5,0,.75,0) .06s}
-.shelf.down .sh-tray > .gw, .shelf.pick .sh-tray > .gw{transform:translateY(calc(var(--ty, 300px) * -1)); transition:transform .42s cubic-bezier(.5,0,.75,0) .06s}
+.shelf.down .sh-scrim, .shelf.pick .sh-scrim{opacity:0; transition:opacity .26s ease}
+.sh-tray{display:none}
 .sh-c{position:absolute; padding:0; border:0; background:none; color:inherit; cursor:default; pointer-events:auto; outline:none;
-  transform-origin:50% 100%; transform:translateX(var(--sx, 0px)); transition:transform .42s var(--glide), opacity .3s;
-  animation:shUp .64s calc(var(--d) + 90ms) var(--glide) backwards}
-@keyframes shUp{from{transform:translateY(80px) scale(.9); opacity:0} 35%{opacity:1}}
-.sh-c.done.hot{z-index:5; transform:translateX(var(--sx, 0px)) translateY(-10px) scale(1.06)}
-.sh-f{position:absolute; inset:0; border-radius:4px; overflow:hidden; background:#141418;
-  box-shadow:0 18px 36px -10px rgba(0,0,0,.6), 0 4px 10px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.18); transition:box-shadow .42s var(--glide)}
-.sh-c.done.hot .sh-f{box-shadow:0 30px 60px -12px rgba(0,0,0,.72), 0 10px 22px rgba(0,0,0,.32), 0 0 0 1.6px rgba(255,255,255,.9)}
-/* (the icon and name only show where Windows has no picture to give, a minimized window's say: they come in under the
-    picture, after it has faded up, so they never flash before it) */
-.sh-ph{opacity:0; animation:shPh .3s calc(var(--d) + 520ms) ease forwards}
+  transform-origin:50% 100%; transform:translateX(var(--sx, 0px)); transition:transform .32s var(--glide);
+  animation:shUp .42s var(--d) var(--glide) backwards}
+@keyframes shUp{from{transform:translateY(24px) scale(.96); opacity:0} 40%{opacity:1}}
+.sh-c.done.hot{z-index:5; transform:translateX(var(--sx, 0px)) translateY(-6px) scale(1.04)}
+.sh-f{position:absolute; inset:0; border-radius:4px; overflow:hidden; background:#16161a;
+  box-shadow:0 10px 24px -6px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.14); transition:box-shadow .32s var(--glide)}
+.sh-c.done.hot .sh-f{box-shadow:0 16px 32px -8px rgba(0,0,0,.6), 0 0 0 1.5px rgba(255,255,255,.85)}
+/* (an icon and name only where Windows has no picture to give, a minimized window's say: they come in under the picture
+    after it has faded up, so they never flash before it) */
+.sh-ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; background:linear-gradient(180deg, #2a2a30, #1a1a1e);
+  opacity:0; animation:shPh .25s calc(var(--d) + 420ms) ease forwards}
 @keyframes shPh{to{opacity:1}}
-.sh-ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:linear-gradient(180deg, #2a2a30, #1a1a1e)}
-.sh-ph img{width:30%; max-width:52px; aspect-ratio:1; object-fit:contain}
-.sh-ph b{font-size:28px; font-weight:600; color:rgba(255,255,255,.8)}
-.sh-ph em{max-width:84%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:normal; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.62)}
-.sh-ic{position:absolute; left:50%; top:calc(100% + 8px); width:22px; height:22px; margin-left:-11px; display:grid; place-items:center;
-  animation:shIc .5s calc(var(--d) + .38s) var(--glide) backwards; transition:opacity .15s, transform .42s var(--glide)}
-.sh-ic img{width:22px; height:22px; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
-.sh-ic b{font-size:13px; font-weight:700}
-.sh-c.done.hot .sh-ic{transform:translateY(8px) scale(.94)}
-@keyframes shIc{from{opacity:0; transform:translateY(8px) scale(.6)}}
-.shelf.down .sh-c:not(.fly){animation:shDown .34s calc(var(--d) * .3) cubic-bezier(.5,0,.75,0) forwards}
-.shelf.pick .sh-c:not(.fly){animation:shDown .3s cubic-bezier(.5,0,.75,0) forwards}
-@keyframes shDown{to{transform:translateY(80px) scale(.92); opacity:0}}
+.sh-ph img{width:30%; max-width:34px; aspect-ratio:1; object-fit:contain}
+.sh-ph b{font-size:20px; font-weight:600; color:rgba(255,255,255,.8)}
+.sh-ph em{max-width:86%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:normal; font-size:10.5px; font-weight:600; color:rgba(255,255,255,.6)}
+.sh-ic{display:none}
+.shelf.down .sh-c:not(.fly){animation:shDown .26s calc(var(--d) * .3) cubic-bezier(.5,0,.75,0) forwards}
+.shelf.pick .sh-c:not(.fly){animation:shDown .24s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes shDown{to{transform:translateY(16px) scale(.96); opacity:0}}
 .sh-c.fly{z-index:9; animation:none}
-.sh-c.fly .sh-ic{opacity:0}
-.sh-tip{position:absolute; left:0; top:0; display:flex; align-items:center; gap:7px; max-width:400px; height:30px; padding:0 13px 0 9px; border-radius:99px;
-  background:rgba(24,24,28,.86); box-shadow:0 0 0 1px rgba(255,255,255,.16), 0 8px 24px rgba(0,0,0,.42); font-size:12.5px; font-weight:600; color:#fff; white-space:nowrap;
-  opacity:0; transform:translate(calc(var(--tx, 0px) - 50%), calc(var(--ty, 0px) + 7px)); transition:opacity .18s, transform .34s var(--glide)}
+.sh-tip{position:absolute; left:0; top:0; display:flex; align-items:center; gap:6px; max-width:360px; height:26px; padding:0 11px 0 8px; border-radius:99px;
+  background:rgba(22,22,26,.9); box-shadow:0 0 0 1px rgba(255,255,255,.12), 0 6px 18px rgba(0,0,0,.4); font-size:12px; font-weight:600; color:#fff; white-space:nowrap;
+  opacity:0; transform:translate(calc(var(--tx, 0px) - 50%), calc(var(--ty, 0px) + 5px)); transition:opacity .16s, transform .3s var(--glide)}
 .sh-tip.on{opacity:1; transform:translate(calc(var(--tx, 0px) - 50%), var(--ty, 0px))}
-.sh-tip img{width:16px; height:16px; flex:none; object-fit:contain}
+.sh-tip img{width:14px; height:14px; flex:none; object-fit:contain}
 .sh-tip span{overflow:hidden; text-overflow:ellipsis}
-.sh-none{position:absolute; left:50%; bottom:40px; padding:9px 16px; border-radius:99px; background:rgba(24,24,28,.86); box-shadow:0 0 0 1px rgba(255,255,255,.14), 0 8px 24px rgba(0,0,0,.4);
-  font-size:13px; font-weight:600; transform:translateX(-50%); animation:shNone .5s var(--glide) backwards}
-@keyframes shNone{from{opacity:0; transform:translate(-50%, 30px)}}
-.shelf.down .sh-none{animation:shNoneOut .3s ease-in forwards}
-@keyframes shNoneOut{to{opacity:0; transform:translate(-50%, 30px)}}
+.sh-none{position:absolute; left:50%; bottom:30px; padding:8px 14px; border-radius:99px; background:rgba(22,22,26,.9); box-shadow:0 0 0 1px rgba(255,255,255,.12);
+  font-size:12.5px; font-weight:600; transform:translateX(-50%); animation:shNone .4s var(--glide) backwards}
+@keyframes shNone{from{opacity:0; transform:translate(-50%, 20px)}}
+.shelf.down .sh-none{animation:shNoneOut .25s ease-in forwards}
+@keyframes shNoneOut{to{opacity:0; transform:translate(-50%, 20px)}}
 
 /* ---------- the floating player, an iPod ----------
    A small body of ULTRON's liquid glass: a screen on top and a click wheel under it. The screen shows the lyrics as
@@ -6037,7 +6031,7 @@ notch.addEventListener('click', e => { e.stopPropagation(); if (notch.classList.
 notch.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === notch){ e.preventDefault(); setOpen(!notch.classList.contains('open')); } });
 $('close').addEventListener('click', e => { e.stopPropagation(); openedAt = 0; setOpen(false); });
 addEventListener('click', () => { if (activeTab !== 'browser') setOpen(false); });
-addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.CP && CP.on){ cpClose(); return; } if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
+addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.CP && CP.on){ cpClose(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
 
 /* ---------- menu bar ---------- */
 const dd = $('dd'), mbar = $('mbar');
@@ -8373,14 +8367,14 @@ const shelfTall = () => new Promise(res => {
   const f = () => { if (ok()){ removeEventListener('resize', f); res(); } };
   addEventListener('resize', f); setTimeout(() => { removeEventListener('resize', f); res(); }, 400);
 });
-// Where a card's picture is, as the card is drawn: resting; pointed at (lifted 10 px and 6% larger from its foot,
+// Where a card's picture is, as the card is drawn: resting; pointed at (lifted 6 px and 4% larger from its foot,
 // as .sh-c.done.hot); pushed aside for a neighbour (--sx); or below, smaller and gone (as shUp starts and shDown ends).
 function shelfAt(c, k){
   const [x, y, w, h] = c._r, sx = parseFloat(c.style.getPropertyValue('--sx')) || 0;
   const grown = (s, dy, o) => [x + sx + w * (1 - s) / 2, y + h * (1 - s) + dy, w * s, h * s, o];
-  if (k === 'from') return grown(.9, 80, 0);
-  if (k === 'down') return grown(.92, 80, 0);
-  return c.classList.contains('hot') && c.classList.contains('done') ? grown(1.06, -10, 1) : grown(1, 0, 1);
+  if (k === 'from') return grown(.96, 24, 0);
+  if (k === 'down') return grown(.96, 16, 0);
+  return c.classList.contains('hot') && c.classList.contains('done') ? grown(1.04, -6, 1) : grown(1, 0, 1);
 }
 const shelfDelay = c => parseFloat(c.style.getPropertyValue('--d')) || 0;
 function shelfPics(ms, list){
@@ -8394,7 +8388,7 @@ async function shelfShow(){
   shelfEl.classList.remove('down', 'pick');
   const wins = SH.wins;
   if (!wins.length){
-    shelfEl.classList.add('on'); shTray.style.width = shTray.style.height = '0px';
+    shelfEl.classList.add('on');
     shCards.innerHTML = '<div class="sh-none">No windows are open</div>';
     SH.top = innerHeight - 110; syncHit();
     setTimeout(() => { if (SH.on && !shCards.querySelector('.sh-c')) shelfHide(); }, 1400);
@@ -8409,54 +8403,41 @@ async function shelfShow(){
   }
   shelfLay(true);
   const cards = [...shCards.querySelectorAll('.sh-c')];
-  // the pictures start below, small and clear, and rise into their places with their cards (shUp: .64 s after --d + 90 ms)
-  invoke('thumbs_go', {only:true, items:cards.map(c => ({id:c._w.id, from:shelfAt(c, 'from'), to:shelfAt(c), ms:640, oms:230, delay:shelfDelay(c) + 90, ease:SH_GLIDE}))});
+  // the pictures start a little below, clear, and rise into their places with their cards (shUp: .42 s after --d)
+  invoke('thumbs_go', {only:true, items:cards.map(c => ({id:c._w.id, from:shelfAt(c, 'from'), to:shelfAt(c), ms:420, oms:170, delay:shelfDelay(c), ease:SH_GLIDE}))});
   void shTray.offsetWidth; shelfEl.classList.add('on');
   syncHit(); wake();
 }
-// The cards' sizes and places: in one row while they fit at a good size, otherwise in two or three rows (like
-// Mission Control), each card the shape of its window; the tray fits round them.
+// The cards' sizes and places: one row just above the bottom edge, each card the shape of its window, as tall as
+// fits (96 px at most, 64 at least, so each stays recognisable); past that they overlap a little, like a fanned hand.
 function shelfLay(first){
   const cards = [...shCards.querySelectorAll('.sh-c')], n = cards.length; if (!n) return;
-  // (never more than two rows, and well clear of the top half of the screen)
-  const W = Math.min(innerWidth - 160, 1400), gap = 20, gapY = 42, maxH = Math.min(250, innerHeight * .29);
+  const W = Math.min(innerWidth - 200, 1300), gap = 14, mid = innerWidth / 2;
   const asp = cards.map(c => { const r = (SH.rects.get(c._w.id) || {}).r; return r && r[3] > 40 ? Math.max(.6, Math.min(2.4, r[2] / r[3])) : 1.6; });
-  let best = null;
-  for (let rows = 1; rows <= 2; rows++){
-    const per = Math.ceil(n / rows), lines = [];
-    for (let i = 0; i < n; i += per) lines.push(asp.slice(i, i + per));
-    const H = Math.min(124, (W - (per - 1) * gap) / Math.max(...lines.map(l => l.reduce((s, a) => s + a, 0))), (maxH - (lines.length - 1) * gapY) / lines.length);
-    if (!best || H > best.H + 6) best = {H, lines, per};
-  }
-  const H = Math.max(56, best.H), per = best.per, rowsN = best.lines.length, blockH = rowsN * H + (rowsN - 1) * gapY, bottom0 = 10 + 40;
-  const rowW = best.lines.map(l => l.reduce((s, a) => s + a * H, 0) + (l.length - 1) * gap);
+  const sumA = asp.reduce((s, a) => s + a, 0);
+  const H = Math.round(Math.max(64, Math.min(96, (W - (n - 1) * gap) / sumA)));
+  const ws = asp.map(a => a * H), tot = ws.reduce((s, w) => s + w, 0) + (n - 1) * gap, cx = [];
+  if (tot <= W){ let x = mid - tot / 2; for (const w of ws){ cx.push(x + w / 2); x += w + gap; } }
+  else { const a = mid - W / 2 + ws[0] / 2, b = mid + W / 2 - ws[n - 1] / 2; for (let i = 0; i < n; i++) cx.push(n > 1 ? a + (b - a) * i / (n - 1) : mid); }
+  const top = innerHeight - 18 - H;
   cards.forEach((c, i) => {
-    const row = Math.floor(i / per), k = i - row * per, line = best.lines[row];
-    let x = innerWidth / 2 - rowW[row] / 2;
-    for (let j = 0; j < k; j++) x += line[j] * H + gap;
-    const w = asp[i] * H, top = innerHeight - bottom0 - blockH + row * (H + gapY);
-    c._cx = x + w / 2; c._top = top; c._r = [Math.round(x), Math.round(top), Math.round(w), Math.round(H)];
-    c.style.left = c._r[0] + 'px'; c.style.top = c._r[1] + 'px'; c.style.width = c._r[2] + 'px'; c.style.height = c._r[3] + 'px';
-    if (first) c.style.setProperty('--d', Math.round(Math.hypot(c._cx - SH.x, (innerHeight - top) * .6) / innerWidth * 260) + 'ms');
+    c._cx = cx[i]; c._top = top; c._r = [Math.round(cx[i] - ws[i] / 2), top, Math.round(ws[i]), H];
+    c.style.left = c._r[0] + 'px'; c.style.top = top + 'px'; c.style.width = c._r[2] + 'px'; c.style.height = H + 'px';
+    if (first) c.style.setProperty('--d', Math.round(Math.abs(cx[i] - SH.x) / innerWidth * 200) + 'ms');
   });
-  const trayW = Math.max(...rowW) + 44, trayH = blockH + 18 + 40, trayL = Math.round(innerWidth / 2 - trayW / 2), trayT = innerHeight - 10 - trayH;
-  shTray.style.left = trayL + 'px'; shTray.style.width = Math.round(trayW) + 'px'; shTray.style.height = Math.round(trayH) + 'px';
-  shTray.style.setProperty('--ty', Math.round(trayH + 40) + 'px');
-  const gw = shTray.querySelector('.gw');
-  gw.style.left = -trayL + 'px'; gw.style.top = -trayT + 'px'; gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
-  SH.top = trayT - 50;
+  SH.top = top - 46;
 }
 function shelfHot(c){
   if (SH.hot === c) return;
   SH.hot = c;
   const cards = [...shCards.querySelectorAll('.sh-c')], h = cards.indexOf(c), hr = c && c._top;
-  cards.forEach((x, i) => { x.classList.toggle('hot', x === c); x.style.setProperty('--sx', h < 0 || i === h || x._top !== hr ? '0px' : (Math.sign(i - h) * 14 / Math.pow(Math.abs(i - h), .7)).toFixed(1) + 'px'); });
-  shelfPics(420, cards.filter(x => x.classList.contains('done')));
+  cards.forEach((x, i) => { x.classList.toggle('hot', x === c); x.style.setProperty('--sx', h < 0 || i === h || x._top !== hr ? '0px' : (Math.sign(i - h) * 8 / Math.pow(Math.abs(i - h), .7)).toFixed(1) + 'px'); });
+  shelfPics(320, cards.filter(x => x.classList.contains('done')));
   if (!c){ shTip.classList.remove('on'); return; }
   const w = c._w, ic = iconCache.get(w.launch);
   shTip.innerHTML = `${ic ? `<img src="${ic}" alt="">` : ''}<span>${esc(w.title || w.name)}</span>`;
   shTip.style.setProperty('--tx', Math.round(c._cx) + 'px');
-  shTip.style.setProperty('--ty', Math.round(c._top - c._r[3] * .06 - 10 - 40) + 'px');
+  shTip.style.setProperty('--ty', Math.round(c._top - c._r[3] * .04 - 6 - 34) + 'px');
   shTip.classList.add('on');
 }
 // pressed: the card grows from where it is into the window itself (placed at the window's size and drawn back down to
@@ -8466,7 +8447,7 @@ function shelfFly(c){
   const w = c._w, r = (SH.rects.get(w.id) || {}).r;
   SH.flying = true; clearTimeout(SH.leaveT); SH.leaveT = 0; shTip.classList.remove('on');
   const rest = [...shCards.querySelectorAll('.sh-c')].filter(x => x !== c);
-  invoke('thumbs_go', {items:rest.map(x => ({id:x._w.id, to:shelfAt(x, 'down'), ms:300, ease:SH_SINK}))});
+  invoke('thumbs_go', {items:rest.map(x => ({id:x._w.id, to:shelfAt(x, 'down'), ms:240, ease:SH_SINK}))});
   shelfEl.classList.add('pick'); c.classList.add('fly');
   if (r && r[2] > 40 && r[3] > 40){
     const b = c.getBoundingClientRect();
@@ -8490,15 +8471,15 @@ function shelfHide(now){
   if (now){ SH.flying = false; invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; }
   else {
     const cards = [...shCards.querySelectorAll('.sh-c')];
-    // (the pictures go down with their cards: shDown, .34 s after --d * .3)
-    invoke('thumbs_go', {items:cards.map(c => ({id:c._w.id, to:shelfAt(c, 'down'), ms:340, delay:shelfDelay(c) * .3, ease:SH_SINK}))});
+    // (the pictures go down with their cards: shDown, .26 s after --d * .3)
+    invoke('thumbs_go', {items:cards.map(c => ({id:c._w.id, to:shelfAt(c, 'down'), ms:260, delay:shelfDelay(c) * .3, ease:SH_SINK}))});
     shelfEl.classList.add('down');
     SH.flying = true;
-    setTimeout(() => { SH.flying = false; if (!SH.on){ invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; } }, 480);
+    setTimeout(() => { SH.flying = false; if (!SH.on){ invoke('thumbs_clear'); shelfEl.classList.remove('on', 'down', 'pick'); shCards.textContent = ''; } }, 360);
   }
   syncHit(); shelfShrinkLater();
 }
-shCards.addEventListener('animationend', e => { if (e.animationName === 'shUp'){ e.target.classList.add('done'); if (e.target === SH.hot) shelfPics(420, [e.target]); } });
+shCards.addEventListener('animationend', e => { if (e.animationName === 'shUp'){ e.target.classList.add('done'); if (e.target === SH.hot) shelfPics(320, [e.target]); } });
 shCards.addEventListener('pointerover', e => { const c = e.target.closest('.sh-c'); if (c && !SH.flying){ clearTimeout(SH.offT); shelfHot(c); } });
 shCards.addEventListener('pointerout', e => { if (SH.flying || (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.sh-c'))) return; clearTimeout(SH.offT); SH.offT = setTimeout(() => { if (!SH.flying) shelfHot(null); }, 160); });
 shCards.addEventListener('click', e => { const c = e.target.closest('.sh-c'); if (c) shelfFly(c); });
