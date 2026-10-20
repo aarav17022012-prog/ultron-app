@@ -2778,6 +2778,17 @@ body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.3
 /* the voice-typing shortcut in the notch's settings */
 .row .hk-wrap{margin-left:auto}
 
+/* ---------- nothing animates forever where it can't be seen ----------
+   An endless animation keeps the page drawing every frame even while hidden: the browser's spinning rim (a
+   repainted conic gradient) and Circle to Search's hint were doing that all the time ULTRON sat idle. Each now
+   runs only while what it's on is showing. */
+.bw-view::before{animation:none}
+.notch.open .pane.active .bw-view::before{animation:bwSpin 7s linear infinite}
+.notch.open .pane.active .bw-view.loading::before{animation-duration:1.6s}
+.cts-hint svg .c{animation:none}
+.cts.on .cts-hint svg .c{animation:ctsDraw 2.3s var(--glide) infinite}
+.flyr:not(.on) .fl-eq i, .notch:not(.open) .eqart i, .dd:not(.open) .mu-art, .dd:not(.open) .mi .eq i, .setw:not(.open) .sw-about svg{animation-play-state:paused !important}
+
 /* ---------- the Mac finish: one layer over everything above ----------
    Type is Inter (bundled, src/fonts; SF Pro can't ship on Windows), the closest free match for SF Pro: its optical
    sizes tighten big text the way SF Display does. Menus use the Mac's sizes (13 px, 22 px rows); headings are
