@@ -14,6 +14,7 @@ mod songs;
 mod hit;
 mod backdrop;
 mod calls;
+mod shelf;
 mod thumbs;
 mod lid;
 mod kids;
@@ -854,6 +855,56 @@ fn dev_show() {
     }
 }
 
+/// The Drop Shelf (shelf.rs).
+#[tauri::command]
+async fn shelf_list(app: AppHandle) -> Vec<shelf::Item> {
+    tauri::async_runtime::spawn_blocking(move || shelf::list(&app)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+async fn shelf_add(app: AppHandle, paths: Vec<String>) -> Vec<shelf::Item> {
+    tauri::async_runtime::spawn_blocking(move || shelf::add(&app, &paths)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+async fn shelf_remove(app: AppHandle, path: String) -> Vec<shelf::Item> {
+    tauri::async_runtime::spawn_blocking(move || shelf::remove(&app, &path)).await.unwrap_or_default()
+}
+
+#[tauri::command]
+async fn shelf_clear(app: AppHandle) {
+    let _ = tauri::async_runtime::spawn_blocking(move || shelf::clear(&app)).await;
+}
+
+/// A shelf item's picture (its thumbnail, or its icon).
+#[tauri::command]
+async fn shelf_thumb(path: String) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        unsafe {
+            let _ = windows::Win32::System::Com::CoInitializeEx(None, windows::Win32::System::Com::COINIT_APARTMENTTHREADED);
+        }
+        sys::image_data_url(&path, 128, false)
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+/// Dragging a shelf item out into another app: Windows' own drag, run on the window's thread (a plain command runs
+/// there), returning once it's dropped.
+#[tauri::command]
+fn shelf_drag(app: AppHandle, paths: Vec<String>) -> u32 {
+    let Some(h) = app.get_webview_window("main").and_then(|w| hit::hwnd_of(&w)) else { return 0 };
+    shelf::drag(h, &paths)
+}
+
+/// Show a shelf item in its folder.
+#[tauri::command]
+fn shelf_reveal(path: String) {
+    use std::os::windows::process::CommandExt;
+    let _ = std::process::Command::new("explorer.exe").raw_arg(format!("/select,\"{path}\"")).creation_flags(0x0800_0000).spawn();
+}
+
 /// The voice-typing shortcut (the notch's settings).
 #[tauri::command]
 fn dictate_key(mods: u32, vk: u32) {
@@ -1273,7 +1324,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_rects, dock_keep, at_login, thumbs_go, thumbs_clear, notes_reply, wifi_join, dictate_key, dev_show, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_rects, dock_keep, at_login, thumbs_go, thumbs_clear, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

@@ -2641,6 +2641,67 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .notch:not(.open) .panel *, .notch:not(.open) .panel *::before, .notch:not(.open) .panel *::after,
 .pane:not(.active):not(.exit) *, .dd:not(.open) *, .wifi:not(.open) *, .start:not(.open) *, .cal:not(.open) *, .setw:not(.open) *{animation-play-state:paused !important}
 @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important; transition-duration:.01ms!important} }
+/* ---------- the Drop Shelf ----------
+   A tray of ULTRON's liquid glass that rises out of the bottom edge, stretching up like something poured and settling
+   (a little taller and narrower, then itself). What's on it sits in a row: a picture of each (its own thumbnail, or its
+   icon) with its name. Dragging something toward it, a dashed place to drop opens in it; over it, the place lights
+   and the arrow dips; dropped, the new thing flies in from where it was let go. Things leave it by being dragged out
+   into any app, or shrink away when taken off. */
+.dshelf{position:fixed; inset:0; z-index:43; pointer-events:none; visibility:hidden}
+.dshelf.on{visibility:visible}
+.ds-tray{position:absolute; left:50%; bottom:16px; width:var(--w, 360px); height:152px; margin-left:calc(var(--w, 360px) / -2); padding:12px 14px 14px; border-radius:28px;
+  pointer-events:auto; --tint:rgba(18,18,24,.3); transform-origin:50% 100%; transform:translateY(200px) scale(.92); opacity:0;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.4), inset 0 0 30px rgba(255,255,255,.06), 0 30px 70px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.22);
+  transition:transform .42s cubic-bezier(.5,0,.75,0), opacity .28s ease .08s, width .45s var(--glide), margin-left .45s var(--glide), box-shadow .3s}
+.dshelf.on .ds-tray{transform:none; opacity:1; animation:dsRise .7s cubic-bezier(.22,1,.36,1) both; transition:width .45s var(--glide), margin-left .45s var(--glide), box-shadow .3s}
+@keyframes dsRise{0%{transform:translateY(200px) scale(.8, .55); opacity:0} 30%{opacity:1} 62%{transform:translateY(-5px) scale(.985, 1.035)} 100%{transform:none}}
+.ds-tray.take{animation:dsTake .55s var(--glide)}
+@keyframes dsTake{35%{transform:scale(1.025, .97)}}
+.ds-head{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; height:22px; margin:0 2px 8px}
+.ds-t{display:flex; align-items:center; gap:7px; font-size:13px; font-weight:650; letter-spacing:-.006em}
+.ds-t svg{width:16px; height:16px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.ds-t em{font-style:normal; font-weight:500; color:rgba(255,255,255,.5)}
+.ds-a{border:0; border-radius:99px; padding:4px 11px; font:inherit; font-size:11.5px; font-weight:600; color:#fff; background:rgba(255,255,255,.12); cursor:default; transition:background .2s, opacity .25s}
+.ds-a:hover{background:rgba(255,255,255,.22)}
+.dshelf.empty .ds-a{opacity:0; pointer-events:none}
+.ds-row{position:relative; z-index:1; display:flex; gap:8px; height:98px; padding:0 2px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; transition:opacity .25s}
+.ds-row::-webkit-scrollbar{display:none}
+.ds-i{position:relative; flex:none; width:80px; height:96px; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:7px; border-radius:16px; cursor:default;
+  transition:background .2s, opacity .2s, transform .3s var(--glide), width .28s var(--glide), margin .28s var(--glide)}
+.ds-i:hover{background:rgba(255,255,255,.1)}
+.ds-i:active{transform:scale(.96)}
+.ds-p{width:58px; height:58px; flex:none; display:grid; place-items:center; overflow:hidden; border-radius:13px; background:rgba(255,255,255,.07);
+  box-shadow:0 6px 16px -4px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.08)}
+.ds-p img{max-width:46px; max-height:46px; object-fit:contain; opacity:0; transition:opacity .3s}
+.ds-p img.ok{opacity:1}
+.ds-p.photo img{max-width:none; max-height:none; width:100%; height:100%; object-fit:cover}
+.ds-p svg{width:26px; height:26px; fill:none; stroke:rgba(255,255,255,.75); stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.ds-n{max-width:76px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:550; color:rgba(255,255,255,.88)}
+.ds-x, .ds-o{position:absolute; top:3px; width:19px; height:19px; padding:0; border:0; border-radius:50%; display:grid; place-items:center; background:rgba(40,40,46,.94);
+  box-shadow:0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.3); color:#fff; opacity:0; transform:scale(.55); transition:opacity .15s, transform .25s var(--glide), background .15s; cursor:default}
+.ds-x{right:5px} .ds-o{left:5px}
+.ds-x svg, .ds-o svg{width:10px; height:10px; fill:none; stroke:#fff; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.ds-i:hover .ds-x, .ds-i:hover .ds-o{opacity:1; transform:none}
+.ds-x:hover, .ds-o:hover{background:rgba(70,70,78,.96)}
+.ds-i.in{animation:dsIn .5s var(--glide) backwards; animation-delay:calc(var(--k, 0) * 32ms + 160ms)}
+@keyframes dsIn{from{opacity:0; transform:translateY(16px) scale(.5) rotate(-8deg)}}
+.ds-i.new{animation:dsNew .62s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes dsNew{from{opacity:.35; transform:translate(var(--fx, 0px), var(--fy, 0px)) scale(1.3) rotate(6deg)}}
+.ds-i.out{animation:dsOut .28s cubic-bezier(.5,0,.75,0) forwards; pointer-events:none}
+@keyframes dsOut{to{opacity:0; transform:scale(0)}}
+.ds-i.gone{width:0; margin-right:-8px; padding:0}
+.ds-i.drag{opacity:.32}
+.ds-drop{position:absolute; z-index:1; left:14px; right:14px; top:44px; bottom:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:18px;
+  border:1.5px dashed rgba(255,255,255,.3); text-align:center; opacity:0; pointer-events:none; transition:opacity .25s, border-color .25s, background .25s, transform .3s var(--glide)}
+.ds-drop svg{width:24px; height:24px; margin-bottom:4px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.ds-drop b{font-size:13px; font-weight:650} .ds-drop small{font-size:11.5px; color:rgba(255,255,255,.55)}
+.dshelf.empty .ds-drop, .dshelf.dragging .ds-drop{opacity:1}
+.dshelf.dragging .ds-row{opacity:.18}
+.dshelf.over .ds-drop{border-style:solid; border-color:rgba(255,255,255,.85); background:rgba(255,255,255,.08); transform:scale(1.015)}
+.dshelf.over .ds-drop .dr{animation:dsDip .9s ease-in-out infinite}
+@keyframes dsDip{50%{transform:translateY(3px)}}
+.dshelf.over .ds-tray{box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 0 30px rgba(255,255,255,.1), 0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.45)}
+
 /* ---------- the floating player, an iPod ----------
    A small body of ULTRON's liquid glass: a screen on top and a click wheel under it. The screen shows the lyrics as
    they're sung over the album art (soft and dark behind them); pointing at the player, the lyrics lift away and the
@@ -2814,11 +2875,13 @@ input, textarea, select, button{font-family:inherit}
     <div class="wh-row"><button class="wh-t" id="whTile" aria-label="Tile the windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg></button>
       <label class="wh-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="whQ" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label>
       <button class="wh-back" id="whBack" aria-label="Back to every app"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg><span id="whBackName"></span></button>
+      <button class="wh-t" id="whShelf" aria-label="Drop Shelf"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg></button>
       <button class="wh-t" id="whGroups" aria-label="Groups" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="2"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="2"/></svg></button></div>
     <button class="wh-mas" id="whMas" aria-label="Ask ULTRON"><canvas id="whMasCv" width="90" height="90"></canvas></button>
     <div class="wh-grip"></div></div>
   <div class="wh-drag" id="whDrag"><img alt=""></div>
 </div></div>
+<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><button class="ds-a" data-ds="clear">Clear</button></div><div class="ds-row" id="dsRow"></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b>Drop here to keep it at hand</b><small>Drag it out again into any app, whenever you need it</small></div></div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
   <div class="sp-pic"><img id="spPic" alt=""><div class="sp-when"><b id="spTime"></b><span id="spDate"></span></div></div>
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
@@ -3275,18 +3338,19 @@ function glassDraw(g, a){
   if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; blank = true; }
   g._x.globalAlpha = blank || a == null ? 1 : a;             // (a < 1: the new picture is laid over the old one a little at a time)
   g._x.drawImage(glassBmp, 0, 0);
-  // Under the sheet (and its corner fillets): right below the bar is whatever window is there, a different picture from
-  // the bar's strip of wallpaper, and the two met in a hard line. The bar's own last rows are carried on down over the
-  // sheet's first 56 px, fading out, so the sheet carries on from the bar and only then shows what's behind it.
+  // Under the sheet (and its corner fillets): right below the bar is whatever window is there (an app's own title bar,
+  // usually: a dark band across the sheet, under the bar), a different picture from the bar's strip of wallpaper. The
+  // bar's own last rows are carried on down: solid over the first 44 px (a title bar's height), then fading out by 96 px,
+  // so the sheet carries on from the bar and only then shows what's behind it.
   // (the bar's own picture too: it's stretched up from a small picture, so its last rows used to blend in the window below
   //  and come out lighter than the sheet starting under them)
   if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass, .mbar.glass');
   if (g._band){
-    const k = c.height / Math.max(1, innerHeight), yb = Math.round(32 * k), h = Math.max(2, Math.round(56 * k)), src = 1;
+    const k = c.height / Math.max(1, innerHeight), yb = Math.round(32 * k), h = Math.max(2, Math.round(96 * k)), src = 1;
     const b = glassBand || (glassBand = document.createElement('canvas')), bx = b.getContext('2d');
     if (b.width !== c.width || b.height !== h){ b.width = c.width; b.height = h; }
     bx.globalCompositeOperation = 'copy'; bx.drawImage(glassBmp, 0, yb - src, c.width, src, 0, 0, c.width, h);
-    const gr = bx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#000'); gr.addColorStop(.3, 'rgba(0,0,0,.82)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    const gr = bx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#000'); gr.addColorStop(.46, '#000'); gr.addColorStop(.72, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
     bx.globalCompositeOperation = 'destination-in'; bx.fillStyle = gr; bx.fillRect(0, 0, c.width, h);
     g._x.globalAlpha = 1; g._x.drawImage(b, 0, yb);
   }
@@ -6004,13 +6068,13 @@ notch.addEventListener('click', e => { e.stopPropagation(); if (notch.classList.
 notch.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === notch){ e.preventDefault(); setOpen(!notch.classList.contains('open')); } });
 $('close').addEventListener('click', e => { e.stopPropagation(); openedAt = 0; setOpen(false); });
 addEventListener('click', () => { if (activeTab !== 'browser') setOpen(false); });
-addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.CP && CP.on){ cpClose(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
+addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.CP && CP.on){ cpClose(); return; } if (window.DS && DS.on){ dsHide(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
 
 /* ---------- menu bar ---------- */
 const dd = $('dd'), mbar = $('mbar');
 let fullscreen = false, ddFor = null, appName = 'Ultron';
 const MENUS = {
-  ultron:[['About ULTRON','about'],['What can ULTRON do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],'-',['Lock Screen','lock','Win L'],'-',['Quit ULTRON','quit']],
+  ultron:[['About ULTRON','about'],['What can ULTRON do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],['Drop Shelf','shelf'],'-',['Lock Screen','lock','Win L'],'-',['Quit ULTRON','quit']],
   app:[['Show Desktop','desktop','Win D'],['Task View','task-view','Win Tab'],'-',['Quit {app}','quit-app','Alt F4']],
   music:'rich', clip:'rich', wall:'rich', notes:'rich', focus:'rich', system:'rich', calc:'rich', convert:'rich', world:'rich', lang:'rich', news:'rich',
 };
@@ -6122,6 +6186,7 @@ function doAction(act){
   if (act === 'help'){ setOpen(true); selectTab('assistant'); showSkills(); return; }
   if (act === 'quit'){ invoke('quit_app'); return; }
   if (act === 'lock' && S.lock === 'ultron'){ lockShow(); return; }
+  if (act === 'shelf'){ closeDD(); setTimeout(() => dsShow('open', true), 160); return; }
   if (act === 'talk'){ startTalk(); return; }
   if (act === 'browser'){ setOpen(true); selectTab('browser'); return; }
   invoke('menu_action', {action:act});
@@ -7603,6 +7668,7 @@ function syncHit(){
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
+  if (window.DS && DS.on && DS.box) rects.push({x:DS.box.x - 14, y:DS.box.y - 14, w:DS.box.w + 28, h:innerHeight - DS.box.y + 14});
   if (window.NF && NF.shown.length) rects.push({x:Math.floor(innerWidth - 10 - NF_W - 8), y:32, w:NF_W + 16, h:Math.ceil(NF.h + 18)});
   for (const el of [dd, wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel')]) if (el.classList.contains('open') && el.id !== 'wheel'){
     // layout size, not the on-screen size: while a panel animates in it's scaled down, which left dead spots
@@ -7670,7 +7736,7 @@ function enter(){
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); dsWatch(p[0], p[1], !!p[2]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
@@ -9491,6 +9557,133 @@ if (TAURI) invoke('at_login').then(yes => { if (yes && S.lock === 'ultron') setT
 
 // every quarter of an hour, a line in the log on how the page is keeping: anything that grows while ULTRON stays open shows there
 if (TAURI) setInterval(() => invoke('page_log', {msg:`health: ${document.getElementsByTagName('*').length} nodes, ${performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : '?'} MB heap, ${Math.round(performance.now() / 60000)} min up`}), 900000);
+
+/* ---------- the Drop Shelf ----------
+   Comes up from the bottom edge (ULTRON's taskbar on): while something is being dragged there (a button held, the
+   pointer on the edge a moment) it opens as a place to drop it; resting the pointer on the very edge a second opens
+   it to take things out. Also from the wheel's tray button and the ULTRON menu. Things go out by dragging them into
+   any app (Windows' own drag, shelf.rs), open with a double click, show in their folder from the corner button. */
+var DS = {on:false, mode:'', items:[], thumbs:new Map(), arm:'', armT:0, leaveT:0, hideT:0, over:false, press:null, out:false};
+const dsEl = $('dshelf'), dsTray = $('dsTray'), dsRow = $('dsRow');
+const DS_FOLDER = '<svg viewBox="0 0 24 24"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>';
+const DS_DOC = '<svg viewBox="0 0 24 24"><path d="M7 3.5h7l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5z"/><path d="M14 3.5V8h4.5"/></svg>';
+const DS_SHOW = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>';
+const dsPhoto = p => /\.(jpe?g|png|webp|gif|bmp|heic|avif)$/i.test(p);
+const dsCan = () => !fullscreen && !WH.open && !tourOn && !(window.LK && LK.on) && !(window.CTS && CTS.on) && !document.body.classList.contains('intro');
+function dsWatch(x, y, down){
+  const H = screen.height || innerHeight;
+  if (DS.on){
+    if (DS.out) return;
+    if (!down && y < innerHeight - 16 - 152 - 70){ if (!DS.leaveT) DS.leaveT = setTimeout(() => { DS.leaveT = 0; dsHide(); }, 260); }
+    else if (DS.leaveT){ clearTimeout(DS.leaveT); DS.leaveT = 0; }
+    // (opened for a drag that was let go somewhere else: it goes again)
+    if (DS.mode === 'drop' && !down && !DS.over){ clearTimeout(DS.hideT); DS.hideT = setTimeout(() => { if (DS.on && DS.mode === 'drop' && !DS.over) dsHide(); }, 900); }
+    return;
+  }
+  // (with ULTRON's taskbar: the bottom edge is free. A drag: the bottom 6 px, a moment. Resting: the last row, a second.)
+  const kind = !DK.on || !dsCan() ? '' : down ? (y >= H - 6 ? 'drop' : '') : (y >= H - 1 ? 'open' : '');
+  if (kind === DS.arm) return;
+  clearTimeout(DS.armT); DS.arm = kind;
+  if (kind) DS.armT = setTimeout(() => { DS.arm = ''; if (dsCan()) dsShow(kind); }, kind === 'drop' ? 220 : 1000);
+}
+const dsTall = () => new Promise(res => {
+  const ok = () => innerHeight >= (screen.height || 864) - 4;
+  if (ok()) return res();
+  const f = () => { if (ok()){ removeEventListener('resize', f); res(); } };
+  addEventListener('resize', f); setTimeout(() => { removeEventListener('resize', f); res(); }, 400);
+});
+async function dsShow(kind, force){
+  if (DS.on){ if (kind === 'drop'){ DS.mode = 'drop'; dsEl.classList.add('dragging'); } return; }
+  if (!force && !dsCan()) return;
+  DS.on = true; DS.mode = kind;
+  clearTimeout(DS.shrinkT);
+  // (2 px short of the screen: a screen-sized window in front would be taken by Windows for a full-screen app)
+  const tall = Math.round(screen.height || 864) - 2;
+  if (winH < tall){ winH = tall; invoke('set_window_height', {h:tall}); await dsTall(); }
+  DS.items = (await invoke('shelf_list')) || [];
+  if (!DS.on) return;
+  dsPaint(true); dsLay();
+  dsEl.classList.toggle('dragging', kind === 'drop');
+  void dsTray.offsetWidth; dsEl.classList.add('on');
+  syncHit(); glassAim(); wake();
+}
+function dsHide(){
+  if (!DS.on || DS.out) return;
+  DS.on = false; DS.mode = ''; DS.over = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT);
+  dsEl.classList.remove('on', 'over', 'dragging');
+  syncHit();
+  clearTimeout(DS.shrinkT);
+  DS.shrinkT = setTimeout(() => { if (DS.on || (window.LK && LK.on) || (window.CTS && CTS.on) || winH === 700) return; winH = 700; invoke('set_window_height', {h:700}); syncHit(); }, 1200);
+}
+// the tray's width follows what's on it; its glass lines up with the screen behind it
+function dsLay(){
+  const w = Math.max(360, Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * 88));
+  dsTray.style.setProperty('--w', w + 'px');
+  const left = Math.round(innerWidth / 2 - w / 2), top = innerHeight - 16 - 152, gw = dsTray.querySelector('.gw');
+  gw.style.left = -left + 'px'; gw.style.top = -top + 'px'; gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
+  DS.box = {x:left, y:top, w, h:152};
+}
+function dsItem(it, k, cls){
+  const u = DS.thumbs.get(it.path), photo = !it.dir && dsPhoto(it.path);
+  return `<div class="ds-i${cls}" data-p="${esc(it.path)}" style="--k:${k}" title="${esc(it.name)}"><span class="ds-p${photo ? ' photo' : ''}">${u ? `<img class="ok" src="${u}" alt="">` : it.dir ? DS_FOLDER : DS_DOC}</span>`
+    + `<span class="ds-n">${esc(it.name)}</span><button class="ds-o" data-ds="show" aria-label="Show in its folder">${DS_SHOW}</button><button class="ds-x" data-ds="rm" aria-label="Take off the shelf">${NF_X}</button></div>`;
+}
+// (fresh: just dropped, they fly in from where they were let go, at x, y)
+function dsPaint(first, fresh, x, y){
+  dsRow.innerHTML = DS.items.map((it, k) => dsItem(it, k, first ? ' in' : fresh && fresh.some(f => f.toLowerCase() === it.path.toLowerCase()) ? ' new' : '')).join('');
+  dsEl.classList.toggle('empty', !DS.items.length);
+  $('dsCount').textContent = DS.items.length ? `${DS.items.length} item${DS.items.length > 1 ? 's' : ''}` : '';
+  if (fresh) for (const el of dsRow.querySelectorAll('.ds-i.new')){ const r = el.getBoundingClientRect(); el.style.setProperty('--fx', Math.round(x - (r.left + r.width / 2)) + 'px'); el.style.setProperty('--fy', Math.round(y - (r.top + r.height / 2)) + 'px'); }
+  for (const it of DS.items) if (!DS.thumbs.has(it.path)){
+    DS.thumbs.set(it.path, '');
+    invoke('shelf_thumb', {path:it.path}).then(u => {
+      if (!u) return; DS.thumbs.set(it.path, u);
+      const p = [...dsRow.querySelectorAll('.ds-i')].find(e => e.dataset.p === it.path)?.querySelector('.ds-p'); if (!p) return;
+      const im = new Image(); im.alt = ''; im.src = u; im.decode().catch(() => {}).then(() => { p.textContent = ''; p.appendChild(im); requestAnimationFrame(() => im.classList.add('ok')); });
+    });
+  }
+}
+function dsGo(el, then){ el.classList.add('out'); setTimeout(() => { el.classList.add('gone'); setTimeout(() => { el.remove(); then && then(); }, 280); }, 260); }
+const dsInside = pos => { if (!DS.box || !pos) return false; const x = pos.x / devicePixelRatio, y = pos.y / devicePixelRatio, b = DS.box; return x >= b.x - 14 && x <= b.x + b.w + 14 && y >= b.y - 14 && y <= b.y + b.h + 14; };
+function dsOver(on){ if (DS.over === on) return; DS.over = on; dsEl.classList.toggle('over', on); if (on){ clearTimeout(DS.hideT); dsEl.classList.add('dragging'); } }
+if (TAURI){
+  listen('tauri://drag-enter', p => { if (DS.on) dsOver(dsInside(p.position)); });
+  listen('tauri://drag-over', p => { if (DS.on) dsOver(dsInside(p.position)); });
+  listen('tauri://drag-leave', () => { if (DS.on) dsOver(false); });
+  listen('tauri://drag-drop', async p => {
+    if (!DS.on) return;
+    const inside = dsInside(p.position), paths = p.paths || [];
+    dsOver(false);
+    if (!inside || !paths.length){ if (DS.mode === 'drop') dsHide(); return; }
+    DS.items = (await invoke('shelf_add', {paths})) || DS.items;
+    DS.mode = 'open'; dsEl.classList.remove('dragging');
+    dsLay(); dsPaint(false, paths, p.position.x / devicePixelRatio, p.position.y / devicePixelRatio);
+    dsTray.classList.remove('take'); void dsTray.offsetWidth; dsTray.classList.add('take');
+    syncHit();
+  });
+}
+// out of the shelf: pressed and moved a few pixels, it becomes Windows' own drag (the shelf stays up meanwhile)
+dsRow.addEventListener('pointerdown', e => { const i = e.target.closest('.ds-i'); if (i && e.button === 0 && !e.target.closest('button')) DS.press = {i, x:e.clientX, y:e.clientY}; });
+dsRow.addEventListener('pointermove', e => {
+  const P = DS.press; if (!P || DS.out || Math.hypot(e.clientX - P.x, e.clientY - P.y) < 6) return;
+  DS.press = null; DS.out = true; P.i.classList.add('drag');
+  invoke('shelf_drag', {paths:[P.i.dataset.p]}).then(() => invoke('shelf_list')).then(l => {
+    DS.out = false; P.i.classList.remove('drag');
+    if (l && l.length !== DS.items.length){ DS.items = l; dsLay(); dsPaint(false); }        // (moved somewhere: it drops off the shelf)
+  });
+});
+addEventListener('pointerup', () => { DS.press = null; });
+dsRow.addEventListener('dblclick', e => { const i = e.target.closest('.ds-i'); if (i) invoke('launch', {target:i.dataset.p}); });
+dsRow.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)){ dsRow.scrollLeft += e.deltaY; e.preventDefault(); } }, {passive:false});
+dsEl.addEventListener('click', e => {
+  e.stopPropagation();
+  const a = e.target.closest('[data-ds]')?.dataset.ds, i = e.target.closest('.ds-i');
+  if (a === 'show' && i) invoke('shelf_reveal', {path:i.dataset.p});
+  else if (a === 'rm' && i){ const path = i.dataset.p; DS.items = DS.items.filter(x => x.path !== path); invoke('shelf_remove', {path}); dsGo(i, () => { dsEl.classList.toggle('empty', !DS.items.length); $('dsCount').textContent = DS.items.length ? `${DS.items.length} item${DS.items.length > 1 ? 's' : ''}` : ''; dsLay(); }); }
+  else if (a === 'clear'){ const all = [...dsRow.querySelectorAll('.ds-i')]; all.forEach((el, k) => setTimeout(() => el.classList.add('out'), k * 30)); DS.items = []; invoke('shelf_clear'); setTimeout(() => { dsPaint(false); dsLay(); }, 300 + all.length * 30); }
+});
+dsEl.addEventListener('pointerdown', e => e.stopPropagation());
+$('whShelf').addEventListener('click', e => { e.stopPropagation(); whClose(); setTimeout(() => dsShow('open', true), 240); });
 
 // (body.sheet while the sheet is open: the bar takes its colour, see the styles)
 new MutationObserver(() => document.body.classList.toggle('sheet', notch.classList.contains('open'))).observe(notch, {attributes:true, attributeFilter:['class']});

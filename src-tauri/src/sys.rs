@@ -253,9 +253,16 @@ pub fn wifi_disconnect() {
 static ICONS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
 fn icon_data_url(source: &str, size: i32) -> Option<String> {
+    image_data_url(source, size, true)
+}
+
+/// A file's picture: its own thumbnail (a photo, a video's frame, a document's first page) where Windows has one,
+/// otherwise its icon (`icon_only`: always the icon).
+pub(crate) fn image_data_url(source: &str, size: i32, icon_only: bool) -> Option<String> {
     unsafe {
         let factory: IShellItemImageFactory = SHCreateItemFromParsingName(&HSTRING::from(source), None).ok()?;
-        let hbm = factory.GetImage(SIZE { cx: size, cy: size }, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK).ok()?;
+        let flags = if icon_only { SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK } else { SIIGBF_BIGGERSIZEOK };
+        let hbm = factory.GetImage(SIZE { cx: size, cy: size }, flags).ok()?;
         let mut bm = BITMAP::default();
         GetObjectW(hbm.into(), std::mem::size_of::<BITMAP>() as i32, Some(&mut bm as *mut _ as _));
         let (w, h) = (bm.bmWidth, bm.bmHeight);
