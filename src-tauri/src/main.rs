@@ -371,6 +371,16 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
         let _request = ai::begin_request();
         // slips of the keyboard and chat shorthand are set right before anything reads the request
         let text = skills::tidy(&text);
+        // AI Tools' own requests about your selection ("rewrite the selected text to…", "translate…", "explain…",
+        // "draft a reply…") go straight to the work: nothing else could be meant by them
+        {
+            let l = text.to_lowercase();
+            if l.contains("the selected text") {
+                if let Some((how, paste)) = skills::writing(&l) {
+                    return agent::execute(&app, vec![agent::Step::Rewrite(how, paste)]);
+                }
+            }
+        }
         // "Danish's chat is open. What should I say?" -> what you say now is the message
         if let Some((chat_app, to)) = skills::asked_message(&text) {
             return agent::execute(&app, vec![agent::Step::Message(chat_app, to, text.trim().to_string())]);

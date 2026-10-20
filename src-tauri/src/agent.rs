@@ -1553,13 +1553,32 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
                 "You read the user's text and answer their request about it in plain spoken English, briefly."
             };
             let max = (text.len() / 3 + 80).min(1500);
+            // Translating goes to the same fast translator as the Language menu (about a second, where the local
+            // brain good at languages takes many); only when it can't is the local brain asked.
+            let lang = {
+                let h = how.to_lowercase();
+                let to = h.rsplit_once(" into ").or_else(|| h.rsplit_once(" to ")).map(|(_, l)| l.trim().trim_end_matches(['.', '!', '?']).trim().to_string()).unwrap_or_default();
+                let mut c = to.chars();
+                c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
+            };
+            let fast = if *paste && how.to_lowercase().starts_with("translate") && !lang.is_empty() {
+                crate::web::translate(&text.chars().take(4500).collect::<String>(), "Auto", &lang).filter(|t| !t.trim().is_empty())
+            } else {
+                None
+            };
+            if let Some(t) = &fast {
+                let _ = app.emit_to("main", "rewrite-piece", t);
+            }
             // (the new words go to the page as they're written: beside your selection you watch it being rewritten)
-            let out = crate::ai::oneshot(app, sys, &format!("Instruction: {how}\n\nText:\n{}", text.chars().take(6000).collect::<String>()), max, |full| {
-                if *paste {
-                    let _ = app.emit_to("main", "rewrite-piece", full);
-                }
-            })
-            .ok_or("My local brain isn't available right now.")?;
+            let out = match fast {
+                Some(t) => t,
+                None => crate::ai::oneshot(app, sys, &format!("Instruction: {how}\n\nText:\n{}", text.chars().take(6000).collect::<String>()), max, |full| {
+                    if *paste {
+                        let _ = app.emit_to("main", "rewrite-piece", full);
+                    }
+                })
+                .ok_or("My local brain isn't available right now.")?,
+            };
             if crate::ai::cancelled() {
                 let _ = crate::clip::set(&before);
                 return Err("Stopped.".into());

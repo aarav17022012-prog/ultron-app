@@ -2641,11 +2641,11 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
    at one lifts it and names it; pressing it, it grows into the window itself as the window comes to the front. */
 .shelf{position:fixed; inset:0; z-index:42; pointer-events:none; visibility:hidden}
 .shelf.on{visibility:visible}
-.sh-scrim{position:absolute; left:0; right:0; bottom:0; height:min(56vh, 480px); pointer-events:auto; opacity:0;
+.sh-scrim{position:absolute; left:0; right:0; bottom:0; height:min(42vh, 380px); pointer-events:auto; opacity:0;
   background:linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,.2) 45%, rgba(0,0,0,0)); transition:opacity .5s ease}
 .shelf.on .sh-scrim{opacity:1}
 .shelf.down .sh-scrim, .shelf.pick .sh-scrim{opacity:0; transition:opacity .36s ease .05s}
-.sh-tray{position:absolute; left:0; bottom:14px; border-radius:34px; pointer-events:auto; --tint:rgba(18,18,24,.28);
+.sh-tray{position:absolute; left:0; bottom:10px; border-radius:34px; pointer-events:auto; --tint:rgba(18,18,24,.28);
   box-shadow:inset 0 1px 1px rgba(255,255,255,.42), inset 0 -1px 1px rgba(255,255,255,.08), inset 0 0 30px rgba(255,255,255,.07), 0 30px 70px rgba(0,0,0,.45), 0 4px 14px rgba(0,0,0,.22);
   transform:translateY(var(--ty, 300px)); transition:transform .62s var(--glide), width .45s var(--glide), height .45s var(--glide), left .45s var(--glide)}
 /* (its glass doesn't ride up with it: the picture behind stays where it is on screen while the tray slides over it) */
@@ -2661,13 +2661,17 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .sh-f{position:absolute; inset:0; border-radius:4px; overflow:hidden; background:#141418;
   box-shadow:0 18px 36px -10px rgba(0,0,0,.6), 0 4px 10px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.18); transition:box-shadow .42s var(--glide)}
 .sh-c.done.hot .sh-f{box-shadow:0 30px 60px -12px rgba(0,0,0,.72), 0 10px 22px rgba(0,0,0,.32), 0 0 0 1.6px rgba(255,255,255,.9)}
+/* (the icon and name only show where Windows has no picture to give, a minimized window's say: they come in under the
+    picture, after it has faded up, so they never flash before it) */
+.sh-ph{opacity:0; animation:shPh .3s calc(var(--d) + 520ms) ease forwards}
+@keyframes shPh{to{opacity:1}}
 .sh-ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:linear-gradient(180deg, #2a2a30, #1a1a1e)}
 .sh-ph img{width:30%; max-width:52px; aspect-ratio:1; object-fit:contain}
 .sh-ph b{font-size:28px; font-weight:600; color:rgba(255,255,255,.8)}
 .sh-ph em{max-width:84%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:normal; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.62)}
-.sh-ic{position:absolute; left:50%; top:calc(100% + 10px); width:24px; height:24px; margin-left:-12px; display:grid; place-items:center;
+.sh-ic{position:absolute; left:50%; top:calc(100% + 8px); width:22px; height:22px; margin-left:-11px; display:grid; place-items:center;
   animation:shIc .5s calc(var(--d) + .38s) var(--glide) backwards; transition:opacity .15s, transform .42s var(--glide)}
-.sh-ic img{width:24px; height:24px; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.sh-ic img{width:22px; height:22px; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
 .sh-ic b{font-size:13px; font-weight:700}
 .sh-c.done.hot .sh-ic{transform:translateY(8px) scale(.94)}
 @keyframes shIc{from{opacity:0; transform:translateY(8px) scale(.6)}}
@@ -2770,7 +2774,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 /* (under the bar the sheet is the wallpaper's glass, like the bar; below it, what's behind shows, fading in, so there's no seam) */
 .notch.glass > .gw > .gwc{-webkit-mask:linear-gradient(transparent var(--bar), #000 calc(var(--bar) + 44px)); mask:linear-gradient(transparent var(--bar), #000 calc(var(--bar) + 44px))}
 /* (while the sheet is open the bar is the sheet's colour, not the window's: one piece, no line where they meet) */
-body:has(.notch.glass.open) .mbar.glass::before, body:has(.notch.glass.open) #barFil::before{--bt:rgba(16,16,20,.34); --bt2:rgba(14,14,20,.58)}
+body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.34); --bt2:rgba(14,14,20,.58)}
 /* the voice-typing shortcut in the notch's settings */
 .row .hk-wrap{margin-left:auto}
 
@@ -8323,13 +8327,14 @@ function shelfWatch(x, y, down){
     else if (SH.leaveT){ clearTimeout(SH.leaveT); SH.leaveT = 0; }
     return;
   }
-  if (y < (screen.height || innerHeight) - 2 || down){
-    if (SH.armed){ SH.armed = false; clearTimeout(SH.armT); shelfShrinkLater(); }
+  // (the very last row of the screen, held there a full second: passing by, or resting near the bottom, does nothing)
+  if (y < (screen.height || innerHeight) - 1 || down){
+    if (SH.armed){ SH.armed = false; clearTimeout(SH.armT); }
     return;
   }
   if (SH.armed || !shelfCan()) return;
-  SH.armed = true; SH.x = x; shelfPrep();
-  SH.armT = setTimeout(() => { if (SH.armed){ SH.armed = false; if (shelfCan()) shelfShow(); else shelfShrinkLater(); } }, 150);
+  SH.armed = true; SH.x = x;
+  SH.armT = setTimeout(() => { if (SH.armed){ SH.armed = false; if (shelfCan()) shelfPrep().then(() => { if (shelfCan()) shelfShow(); else shelfShrinkLater(); }); } }, 1000);
 }
 async function shelfPrep(){
   clearTimeout(SH.shrinkT);
@@ -8342,14 +8347,13 @@ async function shelfPrep(){
   const rects = (await invoke('dock_rects', {ids:wins.map(w => w.id)})) || [];
   if (seq !== SH.seq) return;
   SH.rects = new Map(rects.map(([id, r, min]) => [id, {r, min}]));
-  if (SH.on && !SH.flying){ shelfLay(); shelfPics(450); }
 }
 function shelfShrinkLater(){
   clearTimeout(SH.shrinkT);
   SH.shrinkT = setTimeout(() => {
     if (SH.on || SH.armed || (window.LK && LK.on) || (window.CTS && CTS.on) || winH === 700) return;
     winH = 700; invoke('set_window_height', {h:700}); syncHit();
-  }, 700);
+  }, 1200);
 }
 // (the page is as tall as the screen once Windows has resized the window: wait for that before placing anything)
 const shelfTall = () => new Promise(res => {
@@ -8403,16 +8407,17 @@ async function shelfShow(){
 // Mission Control), each card the shape of its window; the tray fits round them.
 function shelfLay(first){
   const cards = [...shCards.querySelectorAll('.sh-c')], n = cards.length; if (!n) return;
-  const W = Math.min(innerWidth - 140, 1440), gap = 22, gapY = 54, maxH = Math.min(440, innerHeight * .5);
+  // (never more than two rows, and well clear of the top half of the screen)
+  const W = Math.min(innerWidth - 160, 1400), gap = 20, gapY = 42, maxH = Math.min(250, innerHeight * .29);
   const asp = cards.map(c => { const r = (SH.rects.get(c._w.id) || {}).r; return r && r[3] > 40 ? Math.max(.6, Math.min(2.4, r[2] / r[3])) : 1.6; });
   let best = null;
-  for (let rows = 1; rows <= 3; rows++){
+  for (let rows = 1; rows <= 2; rows++){
     const per = Math.ceil(n / rows), lines = [];
     for (let i = 0; i < n; i += per) lines.push(asp.slice(i, i + per));
-    const H = Math.min(150, (W - (per - 1) * gap) / Math.max(...lines.map(l => l.reduce((s, a) => s + a, 0))), (maxH - (lines.length - 1) * gapY) / lines.length);
+    const H = Math.min(124, (W - (per - 1) * gap) / Math.max(...lines.map(l => l.reduce((s, a) => s + a, 0))), (maxH - (lines.length - 1) * gapY) / lines.length);
     if (!best || H > best.H + 6) best = {H, lines, per};
   }
-  const H = Math.max(60, best.H), per = best.per, rowsN = best.lines.length, blockH = rowsN * H + (rowsN - 1) * gapY, bottom0 = 14 + 46;
+  const H = Math.max(56, best.H), per = best.per, rowsN = best.lines.length, blockH = rowsN * H + (rowsN - 1) * gapY, bottom0 = 10 + 40;
   const rowW = best.lines.map(l => l.reduce((s, a) => s + a * H, 0) + (l.length - 1) * gap);
   cards.forEach((c, i) => {
     const row = Math.floor(i / per), k = i - row * per, line = best.lines[row];
@@ -8423,7 +8428,7 @@ function shelfLay(first){
     c.style.left = c._r[0] + 'px'; c.style.top = c._r[1] + 'px'; c.style.width = c._r[2] + 'px'; c.style.height = c._r[3] + 'px';
     if (first) c.style.setProperty('--d', Math.round(Math.hypot(c._cx - SH.x, (innerHeight - top) * .6) / innerWidth * 260) + 'ms');
   });
-  const trayW = Math.max(...rowW) + 48, trayH = blockH + 20 + 46, trayL = Math.round(innerWidth / 2 - trayW / 2), trayT = innerHeight - 14 - trayH;
+  const trayW = Math.max(...rowW) + 44, trayH = blockH + 18 + 40, trayL = Math.round(innerWidth / 2 - trayW / 2), trayT = innerHeight - 10 - trayH;
   shTray.style.left = trayL + 'px'; shTray.style.width = Math.round(trayW) + 'px'; shTray.style.height = Math.round(trayH) + 'px';
   shTray.style.setProperty('--ty', Math.round(trayH + 40) + 'px');
   const gw = shTray.querySelector('.gw');
@@ -8483,8 +8488,8 @@ function shelfHide(now){
   syncHit(); shelfShrinkLater();
 }
 shCards.addEventListener('animationend', e => { if (e.animationName === 'shUp'){ e.target.classList.add('done'); if (e.target === SH.hot) shelfPics(420, [e.target]); } });
-shCards.addEventListener('pointerover', e => { const c = e.target.closest('.sh-c'); if (c && !SH.flying) shelfHot(c); });
-shCards.addEventListener('pointerleave', () => { if (!SH.flying) shelfHot(null); });
+shCards.addEventListener('pointerover', e => { const c = e.target.closest('.sh-c'); if (c && !SH.flying){ clearTimeout(SH.offT); shelfHot(c); } });
+shCards.addEventListener('pointerout', e => { if (SH.flying || (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.sh-c'))) return; clearTimeout(SH.offT); SH.offT = setTimeout(() => { if (!SH.flying) shelfHot(null); }, 160); });
 shCards.addEventListener('click', e => { const c = e.target.closest('.sh-c'); if (c) shelfFly(c); });
 shelfEl.querySelector('.sh-scrim').addEventListener('pointerdown', () => { if (!SH.flying) shelfHide(); });
 shTray.addEventListener('pointerdown', e => { if (!SH.flying && e.target === shTray) shelfHide(); });
@@ -9689,6 +9694,9 @@ if (TAURI) invoke('at_login').then(yes => { if (yes && S.lock === 'ultron') setT
 
 // every quarter of an hour, a line in the log on how the page is keeping: anything that grows while ULTRON stays open shows there
 if (TAURI) setInterval(() => invoke('page_log', {msg:`health: ${document.getElementsByTagName('*').length} nodes, ${performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : '?'} MB heap, ${Math.round(performance.now() / 60000)} min up`}), 900000);
+
+// (body.sheet while the sheet is open: the bar takes its colour, see the styles)
+new MutationObserver(() => document.body.classList.toggle('sheet', notch.classList.contains('open'))).observe(notch, {attributes:true, attributeFilter:['class']});
 
 /* About shows the version the app was built as (tauri.conf.json) */
 window.__TAURI__?.app?.getVersion?.().then(v => { $('abVer').textContent = `Version ${v} · runs entirely on this PC`; }).catch(() => {});
