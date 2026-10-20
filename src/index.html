@@ -2782,7 +2782,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .wf-ask.busy [data-wa="join"]{opacity:.7}
 /* the notch: the wallpaper's glass only (what's behind it on screen doesn't show through, nor the window's colour) */
 /* (while the sheet is open the bar is the sheet's colour, not the window's: one piece, no line where they meet) */
-body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.34); --bt2:rgba(14,14,20,.58)}
+body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.34); --bt2:rgba(14,14,20,.58); transition:--bt .22s ease, --bt2 .22s ease}
 /* the voice-typing shortcut in the notch's settings */
 .row .hk-wrap{margin-left:auto}
 
@@ -9580,11 +9580,11 @@ function dsWatch(x, y, down){
     if (DS.mode === 'drop' && !down && !DS.over){ clearTimeout(DS.hideT); DS.hideT = setTimeout(() => { if (DS.on && DS.mode === 'drop' && !DS.over) dsHide(); }, 900); }
     return;
   }
-  // (with ULTRON's taskbar: the bottom edge is free. A drag: the bottom 6 px, a moment. Resting: the last row, a second.)
+  // (with ULTRON's taskbar: the bottom edge is free. A drag: the bottom 6 px, a moment. Reaching the last row: at once.)
   const kind = !DK.on || !dsCan() ? '' : down ? (y >= H - 6 ? 'drop' : '') : (y >= H - 1 ? 'open' : '');
   if (kind === DS.arm) return;
   clearTimeout(DS.armT); DS.arm = kind;
-  if (kind) DS.armT = setTimeout(() => { DS.arm = ''; if (dsCan()) dsShow(kind); }, kind === 'drop' ? 220 : 1000);
+  if (kind) DS.armT = setTimeout(() => { DS.arm = ''; if (dsCan()) dsShow(kind); }, kind === 'drop' ? 160 : 40);
 }
 const dsTall = () => new Promise(res => {
   const ok = () => innerHeight >= (screen.height || 864) - 4;
