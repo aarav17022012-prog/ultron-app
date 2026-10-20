@@ -59,7 +59,8 @@ fn window() -> Option<HWND> {
             0,
             0,
             GetSystemMetrics(SM_CXSCREEN),
-            GetSystemMetrics(SM_CYSCREEN),
+            // (2 px short of the screen: a screen-sized window on top is taken by Windows for a full-screen app)
+            GetSystemMetrics(SM_CYSCREEN) - 2,
             None,
             None,
             inst,
@@ -159,10 +160,16 @@ pub fn set(items: &[Item], scale: f64) {
             let _ = DwmUpdateThumbnailProperties(t, &p);
         }
     }
-    if first && !shown.is_empty() {
+    if !shown.is_empty() {
         unsafe {
-            let _ = ShowWindow(win, SW_SHOWNOACTIVATE);
-            let _ = SetWindowPos(win, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            if first {
+                let _ = ShowWindow(win, SW_SHOWNOACTIVATE);
+            }
+            // (on top of ULTRON's page, whatever came over it since: its cards would hide the pictures)
+            let above = windows::Win32::UI::WindowsAndMessaging::GetWindow(win, windows::Win32::UI::WindowsAndMessaging::GW_HWNDPREV).map(|h| !h.is_invalid()).unwrap_or(false);
+            if first || above {
+                let _ = SetWindowPos(win, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
         }
     }
 }
