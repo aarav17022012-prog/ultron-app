@@ -112,6 +112,8 @@ pub struct Network {
     pub ssid: String,
     pub signal: u32,
     pub secure: bool,
+    /// how it's secured, as Windows names it ("WPA2-Personal", "WPA3-Personal", "Open"...)
+    pub auth: String,
     pub known: bool,
     pub current: bool,
 }
@@ -182,7 +184,10 @@ pub fn wifi_status(with_list: bool) -> Wifi {
             nets.push(Network { ssid: v, ..Default::default() });
         } else if let Some(n) = nets.last_mut() {
             match k.as_str() {
-                "Authentication" => n.secure = !v.eq_ignore_ascii_case("Open"),
+                "Authentication" => {
+                    n.secure = !v.eq_ignore_ascii_case("Open");
+                    n.auth = v.clone();
+                }
                 "Signal" => n.signal = n.signal.max(v.trim_end_matches('%').parse().unwrap_or(0)),
                 _ => {}
             }
@@ -202,6 +207,41 @@ pub fn wifi_connect(ssid: &str) -> bool {
     let name = format!("name={ssid}");
     let out = netsh(&["wlan", "connect", &name]);
     out.to_lowercase().contains("successfully")
+}
+
+/// Join a network with its password: a profile for it is given to Windows (as Windows' own box would), then
+/// it's joined, and ULTRON waits to see it connect. A wrong password never connects: the profile is taken away
+/// again, so the network isn't left "saved" with it.
+pub fn wifi_join(ssid: &str, key: &str, auth: &str) -> bool {
+    let x = |s: &str| s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&apos;");
+    let a = auth.to_lowercase();
+    let open = key.is_empty() || a == "open";
+    let (method, cipher) = if open { ("open", "none") } else if a.contains("wpa3") { ("WPA3SAE", "AES") } else if a.contains("wpa-personal") { ("WPAPSK", "TKIP") } else { ("WPA2PSK", "AES") };
+    let shared = if open { String::new() } else { format!("<sharedKey><keyType>passPhrase</keyType><protected>false</protected><keyMaterial>{}</keyMaterial></sharedKey>", x(key)) };
+    let xml = format!(
+        "<?xml version=\"1.0\"?><WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\"><name>{n}</name><SSIDConfig><SSID><name>{n}</name></SSID></SSIDConfig><connectionType>ESS</connectionType><connectionMode>auto</connectionMode><MSM><security><authEncryption><authentication>{method}</authentication><encryption>{cipher}</encryption><useOneX>false</useOneX></authEncryption>{shared}</security></MSM></WLANProfile>",
+        n = x(ssid)
+    );
+    let file = std::env::temp_dir().join(format!("ultron-wifi-{}.xml", std::process::id()));
+    if std::fs::write(&file, xml).is_err() {
+        return false;
+    }
+    let added = netsh(&["wlan", "add", "profile", &format!("filename={}", file.display()), "user=current"]);
+    let _ = std::fs::remove_file(&file); // (the password isn't left lying in a file)
+    if !added.to_lowercase().contains("is added") {
+        return false;
+    }
+    netsh(&["wlan", "connect", &format!("name={ssid}")]);
+    for _ in 0..24 {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let st = netsh(&["wlan", "show", "interfaces"]);
+        let on = st.lines().filter_map(kv).any(|(k, v)| k == "SSID" && v == ssid) && st.lines().filter_map(kv).any(|(k, v)| k == "State" && v.eq_ignore_ascii_case("connected"));
+        if on {
+            return true;
+        }
+    }
+    netsh(&["wlan", "delete", "profile", &format!("name={ssid}")]);
+    false
 }
 
 pub fn wifi_disconnect() {

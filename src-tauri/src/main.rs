@@ -14,6 +14,7 @@ mod songs;
 mod hit;
 mod backdrop;
 mod calls;
+mod thumbs;
 mod lid;
 mod kids;
 mod rec;
@@ -811,6 +812,36 @@ async fn dock_rects(app: AppHandle, ids: Vec<String>) -> Vec<(String, [f64; 4], 
     tauri::async_runtime::spawn_blocking(move || dock::rects(&ids, scale)).await.unwrap_or_default()
 }
 
+/// The shelf's live pictures of windows (thumbs.rs): where each goes now, or none.
+#[tauri::command]
+async fn thumbs_set(app: AppHandle, items: Vec<thumbs::Item>) {
+    let scale = app.get_webview_window("main").and_then(|w| w.scale_factor().ok()).unwrap_or(1.0);
+    thumbs::set(&items, scale);
+}
+
+#[tauri::command]
+async fn thumbs_clear() {
+    thumbs::clear();
+}
+
+/// A reply typed on a messaging app's notification that can't take one itself: the chat is opened and it's typed there.
+#[tauri::command]
+async fn notes_reply(app: AppHandle, id: u32, text: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || notes::reply(&app, id, &text)).await.map_err(|e| e.to_string())?
+}
+
+/// Joining a network with its password (ULTRON's own box asks for it, not Windows').
+#[tauri::command]
+async fn wifi_join(ssid: String, key: String, auth: String) -> bool {
+    tauri::async_runtime::spawn_blocking(move || sys::wifi_join(&ssid, &key, &auth)).await.unwrap_or(false)
+}
+
+/// The voice-typing shortcut (the notch's settings).
+#[tauri::command]
+fn dictate_key(mods: u32, vk: u32) {
+    spotkey::set_key(spotkey::DICTATE, mods, vk);
+}
+
 #[tauri::command]
 async fn dock_peek(id: String) -> Option<String> {
     tauri::async_runtime::spawn_blocking(move || dock::peek(&id)).await.ok().flatten()
@@ -1224,7 +1255,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_rects, dock_keep, at_login, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_rects, dock_keep, at_login, thumbs_set, thumbs_clear, notes_reply, wifi_join, dictate_key, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

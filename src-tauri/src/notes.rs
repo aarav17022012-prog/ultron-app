@@ -493,6 +493,35 @@ pub fn press(app: &AppHandle, id: u32, which: Option<usize>, typed: Vec<(String,
     done
 }
 
+/// Reply to a message whose notification has no box of its own: the notification is opened (Windows opens the
+/// chat it's from), and once that app is in front the reply is typed into it and sent with Enter.
+pub fn reply(app: &AppHandle, id: u32, text: &str) -> Result<(), String> {
+    use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+    let text = text.trim();
+    if text.is_empty() {
+        return Ok(());
+    }
+    let before = unsafe { GetForegroundWindow() }.0 as isize;
+    press(app, id, None, Vec::new())?;
+    // (the app comes to the front: wait for that, then a moment for the chat to open and its box to take the keys)
+    let mut changed = false;
+    for _ in 0..40 {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if unsafe { GetForegroundWindow() }.0 as isize != before {
+            changed = true;
+            break;
+        }
+    }
+    if !changed {
+        return Err("The app didn't open, so the reply wasn't sent.".into());
+    }
+    std::thread::sleep(std::time::Duration::from_millis(900));
+    crate::dictate::type_out(text);
+    std::thread::sleep(std::time::Duration::from_millis(120));
+    crate::apps::send_keys(&[windows::Win32::UI::Input::KeyboardAndMouse::VK_RETURN]);
+    Ok(())
+}
+
 pub fn dismiss(app: &AppHandle, id: u32) {
     if let Ok(l) = UserNotificationListener::Current() {
         let _ = l.RemoveNotification(id);
