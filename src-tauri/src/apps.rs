@@ -149,6 +149,27 @@ pub fn key_for(exe: Option<&str>, aumid: Option<&str>) -> String {
 
 pub fn shell_open(target: &str) -> bool {
     unsafe {
+        // (the app that opens may come to the front: ULTRON was just clicked, so it may hand that on)
+        let _ = windows::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow(windows::Win32::UI::WindowsAndMessaging::ASFW_ANY);
+        // An app from the Start list (shell:AppsFolder\ and its id) is opened here, in ULTRON, not by starting another
+        // explorer.exe to open it: that extra Explorer coming up was what made the screen stutter as an app opened.
+        // A Store app is started by Windows' app activation; any other by the shell, which knows the id.
+        if let Some(id) = target.strip_prefix("shell:AppsFolder\\") {
+            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+            if id.contains('!') {
+                use windows::Win32::UI::Shell::{ApplicationActivationManager, IApplicationActivationManager, AO_NONE};
+                let m: windows::core::Result<IApplicationActivationManager> =
+                    windows::Win32::System::Com::CoCreateInstance(&ApplicationActivationManager, None, windows::Win32::System::Com::CLSCTX_LOCAL_SERVER);
+                if let Ok(m) = m {
+                    if m.ActivateApplication(&HSTRING::from(id), PCWSTR::null(), AO_NONE).is_ok() {
+                        return true;
+                    }
+                }
+            }
+            if ShellExecuteW(None, &HSTRING::from("open"), &HSTRING::from(target), PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL).0 as isize > 32 {
+                return true;
+            }
+        }
         let r = if target.starts_with("shell:") || target.starts_with("::") {
             ShellExecuteW(None, &HSTRING::from("open"), &HSTRING::from("explorer.exe"), &HSTRING::from(target), PCWSTR::null(), SW_SHOWNORMAL)
         } else {

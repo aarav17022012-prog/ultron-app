@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetCursorPos, GetWindowLongW, GetWindowRect, IsWindowVisible, SetWindowLongW, SetWindowPos, GWL_EXSTYLE, HWND_TOPMOST,
     SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, WS_EX_LAYERED, WS_EX_TRANSPARENT,
@@ -118,7 +119,9 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 if moved && t.last_emit.elapsed() >= Duration::from_millis(30) {
                     t.last = (x, y);
                     t.last_emit = Instant::now();
-                    let _ = app.emit_to(t.label.as_str(), "cursor", (x, y));
+                    // (and whether a button is held: a drag that reaches the bottom edge mustn't bring the shelf up)
+                    let down = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) < 0 || GetAsyncKeyState(VK_RBUTTON.0 as i32) < 0 };
+                    let _ = app.emit_to(t.label.as_str(), "cursor", (x, y, down));
                 }
             }
             // other always-on-top windows can climb above us; quietly take the top back

@@ -14,6 +14,7 @@ mod songs;
 mod hit;
 mod backdrop;
 mod calls;
+mod lid;
 mod kids;
 mod rec;
 mod squeeze;
@@ -534,11 +535,27 @@ fn set_autostart(on: bool) -> bool {
     let mut c = std::process::Command::new("reg");
     if on {
         let exe = std::env::current_exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
-        c.args(["add", RUN_KEY, "/v", "ULTRON", "/t", "REG_SZ", "/d", &format!("\"{exe}\""), "/f"]);
+        c.args(["add", RUN_KEY, "/v", "ULTRON", "/t", "REG_SZ", "/d", &format!("\"{exe}\" --at-login"), "/f"]);
     } else {
         c.args(["delete", RUN_KEY, "/v", "ULTRON", "/f"]);
     }
     c.creation_flags(0x0800_0000).output().map(|o| o.status.success()).unwrap_or(false)
+}
+
+/// Started by Windows as you signed in (after a restart, say), not opened by hand: the page shows the lock screen
+/// then, when it's ULTRON's. An entry for starting with Windows written before this knew nothing of the mark, so
+/// it's written again with it.
+#[tauri::command]
+fn at_login() -> bool {
+    let marked = std::env::args().any(|a| a == "--at-login");
+    if get_autostart() {
+        use std::os::windows::process::CommandExt;
+        let now = std::process::Command::new("reg").args(["query", RUN_KEY, "/v", "ULTRON"]).creation_flags(0x0800_0000).output().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default();
+        if !now.contains("--at-login") {
+            set_autostart(true);
+        }
+    }
+    marked
 }
 
 #[tauri::command]
@@ -788,6 +805,12 @@ async fn dock_tile_apps(app: AppHandle, launches: Vec<String>, gap: Option<i32>)
 }
 
 /// A window's picture, for the wheel to show beside its bead.
+#[tauri::command]
+async fn dock_rects(app: AppHandle, ids: Vec<String>) -> Vec<(String, [f64; 4], bool)> {
+    let scale = app.get_webview_window("main").and_then(|w| w.scale_factor().ok()).unwrap_or(1.0);
+    tauri::async_runtime::spawn_blocking(move || dock::rects(&ids, scale)).await.unwrap_or_default()
+}
+
 #[tauri::command]
 async fn dock_peek(id: String) -> Option<String> {
     tauri::async_runtime::spawn_blocking(move || dock::peek(&id)).await.ok().flatten()
@@ -1201,7 +1224,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_rects, dock_keep, at_login, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
@@ -1236,6 +1259,7 @@ fn main() {
             dev_inbox(handle.clone());
             routines::start(handle.clone());
             calls::start(handle.clone());
+            lid::start(handle.clone());
             mail::watch(handle.clone());
             rec::hotkeys(handle.clone());
             spotkey::start(handle.clone());

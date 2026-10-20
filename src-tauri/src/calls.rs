@@ -97,6 +97,23 @@ fn announce(app: &AppHandle, c: &Call) {
     let _ = app.emit_to("main", "call", serde_json::json!({ "id": c.id, "app": c.app, "who": c.who, "what": c.what, "canReply": can_reply(&c.app) && !c.who.is_empty() }));
 }
 
+/// A stamp of Windows' own notification store (its size and when it was last written, with its journal). It changes
+/// when a notification comes or goes. Reading it costs next to nothing; asking Windows for every notification it
+/// holds costs more the more it holds, and they pile up the longer the PC runs: asked every 0.9 s, that was a cost
+/// that kept growing while ULTRON stayed open. 0 when the store can't be found (then Windows is asked as before).
+fn store_stamp() -> u64 {
+    let Ok(base) = std::env::var("LOCALAPPDATA") else { return 0 };
+    let db = std::path::Path::new(&base).join("Microsoft").join("Windows").join("Notifications").join("wpndatabase.db");
+    let mut s = 0u64;
+    for f in [db.clone(), db.with_extension("db-wal")] {
+        if let Ok(m) = std::fs::metadata(&f) {
+            let t = m.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_nanos() as u64).unwrap_or(0);
+            s = s.wrapping_mul(31).wrapping_add(m.len()).wrapping_mul(31).wrapping_add(t);
+        }
+    }
+    s
+}
+
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
         unsafe {
@@ -112,8 +129,19 @@ pub fn start(app: AppHandle) {
         if status != UserNotificationListenerAccessStatus::Allowed {
             return;
         }
+        let (mut stamp, mut asked) = (0u64, std::time::Instant::now() - Duration::from_secs(60));
         loop {
-            std::thread::sleep(Duration::from_millis(900));
+            std::thread::sleep(Duration::from_millis(300));
+            // Windows is asked when its store has changed; while a call rings, every 0.9 s as before (to see it end);
+            // and every 20 s whatever happens, in case a change was missed
+            let s = store_stamp();
+            let rings = CURRENT.lock().unwrap().is_some();
+            let due = if s == 0 || rings { asked.elapsed() >= Duration::from_millis(900) } else { s != stamp || asked.elapsed() >= Duration::from_secs(20) };
+            if !due {
+                continue;
+            }
+            stamp = s;
+            asked = std::time::Instant::now();
             // (one look at Windows' list a turn, shared with ULTRON's own notifications when those are on)
             let list: Vec<UserNotification> = listener.GetNotificationsAsync(NotificationKinds::Toast).ok().and_then(|a| a.get().ok()).map(|v| v.into_iter().collect()).unwrap_or_default();
             crate::notes::poll(&app, &list);

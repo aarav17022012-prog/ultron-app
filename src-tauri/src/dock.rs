@@ -495,6 +495,43 @@ fn keep_pictures(wins: &[OpenWin], front: &mut (isize, u64, u64)) {
     }
 }
 
+/// Where each window is on the screen, in the page's pixels (`scale`: the page's), for the shelf's cards to
+/// grow into; a minimized one, where it will come back to. And whether it's minimized.
+pub fn rects(ids: &[String], scale: f64) -> Vec<(String, [f64; 4], bool)> {
+    use windows::Win32::UI::WindowsAndMessaging::WPF_RESTORETOMAXIMIZED;
+    let mut work = RECT::default();
+    unsafe {
+        let _ = SystemParametersInfoW(SPI_GETWORKAREA, 0, Some(&mut work as *mut _ as _), SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0));
+    }
+    let s = if scale > 0.0 { scale } else { 1.0 };
+    ids.iter()
+        .filter_map(|id| {
+            let h = HWND(id.parse::<isize>().ok()? as _);
+            unsafe {
+                if !IsWindow(Some(h)).as_bool() {
+                    return None;
+                }
+                let min = IsIconic(h).as_bool();
+                let mut r = RECT::default();
+                if min {
+                    let mut wp = WINDOWPLACEMENT { length: std::mem::size_of::<WINDOWPLACEMENT>() as u32, ..Default::default() };
+                    GetWindowPlacement(h, &mut wp).ok()?;
+                    // (its normal place is given from the corner of the work area, not of the screen)
+                    r = if wp.flags.0 & WPF_RESTORETOMAXIMIZED.0 != 0 {
+                        work
+                    } else {
+                        let n = wp.rcNormalPosition;
+                        RECT { left: n.left + work.left, top: n.top + work.top, right: n.right + work.left, bottom: n.bottom + work.top }
+                    };
+                } else if DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, &mut r as *mut _ as _, std::mem::size_of::<RECT>() as u32).is_err() {
+                    GetWindowRect(h, &mut r).ok()?;
+                }
+                Some((id.clone(), [r.left as f64 / s, r.top as f64 / s, (r.right - r.left) as f64 / s, (r.bottom - r.top) as f64 / s], min))
+            }
+        })
+        .collect()
+}
+
 /// Put the windows back where they were before they were tiled.
 pub fn untile() -> usize {
     let before = std::mem::take(&mut *BEFORE.lock().unwrap());

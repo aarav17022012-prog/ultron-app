@@ -130,7 +130,12 @@ fn read_session(s: &Session, id: String) -> Option<Sess> {
         }
         e.1
     };
-    let playing = s.GetPlaybackInfo().and_then(|p| p.PlaybackStatus()).map(|st| st == Status::Playing).unwrap_or(false);
+    let status = s.GetPlaybackInfo().and_then(|p| p.PlaybackStatus()).ok();
+    // (a player that has stopped or closed has nothing to show: browsers leave a closed tab's video listed like that)
+    if matches!(status, Some(Status::Stopped) | Some(Status::Closed)) {
+        return None;
+    }
+    let playing = status == Some(Status::Playing);
     let (app, kind) = app_name(&aumid);
     Some(Sess {
         id,
@@ -194,7 +199,12 @@ pub fn start(app: AppHandle) {
                 }
                 Err(_) => Vec::new(),
             };
-            let sessions: Vec<Sess> = list.iter().filter_map(|(id, s)| read_session(s, id.clone())).collect();
+            let mut sessions: Vec<Sess> = list.iter().filter_map(|(id, s)| read_session(s, id.clone())).collect();
+            // a browser that has been closed can stay running unseen and keep its last video listed, paused: not shown
+            if sessions.iter().any(|s| s.kind == "browser" && !s.playing) {
+                let wins = app.state::<crate::apps::Apps>().open_windows();
+                sessions.retain(|s| s.kind != "browser" || s.playing || wins.iter().any(|w| w.name.to_lowercase().contains(&s.app.to_lowercase())));
+            }
             let system = mgr.GetCurrentSession().ok().and_then(|s| s.SourceAppUserModelId().ok()).map(|h| format!("{h}#1"));
             let sys_id = system.clone();
             let current = selected
