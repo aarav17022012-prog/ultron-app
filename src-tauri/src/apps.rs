@@ -559,13 +559,28 @@ pub fn start(app: AppHandle) {
         let mut ticks = 0u32;
         // the window in front (and its title: a browser's changes with the tab), and the looks at its colours still due
         let (mut col_win, mut col_title, mut col_due): (isize, String, Vec<std::time::Instant>) = (0, String::new(), Vec::new());
+        // Switching apps, Windows' own task switcher, taskbar, Start or search pass through the front on the way to the
+        // next app, a moment each. The bar followed them (showing "Ultron" and its own tint, then the app): two changes
+        // in quick succession, which read as a flicker. Those are passed over, and a new window counts once it has
+        // stayed in front for 90 ms.
+        const PASSING: [&str; 12] = [
+            "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "MultitaskingViewFrame", "XamlExplorerHostIslandWindow", "ForegroundStaging", "TaskSwitcherWnd",
+            "TaskSwitcherOverlayWnd", "Windows.UI.Core.CoreWindow", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "Shell_InputSwitchTopLevelWindow", "#32768",
+        ];
+        let (mut cand, mut cand_at) = (0isize, std::time::Instant::now());
         loop {
             let fg = unsafe { GetAncestor(GetForegroundWindow(), GA_ROOTOWNER) };
-            if !fg.is_invalid() && window_pid(fg) != own {
+            if fg.0 as isize != cand {
+                cand = fg.0 as isize;
+                cand_at = std::time::Instant::now();
+            }
+            let settled = cand_at.elapsed() >= Duration::from_millis(90);
+            let passing = !fg.is_invalid() && PASSING.contains(&class_name(fg).as_str());
+            if !fg.is_invalid() && window_pid(fg) != own && settled && !passing {
                 apps.last_external_fg.store(fg.0 as isize, Ordering::SeqCst);
                 // Its colours for the bar: looked at a moment after it comes to the front (once it's drawn) and again a
                 // little later (once it has loaded); the desktop gives the bar its own tint back.
-                let desk = matches!(class_name(fg).as_str(), "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd");
+                let desk = matches!(class_name(fg).as_str(), "Progman" | "WorkerW");
                 let title = window_title(fg);
                 if fg.0 as isize != col_win || title != col_title {
                     let fresh = fg.0 as isize != col_win;
@@ -584,7 +599,7 @@ pub fn start(app: AppHandle) {
                     }
                 }
                 let name = match class_name(fg).as_str() {
-                    "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" => "Ultron".to_string(),
+                    "Progman" | "WorkerW" => "Ultron".to_string(),
                     _ => cache
                         .entry(fg.0 as isize)
                         .or_insert_with(|| app_name_of(fg, &|k| apps.name_for(k)).unwrap_or_else(|| "Ultron".into()))
@@ -604,7 +619,7 @@ pub fn start(app: AppHandle) {
             if ticks % 4000 == 0 {
                 *apps.index.write().unwrap() = build_index();
             }
-            std::thread::park_timeout(Duration::from_millis(if col_due.is_empty() { 120 } else { 40 }));
+            std::thread::park_timeout(Duration::from_millis(if !settled { 30 } else if col_due.is_empty() { 120 } else { 40 }));
         }
     });
 }

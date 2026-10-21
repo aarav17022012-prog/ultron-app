@@ -3694,7 +3694,8 @@ setInterval(() => {
   const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
   const settling = notch.classList.contains('open') && performance.now() - openedAt < 600;
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), settling ? null : notch].some(el => el && el.classList.contains('open'));
+  // (the Drop Shelf too: it wasn't on this list, so its glass got a picture only every 8 seconds and never caught up)
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), settling ? null : notch].some(el => el && el.classList.contains('open')) || !!(window.DS && DS.on);
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -10018,6 +10019,7 @@ async function dsShow(kind, force){
   // (2 px short of the screen: a screen-sized window in front would be taken by Windows for a full-screen app)
   const tall = Math.round(screen.height || 864) - 2;
   if (winH < tall){ winH = tall; invoke('set_window_height', {h:tall}); await dsTall(); }
+  if (glassOn()) invoke('backdrop_now');                     // (a picture of the screen as it is now, the window's new size)
   DS.items = (await invoke('shelf_list')) || [];
   if (!DS.on) return;
   dsPaint(true); dsLay();
