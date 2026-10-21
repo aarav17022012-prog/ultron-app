@@ -202,6 +202,11 @@ fn tap_alt() {
 
 pub fn focus_window(h: HWND) {
     unsafe {
+        // (a window that has closed since, or gone: nothing to hand the keyboard to, and the Alt tap below would land on
+        //  ULTRON's own window instead)
+        if !windows::Win32::UI::WindowsAndMessaging::IsWindow(Some(h)).as_bool() || !IsWindowVisible(h).as_bool() {
+            return;
+        }
         if IsIconic(h).as_bool() {
             let _ = ShowWindow(h, SW_RESTORE);
         }

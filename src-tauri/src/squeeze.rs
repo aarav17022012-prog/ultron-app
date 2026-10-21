@@ -27,6 +27,11 @@ pub fn folder(app: &AppHandle) -> PathBuf {
 /// Windows' own "Open" box: for several files of any kind (Files), or for one picture (Wallpaper). It
 /// belongs to ULTRON's window so that it comes up in front. Empty when it was closed without choosing.
 pub fn pick(owner: Option<isize>, picture: bool) -> Vec<String> {
+    pick_as(owner, picture, "Choose photos, videos or files to make smaller", "Shrink")
+}
+
+/// The same box for several files, with its own title and button.
+pub fn pick_as(owner: Option<isize>, picture: bool, title: &'static str, ok: &'static str) -> Vec<String> {
     use windows::core::w;
     use windows::Win32::Foundation::HWND;
     use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED};
@@ -44,8 +49,8 @@ pub fn pick(owner: Option<isize>, picture: bool) -> Vec<String> {
                 d.SetOkButtonLabel(w!("Use"))?;
             } else {
                 d.SetOptions(d.GetOptions()? | FOS_ALLOWMULTISELECT | FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST)?;
-                d.SetTitle(w!("Choose photos, videos or files to make smaller"))?;
-                d.SetOkButtonLabel(w!("Shrink"))?;
+                d.SetTitle(&windows::core::HSTRING::from(title))?;
+                d.SetOkButtonLabel(&windows::core::HSTRING::from(ok))?;
             }
             d.Show(owner.map(|h| HWND(h as _)))?; // (closing the box without choosing ends here)
             let items = d.GetResults()?;

@@ -22,6 +22,9 @@ pub struct Item {
     pub name: String,
     pub dir: bool,
     pub size: u64,
+    /// an app pinned to the shelf: `path` is what starts it (as the Start menu has it)
+    #[serde(default)]
+    pub app: bool,
 }
 
 const MOST: usize = 48;
@@ -37,6 +40,7 @@ fn item(p: &Path) -> Option<Item> {
         name: p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| p.to_string_lossy().to_string()),
         dir: m.is_dir(),
         size: if m.is_dir() { 0 } else { m.len() },
+        app: false,
     })
 }
 
@@ -52,7 +56,7 @@ fn save(app: &AppHandle, items: &[Item]) {
 /// What's on the shelf now, newest first (anything deleted or moved away since has dropped off).
 pub fn list(app: &AppHandle) -> Vec<Item> {
     let kept: Vec<Item> = file(app).and_then(|f| std::fs::read_to_string(f).ok()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
-    let now: Vec<Item> = kept.iter().filter_map(|i| item(Path::new(&i.path))).collect();
+    let now: Vec<Item> = kept.iter().filter_map(|i| if i.app { Some(i.clone()) } else { item(Path::new(&i.path)) }).collect();
     if now.len() != kept.len() {
         save(app, &now);
     }
@@ -67,6 +71,16 @@ pub fn add(app: &AppHandle, paths: &[String]) -> Vec<Item> {
         items.retain(|i| !i.path.eq_ignore_ascii_case(&it.path));
         items.insert(0, it);
     }
+    items.truncate(MOST);
+    save(app, &items);
+    items
+}
+
+/// Pin an app to the shelf (at the front).
+pub fn add_app(app: &AppHandle, name: &str, launch: &str) -> Vec<Item> {
+    let mut items = list(app);
+    items.retain(|i| !i.path.eq_ignore_ascii_case(launch));
+    items.insert(0, Item { path: launch.to_string(), name: name.to_string(), dir: false, size: 0, app: true });
     items.truncate(MOST);
     save(app, &items);
     items

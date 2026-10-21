@@ -1387,7 +1387,7 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
 .cp-o span{min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .cp-o.on{background:#fff; color:#0b0b0d; text-shadow:none} .cp-o.on i{background:#0b0b0d; color:#fff}
 .cp.open .cp-o{animation:cpIn .45s var(--glide) backwards; animation-delay:var(--d, 0ms)}
-@keyframes cpIn{from{opacity:0; transform:translateY(-7px) scale(.92)}}
+@keyframes cpIn{from{opacity:0; transform:translateY(-6px) scale(.97)}}
 .nw-cp{height:28px}
 
 /* ---------- calendar: a country's own time, and its holidays and festivals ---------- */
@@ -2649,21 +2649,36 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
    into any app, or shrink away when taken off. */
 .dshelf{position:fixed; inset:0; z-index:43; pointer-events:none; visibility:hidden}
 .dshelf.on{visibility:visible}
-.ds-tray{position:absolute; left:50%; bottom:16px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.3); width:var(--w, 360px); height:152px; margin-left:calc(var(--w, 360px) / -2); padding:12px 14px 14px; border-radius:28px;
-  pointer-events:auto; --tint:rgba(18,18,24,.3); transform-origin:50% 100%; transform:translateY(200px) scale(.92); opacity:0;
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.4), inset 0 0 30px rgba(255,255,255,.06), 0 30px 70px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.22);
-  transition:transform .42s cubic-bezier(.5,0,.75,0), opacity .28s ease .08s, width .45s var(--glide), margin-left .45s var(--glide), box-shadow .3s}
-.dshelf.on .ds-tray{transform:none; opacity:1; animation:dsRise .7s cubic-bezier(.22,1,.36,1) both; transition:width .45s var(--glide), margin-left .45s var(--glide), box-shadow .3s}
-@keyframes dsRise{0%{transform:translateY(200px) scale(.8, .55); opacity:0} 30%{opacity:1} 62%{transform:translateY(-5px) scale(.985, 1.035)} 100%{transform:none}}
-.ds-tray.take{animation:dsTake .55s var(--glide)}
-@keyframes dsTake{35%{transform:scale(1.025, .97)}}
+/* The tray is one piece of glass growing out of the bottom edge: a small pill that widens and rises into the tray (and
+   sinks back into the edge when it goes). Its size is two animated lengths, and its glass's picture is placed from the
+   same two, so what shows through it stays in line with the screen behind at every frame of the way. (Moved and
+   squashed by a transform, it took its picture along with it.) */
+@property --dsw{syntax:'<length>'; inherits:false; initial-value:140px}
+@property --dsh{syntax:'<length>'; inherits:false; initial-value:12px}
+.ds-tray{position:absolute; left:50%; bottom:16px; color:#fff; width:var(--dsw); height:var(--dsh); margin-left:calc(var(--dsw) / -2); padding:12px 14px 14px; border-radius:34px;
+  pointer-events:auto; --tint:rgba(16,16,22,.42); --dsw:140px; --dsh:12px; opacity:0;
+  transition:--dsw .4s cubic-bezier(.55,0,.35,1), --dsh .34s cubic-bezier(.55,0,.35,1), opacity .18s ease .22s, box-shadow .3s}
+.dshelf.on .ds-tray{--dsw:var(--w, 360px); --dsh:var(--h, 152px); opacity:1;
+  transition:--dsw .6s cubic-bezier(.2,1,.3,1), --dsh .62s cubic-bezier(.3,1.08,.4,1), opacity .12s ease, box-shadow .3s}
+.ds-tray > .gw{--dsw:inherit; --dsh:inherit; left:calc(var(--dsw) / 2 - 50vw) !important; top:calc(var(--dsh) + 16px - 100vh) !important}
+/* (what's on the tray is laid out once at the tray's full width and kept centred on it as it grows, by a move the
+    graphics card makes: nothing inside is laid out again at each frame, and the two lengths aren't handed down to it) */
+.ds-head, .ds-row, .ds-apps, .ds-drop{--dsw:inherit; width:calc(var(--w, 360px) - 28px); flex:none; translate:calc((var(--dsw) - var(--w, 360px)) / 2) 0}
+.ds-drop{right:auto}
+.ds-head, .ds-row{opacity:0; transform:translateY(10px); transition:opacity .14s, transform .3s var(--glide)}
+.dshelf.on .ds-head, .dshelf.on .ds-row{opacity:1; transform:none; transition:opacity .3s ease .14s, transform .55s var(--glide) .1s}
+.ds-tray.take{animation:dsTake .5s cubic-bezier(.3,1.2,.4,1)}
+@keyframes dsTake{40%{--dsh:calc(var(--h, 152px) + 7px)}}
 .ds-head{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; height:22px; margin:0 2px 8px}
 .ds-t{display:flex; align-items:center; gap:7px; font-size:13px; font-weight:650; letter-spacing:-.006em}
 .ds-t svg{width:16px; height:16px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
 .ds-t em{font-style:normal; font-weight:500; color:rgba(255,255,255,.5)}
-.ds-a{border:0; border-radius:99px; padding:4px 11px; font:inherit; font-size:11.5px; font-weight:600; color:#fff; background:rgba(255,255,255,.12); cursor:default; transition:background .2s, opacity .25s}
+.ds-acts{display:flex; gap:6px}
+.ds-a{display:inline-flex; align-items:center; gap:5px; border:0; border-radius:99px; padding:4px 11px; font:inherit; font-size:11.5px; font-weight:600; color:#fff; background:rgba(255,255,255,.12); cursor:default; transition:background .2s, opacity .25s}
 .ds-a:hover{background:rgba(255,255,255,.22)}
-.dshelf.empty .ds-a{opacity:0; pointer-events:none}
+.ds-a svg{width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round}
+.dshelf.apps .ds-a[data-ds="apps"]{background:#fff; color:#0b0b0d}
+.dshelf.empty .ds-a.clr{opacity:0; pointer-events:none}
 .ds-row{position:relative; z-index:1; display:flex; gap:8px; height:98px; padding:0 2px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; transition:opacity .25s}
 .ds-row::-webkit-scrollbar{display:none}
 .ds-i{position:relative; flex:none; width:80px; height:96px; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:7px; border-radius:16px; cursor:default;
@@ -2683,15 +2698,15 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .ds-x svg, .ds-o svg{width:10px; height:10px; fill:none; stroke:#fff; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
 .ds-i:hover .ds-x, .ds-i:hover .ds-o{opacity:1; transform:none}
 .ds-x:hover, .ds-o:hover{background:rgba(70,70,78,.96)}
-.ds-i.in{animation:dsIn .5s var(--glide) backwards; animation-delay:calc(var(--k, 0) * 32ms + 160ms)}
-@keyframes dsIn{from{opacity:0; transform:translateY(16px) scale(.5) rotate(-8deg)}}
+.ds-i.in{animation:dsIn .5s var(--glide) backwards; animation-delay:calc(min(var(--k, 0), 12) * 28ms + 200ms)}
+@keyframes dsIn{from{opacity:0; transform:translateY(12px) scale(.8)}}
 .ds-i.new{animation:dsNew .62s cubic-bezier(.22,1,.36,1) backwards}
-@keyframes dsNew{from{opacity:.35; transform:translate(var(--fx, 0px), var(--fy, 0px)) scale(1.3) rotate(6deg)}}
+@keyframes dsNew{from{opacity:.35; transform:translate(var(--fx, 0px), var(--fy, 0px)) scale(1.2)}}
 .ds-i.out{animation:dsOut .28s cubic-bezier(.5,0,.75,0) forwards; pointer-events:none}
 @keyframes dsOut{to{opacity:0; transform:scale(0)}}
 .ds-i.gone{width:0; margin-right:-8px; padding:0}
 .ds-i.drag{opacity:.32}
-.ds-drop{position:absolute; z-index:1; left:14px; right:14px; top:44px; bottom:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:18px;
+.ds-drop{position:absolute; z-index:1; left:14px; right:14px; top:44px; bottom:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:18px; height:98px; bottom:auto;
   border:1.5px dashed rgba(255,255,255,.3); text-align:center; opacity:0; pointer-events:none; transition:opacity .25s, border-color .25s, background .25s, transform .3s var(--glide)}
 .ds-drop svg{width:24px; height:24px; margin-bottom:4px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
 .ds-drop b{font-size:13px; font-weight:650} .ds-drop small{font-size:11.5px; color:rgba(255,255,255,.55)}
@@ -2700,7 +2715,43 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .dshelf.over .ds-drop{border-style:solid; border-color:rgba(255,255,255,.85); background:rgba(255,255,255,.08); transform:scale(1.015)}
 .dshelf.over .ds-drop .dr{animation:dsDip .9s ease-in-out infinite}
 @keyframes dsDip{50%{transform:translateY(3px)}}
-.dshelf.over .ds-tray{box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 0 30px rgba(255,255,255,.1), 0 30px 70px rgba(0,0,0,.5), 0 0 0 .8px rgba(255,255,255,.45)}
+.dshelf.over .ds-tray{box-shadow:0 0 0 .8px rgba(255,255,255,.55), 0 1px 3px rgba(0,0,0,.16), 0 12px 30px rgba(0,0,0,.28), 0 34px 80px rgba(0,0,0,.22)}
+/* empty: the drop area is also a button, for Windows' Open box */
+.dshelf.empty:not(.dragging) .ds-drop{pointer-events:auto}
+.dshelf.empty:not(.dragging) .ds-drop:hover{background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.5)}
+.ds-drop .dw-d, .dshelf.dragging .ds-drop .dw-e{display:none} .dshelf.dragging .ds-drop .dw-d{display:inline}
+/* apps on the shelf: their icon, no tile behind it */
+.ds-p.app{background:none; box-shadow:none; overflow:visible}
+.ds-ic{position:relative; width:46px; height:46px; flex:none}
+.ds-ic img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; transition:opacity .3s; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3))} .ds-ic img.ok{opacity:1}
+.ds-ic .fbk{border-radius:12px; font-size:17px}
+/* Apps: under the shelf's row as the tray rises a little more; a search box and your apps, one clicked flies up onto the shelf */
+.ds-apps{position:relative; z-index:1; height:198px; margin-top:12px; display:flex; flex-direction:column; gap:8px; opacity:0; transform:translateY(18px); pointer-events:none;
+  transition:opacity .14s, transform .3s var(--glide)}
+.dshelf.on.apps .ds-apps{opacity:1; transform:none; pointer-events:auto; transition:opacity .3s ease .16s, transform .55s var(--glide) .12s}
+.ds-q{flex:none; height:30px; border:0; outline:0; border-radius:10px; padding:0 12px 0 31px; color:#fff; font:inherit; font-size:12.5px;
+  background:rgba(255,255,255,.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.6' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4 4'/%3E%3C/svg%3E") 10px 50%/14px no-repeat;
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.1); transition:background-color .2s, box-shadow .2s}
+.ds-q::placeholder{color:rgba(255,255,255,.45)}
+.ds-q:focus{background-color:rgba(255,255,255,.14); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.32)}
+.ds-grid{flex:1; min-height:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); grid-auto-rows:78px; gap:2px 4px; overflow-y:auto; scrollbar-width:none; padding:0 0 10px;
+  -webkit-mask:linear-gradient(#000 84%, transparent); mask:linear-gradient(#000 84%, transparent)}
+.ds-grid::-webkit-scrollbar{display:none}
+.ds-ap{position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:7px 2px 0; border:0; border-radius:14px; background:none; color:#fff; font:inherit; cursor:default;
+  transition:background .2s, transform .3s var(--glide)}
+.ds-ap:hover{background:rgba(255,255,255,.1)} .ds-ap:active{transform:scale(.95)}
+.ds-ap .ds-ic{width:38px; height:38px}
+.ds-ap b{max-width:76px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10.5px; font-weight:500; color:rgba(255,255,255,.86)}
+.ds-ap::after{content:""; position:absolute; top:4px; right:calc(50% - 26px); width:15px; height:15px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,.35);
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b0b0d' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4L18.5 7.5'/%3E%3C/svg%3E") center/10px no-repeat;
+  opacity:0; transform:scale(.4); transition:opacity .2s, transform .4s cubic-bezier(.3,1.35,.4,1)}
+.ds-ap.on::after{opacity:1; transform:none}
+.ds-ap.in{animation:dsApIn .45s var(--glide) backwards; animation-delay:calc(min(var(--k, 0), 18) * 12ms + 150ms)}
+.ds-grid.q .ds-ap.in{animation-duration:.26s; animation-delay:0s}
+@keyframes dsApIn{from{opacity:0; transform:translateY(10px) scale(.9)}}
+.ds-ap.pop .ds-ic{animation:dsApPop .42s var(--glide)}
+@keyframes dsApPop{35%{transform:scale(.78)}}
+.ds-none{grid-column:1 / -1; align-self:center; margin:0; text-align:center; font-size:12px; color:rgba(255,255,255,.5)}
 
 /* ---------- the floating player, an iPod ----------
    A small body of ULTRON's liquid glass: a screen on top and a click wheel under it. The screen shows the lyrics as
@@ -2709,7 +2760,10 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
    and its centre plays or pauses; a press dips the wheel. It's dragged anywhere by its body. */
 #flyr{width:214px; height:356px; padding:12px; border-radius:38px; flex-direction:column; justify-content:flex-start; gap:16px; --tint:rgba(16,16,22,.26);
   box-shadow:inset 0 1px 1px rgba(255,255,255,.5), inset 0 -1px 1px rgba(255,255,255,.12), inset 0 0 34px rgba(255,255,255,.07), var(--sx) var(--sy) var(--sb) rgba(0,0,0,var(--so)), 0 2px 8px rgba(0,0,0,.2)}
-#flyr::after{padding:.8px; background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.18) 18%, rgba(255,255,255,.12) 64%, rgba(255,255,255,.24)) !important}
+/* its body is the song's art blurred into the glass (Spotify's cover, a video's picture), a new one melting over the old */
+#flyr .fl-bg{position:absolute; inset:0; z-index:-2; overflow:hidden; border-radius:inherit; pointer-events:none}
+#flyr .fl-bg img{position:absolute; left:-30%; top:-20%; width:160%; height:140%; object-fit:cover; filter:blur(24px) saturate(1.5) brightness(.8); opacity:0; transition:opacity 1s ease}
+#flyr .fl-bg img.ok{opacity:.94}
 #flyr .fl-screen{position:relative; z-index:1; width:100%; height:156px; flex:none; border-radius:18px; overflow:hidden; background:#0b0b0f;
   box-shadow:inset 0 0 0 .8px rgba(255,255,255,.12), inset 0 10px 22px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.18)}
 #flyr .fl-art{position:absolute; inset:-14px; width:auto; height:auto; border-radius:0; background:#111; box-shadow:none; transform:none; z-index:0}
@@ -2822,10 +2876,8 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .pk-new span{animation:pkWord .5s var(--glide) backwards; animation-delay:var(--wd, 0ms)}
 @keyframes pkWord{from{opacity:0; transform:translateY(7px) scale(.96)}}
 
-/* the Drop Shelf leaving: it sinks back into the bottom edge, narrowing a little as it goes */
+/* the Drop Shelf leaving: it stays on screen until its tray has gone back into the bottom edge */
 .dshelf.leaving{visibility:visible}
-.dshelf.leaving .ds-tray{animation:dsSink .42s cubic-bezier(.5,0,.75,0) forwards}
-@keyframes dsSink{from{transform:none; opacity:1} 70%{opacity:1} to{transform:translateY(200px) scale(.86, .7); opacity:0}}
 /* starting up: the glass's picture fades in rather than appearing in one frame */
 html.wallin .glass > .gw{animation:gwIn .7s ease}
 @keyframes gwIn{from{opacity:0}}
@@ -2867,6 +2919,38 @@ input, textarea, select, button{font-family:inherit}
 ::-webkit-scrollbar-thumb{border:2.5px solid transparent; border-radius:9px; background:rgba(255,255,255,.28) padding-box}
 ::-webkit-scrollbar-thumb:hover{background-color:rgba(255,255,255,.45)}
 ::-webkit-scrollbar-button, ::-webkit-scrollbar-corner{display:none; background:transparent}
+/* ---------- the finish, second pass: calmer and crisper ----------
+   Corners are continuous, the way a Mac's are (a superellipse: the bend starts further along the edge and eases in,
+   with no point where a straight edge meets a circle), with radii a little larger to keep the same size.
+   The glass's rim is one even line all the way round, drawn as a rounded shape over the glass (the masked ring broke
+   up into uneven dots around the curves), the light catching its top edge; a crisp dark line just outside keeps the
+   edge sharp on light pictures, and the shadow under it is soft and layered.
+   A menu's reveal no longer cuts off its own outline and shadow. Text on panels and menus has no shadow, menus use
+   the regular weight, and things open with a short, calm ease rather than a bounce. */
+:root{--spring:cubic-bezier(.3,1.06,.4,1)}
+.glass.panel-glass, .wh-tray, .flyr{corner-shape:superellipse(1.5)}
+.glass::before, .glass::after{corner-shape:inherit}
+.dd{border-radius:15px}
+.wm{border-radius:20px}
+.setw.mac{border-radius:18px}
+.nf-card, .cp{border-radius:22px}
+.mlw, .nfw, .wh-tray{border-radius:25px}
+.wifi, .cal{border-radius:27px}
+.flyr{border-radius:29px}
+.setw{border-radius:32px}
+.start, .ds-tray{border-radius:34px}
+.spot{border-radius:36px}
+.glass:not(.notch):not(.ears):not(.mbar)::after{padding:0; -webkit-mask:none; mask:none; background:none;
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.12), inset 0 .8px 0 rgba(255,255,255,.2), inset 0 -.8px 0 rgba(255,255,255,.035)}
+.glass.panel-glass{box-shadow:0 0 0 .8px rgba(0,0,0,.36), 0 1px 3px rgba(0,0,0,.16), 0 12px 30px rgba(0,0,0,.26), 0 34px 80px rgba(0,0,0,.2)}
+.dd{box-shadow:0 0 0 .8px rgba(0,0,0,.36), 0 1px 3px rgba(0,0,0,.16), 0 10px 26px rgba(0,0,0,.3);
+  clip-path:inset(-2px -48px 92% -48px round 15px)}
+.dd.open{clip-path:inset(-2px -48px -72px -48px round 15px)}
+.dd{font-weight:450}
+.dd.fresh .dd-c > *, .dd.fresh .rp > *{animation:none}
+.glass.panel-glass, .glass.panel-glass *, .dd, .dd *{text-shadow:none !important}
+.wifi, .cal{transform:translateY(-8px) scale(.96)}
+.wifi.open, .cal.open{transform:none; transition:opacity .2s, transform .46s var(--glide), visibility 0s}
 </style>
 </head>
 <body>
@@ -2909,7 +2993,7 @@ input, textarea, select, button{font-family:inherit}
     <div class="wh-grip"></div></div>
   <div class="wh-drag" id="whDrag"><img alt=""></div>
 </div></div>
-<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><button class="ds-a" data-ds="clear">Clear</button></div><div class="ds-row" id="dsRow"></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b>Drop here to keep it at hand</b><small>Drag it out again into any app, whenever you need it</small></div></div></div>
+<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
   <div class="sp-pic"><img id="spPic" alt=""><div class="sp-when"><b id="spTime"></b><span id="spDate"></span></div></div>
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
@@ -2940,7 +3024,7 @@ input, textarea, select, button{font-family:inherit}
 <div class="dd glass panel-glass" id="dd" role="menu"></div>
 <div class="cal glass panel-glass" id="cal" role="dialog" aria-label="Calendar"><i class="gw"></i><div class="ca-in" id="calIn"></div></div>
 <div class="wifi glass panel-glass" id="wifi" role="dialog" aria-label="Wi-Fi"><i class="gw"></i><div class="wf-in" id="wfIn"></div></div>
-<div class="flyr glass" id="flyr" aria-label="Floating player"><i class="gw"></i><div class="fl-screen"><div class="fl-art"><img id="flArt" alt=""></div><div class="fl-eq"><i></i><i></i><i></i></div><div class="fl-txt" id="flTxt"></div><div class="fl-meta" id="flMeta"></div></div><div class="fl-ctl fl-wheel" id="flCtl"><button class="fl-b fl-menu" data-fl="menu" aria-label="Open Music">MENU</button><button class="fl-b fl-prev" data-fl="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12l8.5 6V6z"/></svg></button><button class="fl-b fl-next" data-fl="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button><button class="fl-b fl-pp" data-fl="play" aria-label="Play or pause"><svg class="pz" viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l10.5-6.5z"/><rect class="pa" x="6.5" y="5.5" width="3.6" height="13" rx="1.1"/><rect class="pa" x="13.9" y="5.5" width="3.6" height="13" rx="1.1"/></svg></button><button class="fl-b fl-hub" data-fl="play" aria-label="Play or pause"></button></div><button class="fl-x" id="flX" title="Turn off the floating player">✕</button></div>
+<div class="flyr glass" id="flyr" aria-label="Floating player"><i class="gw"></i><div class="fl-bg" aria-hidden="true"><img alt=""><img alt=""></div><div class="fl-screen"><div class="fl-art"><img id="flArt" alt=""></div><div class="fl-eq"><i></i><i></i><i></i></div><div class="fl-txt" id="flTxt"></div><div class="fl-meta" id="flMeta"></div></div><div class="fl-ctl fl-wheel" id="flCtl"><button class="fl-b fl-menu" data-fl="menu" aria-label="Open Music">MENU</button><button class="fl-b fl-prev" data-fl="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12l8.5 6V6z"/></svg></button><button class="fl-b fl-next" data-fl="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button><button class="fl-b fl-pp" data-fl="play" aria-label="Play or pause"><svg class="pz" viewBox="0 0 24 24"><path class="pl" d="M8 5.5v13l10.5-6.5z"/><rect class="pa" x="6.5" y="5.5" width="3.6" height="13" rx="1.1"/><rect class="pa" x="13.9" y="5.5" width="3.6" height="13" rx="1.1"/></svg></button><button class="fl-b fl-hub" data-fl="play" aria-label="Play or pause"></button></div><button class="fl-x" id="flX" title="Turn off the floating player">✕</button></div>
 <div class="aiw glass panel-glass" id="aiw" role="dialog" aria-label="AI Tools"><i class="gw"></i><div class="ai-in" id="aiIn"></div></div>
 <div class="mlw glass panel-glass" id="mailw" role="dialog" aria-label="Email"><i class="gw"></i><div class="ml-in" id="mlIn"></div></div>
 <div class="nfw glass panel-glass" id="nfw" role="dialog" aria-label="Notifications"><i class="gw"></i><div class="nf-in" id="nfIn"></div></div>
@@ -3161,7 +3245,11 @@ input, textarea, select, button{font-family:inherit}
 <script>
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TAURI = window.__TAURI__;
-const invoke = (cmd, args) => TAURI ? TAURI.core.invoke(cmd, args).catch(err => { console.warn(cmd, err); TAURI.core.invoke('page_log', {msg:`${cmd} failed: ${err}`}).catch(() => {}); }) : Promise.resolve();
+// (each call to the app is kept count of until it answers: any that haven't for a while are written into the page's
+//  address, where the watchdog reads them even when no call is getting through)
+const IPC = new Map(); let ipcN = 0;
+const invoke = (cmd, args) => { if (!TAURI) return Promise.resolve(); const id = ++ipcN; IPC.set(id, [cmd, performance.now()]);
+  return TAURI.core.invoke(cmd, args).catch(err => { console.warn(cmd, err); TAURI.core.invoke('page_log', {msg:`${cmd} failed: ${err}`}).catch(() => {}); }).finally(() => IPC.delete(id)); };
 const listen = (name, fn) => TAURI && TAURI.event.listen(name, e => fn(e.payload));
 // this is an app, not a web page: no browser menu ("Back", "Refresh", "Save as"...) on right-click (text boxes keep theirs, for paste)
 addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, [contenteditable]')) e.preventDefault(); });
@@ -3374,16 +3462,40 @@ function glassDraw(g, a){
   //  and come out lighter than the sheet starting under them)
   if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass, .mbar.glass');
   if (g._band){
-    const k = c.height / Math.max(1, innerHeight), yb = Math.round(32 * k), h = Math.max(2, Math.round(96 * k)), src = 1;
+    const k = c.height / Math.max(1, innerHeight);
+    if (deskBmp){
+      // The top of the notch, its corner fillets and the bar always look as they do with no window open: the desktop's
+      // own picture (backdrop::desk), solid over the first 110 px and melting into what's really behind by 190 px. A
+      // window right under the bar (its title bar, a band across the sheet) never shows through them as a line.
+      const h = Math.max(2, Math.round(190 * k));
+      let b = deskBand;
+      if (!b || b.width !== c.width || b.height !== h || b._src !== deskBmp){
+        b = deskBand = document.createElement('canvas'); b.width = c.width; b.height = h; b._src = deskBmp;
+        const bx = b.getContext('2d');
+        bx.drawImage(deskBmp, 0, 0, deskBmp.width, Math.min(deskBmp.height, h * deskBmp.width / c.width), 0, 0, c.width, h);
+        const gr = bx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#000'); gr.addColorStop(.58, '#000'); gr.addColorStop(.8, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        bx.globalCompositeOperation = 'destination-in'; bx.fillStyle = gr; bx.fillRect(0, 0, c.width, h);
+      }
+      g._x.globalAlpha = 1; g._x.drawImage(b, 0, 0);
+    } else {
+    const yb = Math.round(32 * k), h = Math.max(2, Math.round(96 * k)), src = 1;
     const b = glassBand || (glassBand = document.createElement('canvas')), bx = b.getContext('2d');
     if (b.width !== c.width || b.height !== h){ b.width = c.width; b.height = h; }
     bx.globalCompositeOperation = 'copy'; bx.drawImage(glassBmp, 0, yb - src, c.width, src, 0, 0, c.width, h);
     const gr = bx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#000'); gr.addColorStop(.46, '#000'); gr.addColorStop(.72, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
     bx.globalCompositeOperation = 'destination-in'; bx.fillStyle = gr; bx.fillRect(0, 0, c.width, h);
     g._x.globalAlpha = 1; g._x.drawImage(b, 0, yb);
+    }
   }
 }
-var glassBand = null;
+var glassBand = null, deskBmp = null, deskBand = null;
+// the desktop's own picture for the glass's top (made again when the wallpaper changes)
+async function deskLoad(){
+  const u = await invoke('desk_glass').catch(() => null); if (!u) return;
+  const im = new Image(); im.src = u; try { await im.decode(); } catch(_){ return; }
+  const bmp = await createImageBitmap(im); if (deskBmp) deskBmp.close(); deskBmp = bmp; deskBand = null;
+  for (const g of glassEls) glassDraw(g);
+}
 /* A picture that arrives after a pause (the bar's own occasional look, the first live one once something opens) is
    melted in over a quarter of a second. Cut in, it made the glass jump darker or lighter. A steady stream isn't melted. */
 let glassAt = 0, glassMixT = 0, glassMixRaf = 0, glassMixLast = 0, glassAsked = 0;
@@ -4240,6 +4352,13 @@ function showFloat(on){
   flyr.classList.toggle('on', on); syncHit(); setTimeout(syncHit, 600);
 }
 let flLast = '', flArtSrc = '';
+// the player's body: the song's art, blurred (two pictures: the new one melts in over the old)
+function flBg(u){
+  const [a, b] = $('flyr').querySelectorAll('.fl-bg img'), cur = a.classList.contains('ok') ? a : b, nx = cur === a ? b : a;
+  if (!u){ a.classList.remove('ok'); b.classList.remove('ok'); return; }
+  nx.onload = () => { if (flArtSrc !== u) return; nx.classList.add('ok'); cur.classList.remove('ok'); };
+  nx.src = u;
+}
 let flAt = -2, flListKey = '';
 const flGap = text => !text || /^[\s♪♫]*$/.test(text);
 // The whole song is laid out once as a list; a new line marks itself and the list scrolls to it. The lyrics give each
@@ -4281,7 +4400,7 @@ function flSetCur(li, dur, at, jump){
 function renderFloat(m){
   flyr.classList.toggle('playing', !!m.playing);
   $('flMeta').innerHTML = m.title ? `<b>${esc(m.title)}</b>${m.artist ? `<span>${esc(m.artist)}</span>` : ''}` : '';
-  if (m.art !== flArtSrc){ flArtSrc = m.art; const a = $('flArt'); a.classList.remove('ok'); if (m.art){ a.onload = () => a.classList.add('ok'); a.src = m.art; } }
+  if (m.art !== flArtSrc){ flArtSrc = m.art; const a = $('flArt'); a.classList.remove('ok'); if (m.art){ a.onload = () => a.classList.add('ok'); a.src = m.art; } flBg(m.art); }
   if (m.key === flLast) return;   // only play / pause changed
   flLast = m.key;
   // a new song (or new lyrics for it): the list is laid out afresh and put straight in place; otherwise it scrolls
@@ -7634,9 +7753,10 @@ function barTint(c){
     a = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(L * 100)}% / .5)`;
     b = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 90)}% ${Math.round(L * 72)}% / .66)`;
   }
-  // (the bar, the notch and its corner fillets always the same colour, changing together over the same .9 s: where the
-  //  notch hangs from the bar there's nothing to tell them apart)
-  for (const el of [mbar, notch, earsEl, $('barFil')]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
+  // (the bar takes the front window's colour; the notch and its corner fillets keep the look they have with no window
+  //  open, whatever is open)
+  for (const el of [mbar, $('barFil')]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
+  for (const el of [notch, earsEl]){ el.style.setProperty('--bt', 'rgba(16,16,20,.34)'); el.style.setProperty('--bt2', 'rgba(14,14,20,.58)'); }
 }
 function setAppName(n){
   if (!n) return;
@@ -7732,17 +7852,27 @@ new ResizeObserver(() => keepMeasuring(300)).observe(notch);
 var barHid = false, barT = 0, barUp = 0;
 const barBusy = () => notch.classList.contains('open') || notch.classList.contains('call') || !!ddFor || tourOn || document.body.classList.contains('intro') || nbOn || REC.starting
   || !!(aiStream && !aiStream.stopped) || [wifiEl, startEl, calEl, $('setw'), $('aiw'), $('mailw'), $('nfw'), $('recw'), $('filew'), $('spot'), $('wheel')].some(el => el.classList.contains('open')) || !!(window.NF && NF.shown.length);
-// Nothing open for half a minute: ULTRON hands its spare memory back (smooth.rs). Anything opening takes it back at once.
+// Nothing open for four minutes: ULTRON hands its spare memory back (smooth.rs). The pointer heading for the bar, or
+// anything opening, takes it back. (After only half a minute, nearly every use paid for bringing it all back in.)
 var idleT = 0, idleNow = false;                 // (var: the hit area is synced before this line has run)
 function pageIdle(){
   let busy = true;
   try { busy = barBusy() || !!ddFor || !!(window.Pick && Pick.on) || !!(window.CTS && CTS.on) || !!(window.LK && LK.on) || !!(window.CP && CP.on) || document.body.classList.contains('intro'); } catch(_){}
   if (busy){ clearTimeout(idleT); idleT = 0; if (idleNow){ idleNow = false; invoke('page_idle', {idle:false}); } return; }
-  if (!idleNow && !idleT) idleT = setTimeout(() => { idleT = 0; pageIdleCheck(); }, 30000);
+  if (!idleNow && !idleT) idleT = setTimeout(() => { idleT = 0; pageIdleCheck(); }, 240000);
 }
+function pageWake(){ if (idleNow){ idleNow = false; invoke('page_idle', {idle:false}); } }
 function pageIdleCheck(){ let busy = true; try { busy = barBusy(); } catch(_){} if (!busy && !idleNow){ idleNow = true; invoke('page_idle', {idle:true}); } else pageIdle(); }
 addEventListener('pointerdown', pageIdle, true);
 setInterval(pageIdle, 5000);
+// (and the page tells the app it's alive: if it ever stops answering, the app reloads it, watchdog.rs)
+const pageAlive = () => {
+  invoke('page_alive', {hidden:document.hidden});
+  const now = performance.now(), slow = [...IPC.values()].filter(v => now - v[1] > 15000).map(v => v[0] + '~' + Math.round((now - v[1]) / 1000) + 's');
+  const h = slow.length ? '#ipc' + IPC.size + ':' + slow.slice(0, 14).join(',') : '';
+  if (h !== location.hash) history.replaceState(null, '', location.pathname + location.search + h);
+};
+setInterval(pageAlive, 5000); document.addEventListener('visibilitychange', pageAlive); pageAlive();
 function barShow(on){
   if (barHid === !on) return;
   barHid = !on; document.body.classList.toggle('barhid', barHid);
@@ -7777,7 +7907,7 @@ function enter(){
   document.body.classList.add('boot'); keepMeasuring(1400);
 }
 if (TAURI){
-  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); dsWatch(p[0], p[1], !!p[2]); barWatch(); if (p[1] < 40) glassFresh(); wake(); });
+  listen('cursor', p => { lastAim = performance.now(); aim(p[0], p[1]); peekWatch(p[0], p[1]); dsWatch(p[0], p[1], !!p[2]); barWatch(); if (p[1] < 90) pageWake(); if (p[1] < 40) glassFresh(); wake(); });
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
@@ -7796,6 +7926,7 @@ if (TAURI){
     if (!openedByVoice && activeTab !== 'browser') setOpen(false);
   }, 160));
   invoke('wallpaper').then(setWall); listen('wallpaper', setWall);
+  deskLoad(); listen('wallpaper', deskLoad);
   listen('wallpaper', () => invoke('backdrop_now'));       // (a new wallpaper: the glass looks again at once, not at its next turn)
   invoke('ai_status').then(st => { if (st){ aiStat = st; setVoice(lastVoice); } });
   pushAI(); document.body.classList.toggle('calm', !!S.reduceMotion); tickTimers();
@@ -8259,6 +8390,7 @@ function whGL(){
   return WH.gl = {r, sc, cam};
 }
 function whMascot(){ const g = whGL(); g.sc.add(mochi); g.r.render(g.sc, g.cam); scene.add(mochi); }
+setTimeout(() => (window.requestIdleCallback || setTimeout)(() => { try { if (!WH.gl) whMascot(); } catch(_){} }), 7000);
 function whOpen(focus){
   clearTimeout(WH.openT); clearTimeout(WH.closeT);
   if (WH.open || !DK.on || wheel.classList.contains('away')) return;
@@ -9615,7 +9747,7 @@ function dsWatch(x, y, down){
   const H = screen.height || innerHeight;
   if (DS.on){
     if (DS.out) return;
-    if (!down && y < innerHeight - 16 - 152 - 70){ if (!DS.leaveT) DS.leaveT = setTimeout(() => { DS.leaveT = 0; dsHide(); }, 260); }
+    if (!down && y < (DS.box ? DS.box.y : innerHeight - 168) - 70){ if (!DS.leaveT) DS.leaveT = setTimeout(() => { DS.leaveT = 0; dsHide(); }, 260); }
     else if (DS.leaveT){ clearTimeout(DS.leaveT); DS.leaveT = 0; }
     // (opened for a drag that was let go somewhere else: it goes again)
     if (DS.mode === 'drop' && !down && !DS.over){ clearTimeout(DS.hideT); DS.hideT = setTimeout(() => { if (DS.on && DS.mode === 'drop' && !DS.over) dsHide(); }, 900); }
@@ -9651,7 +9783,8 @@ async function dsShow(kind, force){
 function dsHide(){
   if (!DS.on || DS.out) return;
   DS.on = false; DS.mode = ''; DS.over = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT);
-  dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging');
+  if (DS.apps){ DS.apps = false; dsEl.querySelector('[data-ds="apps"] span').textContent = 'Apps'; invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 700); }
+  dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging', 'apps');
   clearTimeout(DS.leftT); DS.leftT = setTimeout(() => { if (!DS.on) dsEl.classList.remove('leaving'); }, 480);
   syncHit();
   clearTimeout(DS.shrinkT);
@@ -9659,13 +9792,16 @@ function dsHide(){
 }
 // the tray's width follows what's on it; its glass lines up with the screen behind it
 function dsLay(){
-  const w = Math.max(360, Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * 88));
-  dsTray.style.setProperty('--w', w + 'px');
-  const left = Math.round(innerWidth / 2 - w / 2), top = innerHeight - 16 - 152, gw = dsTray.querySelector('.gw');
-  gw.style.left = -left + 'px'; gw.style.top = -top + 'px'; gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
-  DS.box = {x:left, y:top, w, h:152};
+  const w = Math.max(DS.apps ? 560 : 360, Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * 88)), h = DS.apps ? 366 : 152;
+  dsTray.style.setProperty('--w', w + 'px'); dsTray.style.setProperty('--h', h + 'px');
+  // (the glass's picture is placed by the styles, from the tray's own size as it changes)
+  const left = Math.round(innerWidth / 2 - w / 2), top = innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
+  gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
+  DS.box = {x:left, y:top, w, h};
 }
 function dsItem(it, k, cls){
+  if (it.app) return `<div class="ds-i app${cls}" data-p="${esc(it.path)}" data-app="1" style="--k:${k}" title="${esc(it.name)}"><span class="ds-p app">${iconHtml({name:it.name, launch:it.path}, 'ds-ic')}</span>`
+    + `<span class="ds-n">${esc(it.name)}</span><button class="ds-x" data-ds="rm" aria-label="Take off the shelf">${NF_X}</button></div>`;
   const u = DS.thumbs.get(it.path), photo = !it.dir && dsPhoto(it.path);
   return `<div class="ds-i${cls}" data-p="${esc(it.path)}" style="--k:${k}" title="${esc(it.name)}"><span class="ds-p${photo ? ' photo' : ''}">${u ? `<img class="ok" src="${u}" alt="">` : it.dir ? DS_FOLDER : DS_DOC}</span>`
     + `<span class="ds-n">${esc(it.name)}</span><button class="ds-o" data-ds="show" aria-label="Show in its folder">${DS_SHOW}</button><button class="ds-x" data-ds="rm" aria-label="Take off the shelf">${NF_X}</button></div>`;
@@ -9676,7 +9812,8 @@ function dsPaint(first, fresh, x, y){
   dsEl.classList.toggle('empty', !DS.items.length);
   $('dsCount').textContent = DS.items.length ? `${DS.items.length} item${DS.items.length > 1 ? 's' : ''}` : '';
   if (fresh) for (const el of dsRow.querySelectorAll('.ds-i.new')){ const r = el.getBoundingClientRect(); el.style.setProperty('--fx', Math.round(x - (r.left + r.width / 2)) + 'px'); el.style.setProperty('--fy', Math.round(y - (r.top + r.height / 2)) + 'px'); }
-  for (const it of DS.items) if (!DS.thumbs.has(it.path)){
+  loadIcons(dsRow);
+  for (const it of DS.items) if (!it.app && !DS.thumbs.has(it.path)){
     DS.thumbs.set(it.path, '');
     invoke('shelf_thumb', {path:it.path}).then(u => {
       if (!u) return; DS.thumbs.set(it.path, u);
@@ -9715,16 +9852,74 @@ dsRow.addEventListener('pointermove', e => {
   });
 });
 addEventListener('pointerup', () => { DS.press = null; });
-dsRow.addEventListener('dblclick', e => { const i = e.target.closest('.ds-i'); if (i) invoke('launch', {target:i.dataset.p}); });
+dsRow.addEventListener('dblclick', e => { const i = e.target.closest('.ds-i'); if (i && !i.dataset.app) invoke('launch', {target:i.dataset.p}); });
 dsRow.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)){ dsRow.scrollLeft += e.deltaY; e.preventDefault(); } }, {passive:false});
 dsEl.addEventListener('click', e => {
   e.stopPropagation();
-  const a = e.target.closest('[data-ds]')?.dataset.ds, i = e.target.closest('.ds-i');
+  const a = e.target.closest('[data-ds]')?.dataset.ds, i = e.target.closest('.ds-i'), ap = e.target.closest('.ds-ap');
+  if (ap) return dsPin(ap);
+  if (a === 'add') return dsPick(e.target.closest('[data-ds]'));
+  if (a === 'apps') return dsApps(!DS.apps);
+  if (!a && !i && !DS.items.length && e.target.closest('.ds-drop')) return dsPick(e.target.closest('.ds-drop'));
+  if (!a && i && i.dataset.app){ invoke('launch', {target:i.dataset.p}); dsHide(); return; }
   if (a === 'show' && i) invoke('shelf_reveal', {path:i.dataset.p});
   else if (a === 'rm' && i){ const path = i.dataset.p; DS.items = DS.items.filter(x => x.path !== path); invoke('shelf_remove', {path}); dsGo(i, () => { dsEl.classList.toggle('empty', !DS.items.length); $('dsCount').textContent = DS.items.length ? `${DS.items.length} item${DS.items.length > 1 ? 's' : ''}` : ''; dsLay(); }); }
   else if (a === 'clear'){ const all = [...dsRow.querySelectorAll('.ds-i')]; all.forEach((el, k) => setTimeout(() => el.classList.add('out'), k * 30)); DS.items = []; invoke('shelf_clear'); setTimeout(() => { dsPaint(false); dsLay(); }, 300 + all.length * 30); }
 });
 dsEl.addEventListener('pointerdown', e => e.stopPropagation());
+// Add files: Windows' Open box; what's chosen flies onto the shelf from the button
+async function dsPick(from){
+  const r = from.getBoundingClientRect(), before = new Set(DS.items.map(i => i.path.toLowerCase()));
+  DS.out = true;                                   // (the shelf stays up while the box is in front of it)
+  const items = await invoke('shelf_pick').catch(() => null);
+  DS.out = false;
+  if (!items || !DS.on) return;
+  const fresh = items.filter(i => !before.has(i.path.toLowerCase())).map(i => i.path);
+  DS.items = items; dsLay(); dsPaint(false, fresh, r.left + r.width / 2, r.top + r.height / 2);
+  if (fresh.length){ dsTray.classList.remove('take'); void dsTray.offsetWidth; dsTray.classList.add('take'); }
+  syncHit();
+}
+// Apps: the tray rises a little more to show your apps under the shelf; one clicked flies up onto it, pinned there
+async function dsApps(on){
+  if (on === !!DS.apps) return;
+  DS.apps = on; dsEl.classList.toggle('apps', on);
+  dsEl.querySelector('[data-ds="apps"] span').textContent = on ? 'Done' : 'Apps';
+  if (on){
+    if (!startApps) startApps = (await invoke('start_apps')) || [];
+    if (!DS.apps) return;
+    $('dsQ').value = ''; dsGridPaint('', false);
+    invoke('focus_main'); setTimeout(() => { if (DS.apps) $('dsQ').focus({preventScroll:true}); }, 140);
+  } else { invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 700); }
+  dsLay(); syncHit();
+}
+function dsGridPaint(q, typed){
+  const s = q.trim().toLowerCase(), pinned = new Set(DS.items.filter(i => i.app).map(i => i.path.toLowerCase()));
+  const list = DS.appList = (s ? startApps.filter(a => a.name.toLowerCase().includes(s)) : startApps).slice(0, 160), g = $('dsGrid');
+  const tile = (a, k, cls) => `<button class="ds-ap${cls}${pinned.has(a.launch.toLowerCase()) ? ' on' : ''}" data-k="${k}" style="--k:${k}" title="${esc(a.name)}">${iconHtml(a, 'ds-ic')}<b>${esc(a.name)}</b></button>`;
+  g.classList.toggle('q', !!typed);
+  // (the first rows now, rising in; the rest, out of sight below them, once the tray has finished rising: all of them at
+  //  once stalled the opening for a sixth of a second)
+  g.innerHTML = list.length ? list.slice(0, 28).map((a, k) => tile(a, k, ' in')).join('') : `<p class="ds-none">No app called “${esc(q.trim())}”</p>`;
+  clearTimeout(DS.gridT);
+  if (list.length > 28) DS.gridT = setTimeout(() => { if (DS.appList !== list) return; g.insertAdjacentHTML('beforeend', list.slice(28).map((a, k) => tile(a, k + 28, '')).join('')); loadIcons(g); }, typed ? 160 : 760);
+  g.scrollTop = 0; loadIcons(g);
+}
+async function dsPin(t){
+  const a = DS.appList && DS.appList[+t.dataset.k]; if (!a) return;
+  const r = t.querySelector('.ds-ic').getBoundingClientRect();
+  t.classList.add('on'); t.classList.remove('pop'); void t.offsetWidth; t.classList.add('pop');
+  const items = await invoke('shelf_add_app', {name:a.name, launch:a.launch});
+  if (!items || !items.length || !DS.on) return;
+  DS.items = items; dsLay(); dsPaint(false, [a.launch], r.left + r.width / 2, r.top + r.height / 2);
+  dsRow.scrollTo({left:0, behavior:'smooth'});
+  dsTray.classList.remove('take'); void dsTray.offsetWidth; dsTray.classList.add('take');
+}
+$('dsQ').addEventListener('input', e => dsGridPaint(e.target.value, true));
+$('dsQ').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter'){ const t = $('dsGrid').querySelector('.ds-ap'); if (t) dsPin(t); }
+  else if (e.key === 'Escape') dsApps(false);
+});
 $('whShelf').addEventListener('click', e => { e.stopPropagation(); whClose(); setTimeout(() => dsShow('open', true), 240); });
 
 // (body.sheet while the sheet is open: the bar takes its colour, see the styles)

@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use base64::Engine;
 use tauri::{AppHandle, Emitter, Manager};
 use windows::Win32::Foundation::{HWND, RECT};
-use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE, WDA_NONE};
+use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, GetWindowRect, SetWindowDisplayAffinity, SM_CYSCREEN, WDA_EXCLUDEFROMCAPTURE, WDA_NONE};
 
 /// How often to refresh, in ms (0 = paused). Set by the page from what's on screen.
 static EVERY: AtomicU64 = AtomicU64::new(700);
@@ -244,6 +244,19 @@ fn finish(shot: &[u8], w: usize, hh: usize) -> Option<String> {
     Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out.into_inner())))
 }
 
+/// The desktop's own picture, as the glass shows it with no window open: the wallpaper filled to the screen, made
+/// small, blurred and toned exactly as the live pictures are, the whole screen tall. The top of the notch and the bar
+/// always show this, so a window right under the bar never shows through them as a band.
+pub fn desk(app: &AppHandle) -> Option<String> {
+    let (_, r) = window(app)?;
+    let (w, _) = small_size(r);
+    let sh = unsafe { GetSystemMetrics(SM_CYSCREEN) };
+    let hh = ((sh as f32) * w as f32 / (r.right - r.left).max(1) as f32).round().max(1.0) as u32;
+    let img = image::open(crate::sys::wallpaper_path()?).ok()?.resize_to_fill(w as u32, hh, image::imageops::FilterType::Triangle).to_rgb8();
+    let bgra: Vec<u8> = img.pixels().flat_map(|p| [p[2], p[1], p[0], 255]).collect();
+    finish(&bgra, w, hh as usize)
+}
+
 /// (developer runs only) ULTRON back in screen captures for a while, its glass held as it is: for pictures of it.
 pub fn dev_show() {
     SNAP_UNTIL.store(ticks() + 20_000, Ordering::SeqCst);
@@ -403,6 +416,7 @@ pub fn start(app: AppHandle) {
         std::thread::sleep(Duration::from_secs(2));
         let mut last_log = Instant::now() - Duration::from_secs(600);
         let mut feed: Option<live::Feed> = None;
+        let mut feed_r = RECT::default();
         let (mut dims, mut last, mut retry) = ((0usize, 0usize), Vec::new(), Instant::now());
         let (mut shown, mut spent, mut since, mut told) = (0u32, Duration::ZERO, Instant::now(), false);
         let (mut sent, mut sent_at) = (String::new(), Instant::now());
@@ -426,6 +440,7 @@ pub fn start(app: AppHandle) {
                         exclude(true);
                         std::thread::sleep(Duration::from_millis(40)); // (the compositor takes ULTRON out before the first picture)
                         feed = unsafe { live::Feed::open(r) };
+                        feed_r = r;
                         if feed.is_some() {
                             LIVE.store(true, Ordering::SeqCst);
                             (dims, shown, spent, since) = (small_size(r), 0, Duration::ZERO, Instant::now());
@@ -434,6 +449,14 @@ pub fn start(app: AppHandle) {
                             crate::log_line("live glass: the live feed isn't available on this screen; refreshing the slow way");
                         }
                     }
+                }
+                // (ULTRON's window grew or shrank, for the Drop Shelf or back: the feed is opened again on the new part of
+                //  the screen. Kept on the old one, its picture was stretched over the new window: the shelf's glass showed
+                //  the wrong part of the screen)
+                if feed.is_some() && window(&app).is_some_and(|(_, r)| r != feed_r) {
+                    feed = None;
+                    LIVE.store(false, Ordering::SeqCst);
+                    continue;
                 }
                 if let Some(f) = feed.as_mut() {
                     let t0 = Instant::now();
