@@ -142,7 +142,62 @@ fn kv(line: &str) -> Option<(String, String)> {
     Some((k.trim().to_string(), v.trim().to_string()))
 }
 
+/// What the bar shows (connected, to what, how strong, the radio on or off), asked of Windows' own Wi-Fi service. The
+/// bar used to start the netsh program for this every 20 seconds: a new program each time for Windows (and its virus
+/// scanner) to load, a small hitch now and then. The full list of networks, for the panel, still comes from netsh.
+fn wifi_now() -> Option<Wifi> {
+    use windows::core::GUID;
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::NetworkManagement::WiFi::*;
+    unsafe {
+        let (mut ver, mut h) = (0u32, HANDLE::default());
+        if WlanOpenHandle(2, None, &mut ver, &mut h) != 0 {
+            return None;
+        }
+        let mut w = Wifi::default();
+        let mut list: *mut WLAN_INTERFACE_INFO_LIST = std::ptr::null_mut();
+        let found = WlanEnumInterfaces(h, None, &mut list) == 0 && !list.is_null() && (*list).dwNumberOfItems > 0;
+        if found {
+            let info = &*(*list).InterfaceInfo.as_ptr();
+            let g: GUID = info.InterfaceGuid;
+            w.available = true;
+            w.radio = true;
+            // the radio: off when every one of its parts is switched off (by the switch, or by Windows)
+            let (mut size, mut data) = (0u32, std::ptr::null_mut::<core::ffi::c_void>());
+            if WlanQueryInterface(h, &g, wlan_intf_opcode_radio_state, None, &mut size, &mut data, None) == 0 && !data.is_null() {
+                let rs = &*(data as *const WLAN_RADIO_STATE);
+                let n = (rs.dwNumberOfPhys as usize).min(rs.PhyRadioState.len());
+                if n > 0 {
+                    w.radio = rs.PhyRadioState[..n].iter().any(|p| p.dot11SoftwareRadioState == dot11_radio_state_on && p.dot11HardwareRadioState == dot11_radio_state_on);
+                }
+                WlanFreeMemory(data);
+            }
+            if info.isState == wlan_interface_state_connected {
+                let (mut size, mut data) = (0u32, std::ptr::null_mut::<core::ffi::c_void>());
+                if WlanQueryInterface(h, &g, wlan_intf_opcode_current_connection, None, &mut size, &mut data, None) == 0 && !data.is_null() {
+                    let a = &(*(data as *const WLAN_CONNECTION_ATTRIBUTES)).wlanAssociationAttributes;
+                    let len = (a.dot11Ssid.uSSIDLength as usize).min(a.dot11Ssid.ucSSID.len());
+                    w.connected = true;
+                    w.ssid = String::from_utf8_lossy(&a.dot11Ssid.ucSSID[..len]).to_string();
+                    w.signal = a.wlanSignalQuality;
+                    WlanFreeMemory(data);
+                }
+            }
+        }
+        if !list.is_null() {
+            WlanFreeMemory(list as *const core::ffi::c_void);
+        }
+        WlanCloseHandle(h, None);
+        found.then_some(w)
+    }
+}
+
 pub fn wifi_status(with_list: bool) -> Wifi {
+    if !with_list {
+        if let Some(w) = wifi_now() {
+            return w;
+        }
+    }
     let iface = netsh(&["wlan", "show", "interfaces"]);
     let mut w = Wifi::default();
     if !iface.contains("Name") {

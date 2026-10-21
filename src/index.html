@@ -3693,7 +3693,8 @@ setInterval(() => {
   const spotOn = $('spot').classList.contains('open');
   const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), notch].some(el => el && el.classList.contains('open'));
+  const settling = notch.classList.contains('open') && performance.now() - openedAt < 600;
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), settling ? null : notch].some(el => el && el.classList.contains('open'));
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -8167,8 +8168,9 @@ if (TAURI){
   //  showing, its picture came every 8 s: the old one stayed a while and then jumped. Now it's looked at again at
   //  once, and once more as the app finishes drawing, each new picture melting in over the last)
   const glassLook = () => { if (!glassOn()) return; glassMixTau = 150; glassMixT = performance.now() + 750; invoke('backdrop_now'); clearTimeout(glassLook.t); glassLook.t = setTimeout(() => { glassMixTau = 60; }, 1900); };
-  listen('front-app', () => { glassLook(); setTimeout(glassLook, 380); setTimeout(glassLook, 1100); });
-  listen('front-colour', () => glassLook());
+  // (looked at once the window has finished appearing: as it opens, Windows grows it in from nothing, and a look at
+  //  once caught the wallpaper behind it, so the bar glowed and then went dark)
+  listen('front-app', () => { clearTimeout(glassLook.a); clearTimeout(glassLook.b); glassLook.a = setTimeout(glassLook, 300); glassLook.b = setTimeout(glassLook, 1000); });
   listen('front-colour', barTint);
   listen('dyn-max', m => document.body.classList.toggle('dynmax', !!m && !!S.dynWin));
   listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); if (on && notch.classList.contains('open')){ openedAt = 0; setOpen(false); } syncHit(); });

@@ -572,7 +572,7 @@ pub fn start(app: AppHandle) {
                     col_win = fg.0 as isize;
                     col_title = title;
                     let now = std::time::Instant::now();
-                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(30), now + Duration::from_millis(450), now + Duration::from_millis(1500)] } else { vec![now + Duration::from_millis(400)] };
+                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(240), now + Duration::from_millis(450), now + Duration::from_millis(1500)] } else { vec![now + Duration::from_millis(400)] };
                     if desk {
                         let _ = app.emit_to("main", "front-colour", serde_json::Value::Null);
                     }

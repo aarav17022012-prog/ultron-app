@@ -64,6 +64,7 @@ features = [
   "Win32_System_Com",
   "Win32_System_Diagnostics_ToolHelp",
   "Win32_System_ProcessStatus",
+  "Win32_NetworkManagement_WiFi",
   "Win32_System_RemoteDesktop",
   "Win32_System_JobObjects",
   "Win32_System_DataExchange",

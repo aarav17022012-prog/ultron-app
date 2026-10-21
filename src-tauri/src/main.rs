@@ -245,7 +245,49 @@ fn mail_body(uid: u32) -> Option<String> {
 /// Screen recording (rec.rs): start a file, add the next second to it, close it; and press ULTRON's own Record button.
 #[tauri::command]
 fn rec_begin(app: AppHandle, ext: String) -> Result<String, String> {
-    rec::begin(&app, &ext)
+    let r = rec::begin(&app, &ext);
+    if r.is_ok() {
+        hide_share_notice();
+    }
+    r
+}
+
+/// While a recording runs, the web engine puts up its own notice at the bottom of the screen ("http://tauri.localhost
+/// is sharing your screen.", with Stop and Hide): it isn't ULTRON's, it named the page's address, and it was in the
+/// recording itself. It's hidden as soon as it appears, and again if it comes back, until the recording ends.
+static RECORDING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+fn hide_share_notice() {
+    use std::sync::atomic::Ordering::SeqCst;
+    if RECORDING.swap(true, SeqCst) {
+        return;
+    }
+    std::thread::spawn(|| {
+        use windows::Win32::Foundation::{HWND, LPARAM};
+        use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetWindowTextW, IsWindowVisible, ShowWindow, SW_HIDE};
+        unsafe extern "system" fn each(h: HWND, _: LPARAM) -> windows::core::BOOL {
+            unsafe {
+                if IsWindowVisible(h).as_bool() {
+                    let mut buf = [0u16; 200];
+                    let n = GetWindowTextW(h, &mut buf);
+                    let t = String::from_utf16_lossy(&buf[..n.max(0) as usize]);
+                    if t.contains("tauri.localhost") && t.contains("sharing") {
+                        let _ = ShowWindow(h, SW_HIDE);
+                    }
+                }
+            }
+            true.into()
+        }
+        let t0 = std::time::Instant::now();
+        while RECORDING.load(SeqCst) && t0.elapsed() < std::time::Duration::from_secs(6 * 3600) {
+            unsafe {
+                let _ = EnumWindows(Some(each), LPARAM(0));
+            }
+            // (looked for often just as it starts, then now and then)
+            std::thread::sleep(std::time::Duration::from_millis(if t0.elapsed().as_secs() < 5 { 40 } else { 1000 }));
+        }
+        RECORDING.store(false, SeqCst);
+    });
 }
 
 #[tauri::command]
@@ -255,6 +297,7 @@ fn rec_data(b64: String) -> bool {
 
 #[tauri::command]
 fn rec_end(secs: f64) -> Option<(String, f64)> {
+    RECORDING.store(false, std::sync::atomic::Ordering::SeqCst);
     rec::end(secs)
 }
 
