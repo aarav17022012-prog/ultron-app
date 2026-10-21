@@ -38,14 +38,30 @@ pub fn scale_of(hwnd: HWND) -> f64 {
 
 /// Flip click-through right here instead of queueing it for the UI thread: a
 /// queued flip could land after your click, which then went to the window below.
+/// Clicks go through the window (`on`) or to it. Only WS_EX_TRANSPARENT is changed: the window stays layered all the
+/// time (fully opaque, see `keep_layered`). It used to be made layered and not again as the pointer came and went, and
+/// every such change re-made the way Windows draws the whole window, a one-frame flash of the bar (and a hitch in
+/// whatever was animating), each time the pointer crossed into or out of the bar, the notch or a panel.
 fn set_click_through(hwnd: HWND, on: bool) {
     unsafe {
         let ex = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
-        let bits = WS_EX_TRANSPARENT.0 | WS_EX_LAYERED.0;
-        let new = if on { ex | bits } else { ex & !bits };
+        let new = (if on { ex | WS_EX_TRANSPARENT.0 } else { ex & !WS_EX_TRANSPARENT.0 }) | WS_EX_LAYERED.0;
         if new != ex {
             SetWindowLongW(hwnd, GWL_EXSTYLE, new as i32);
         }
+    }
+}
+
+/// Layered for good, at full opacity (so the window takes clicks wherever it isn't set to let them through).
+fn keep_layered(hwnd: HWND) {
+    use windows::Win32::Foundation::COLORREF;
+    use windows::Win32::UI::WindowsAndMessaging::{SetLayeredWindowAttributes, LWA_ALPHA};
+    unsafe {
+        let ex = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
+        if ex & WS_EX_LAYERED.0 == 0 {
+            SetWindowLongW(hwnd, GWL_EXSTYLE, (ex | WS_EX_LAYERED.0) as i32);
+        }
+        let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 255, LWA_ALPHA);
     }
 }
 
@@ -97,6 +113,9 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 Some(Target { label: l.clone(), win, hwnd, ignoring: None, last: (f64::NAN, f64::NAN), last_emit: Instant::now() })
             })
             .collect();
+        for t in &targets {
+            keep_layered(t.hwnd);
+        }
         let mut last_topmost = Instant::now();
         let mut near = false;
         loop {
@@ -121,9 +140,11 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 let within = |m: f64| rects.iter().any(|h| x >= h.x - m && x <= h.x + h.w + m && y >= h.y - m && y <= h.y + h.h + m);
                 let inside = within(MARGIN);
                 near |= within(NEAR);
-                if t.ignoring != Some(!inside) {
+                // (checked against the window itself each time, not a note of what was last set: anything else that touches
+                //  its style is put right at once. And not through the window library, which re-made the window's frame
+                //  each time: a flash)
+                if t.ignoring != Some(!inside) || (unsafe { GetWindowLongW(t.hwnd, GWL_EXSTYLE) } as u32 & WS_EX_TRANSPARENT.0 != 0) != !inside {
                     set_click_through(t.hwnd, !inside);
-                    let _ = t.win.set_ignore_cursor_events(!inside); // keep the window's own bookkeeping in step
                     t.ignoring = Some(!inside);
                 }
                 let moved = (x - t.last.0).abs() >= 1.0 || (y - t.last.1).abs() >= 1.0 || t.last.0.is_nan();
