@@ -119,7 +119,7 @@ html.live .gw > .gwc{display:block}
 .tr-name button:active{transform:scale(.95)}
 .tr-name button.soft{background:#f0f0f3; color:#0c0c0e}
 
-html.prewarm .dd{opacity:.004 !important; pointer-events:none !important}
+html.prewarm .dd, html.prewarm .setw, html.prewarm .cal{opacity:.004 !important; pointer-events:none !important}
 html.prewarm .mt-pill{opacity:0 !important}
 
 /* ---------- an incoming call: the notch opens a little and shows who is calling, from which app, and what you can do ---------- */
@@ -3697,7 +3697,7 @@ setInterval(() => {
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
-  const ms = off || answering ? 0 : spotOn ? 33 : boxOpen ? 50 : panel ? 100 : S.bar === 'hide' ? (barHid ? 0 : 400) : 8000;
+  const ms = off ? 0 : answering ? 60000 : spotOn ? 33 : boxOpen ? 50 : panel ? 100 : S.bar === 'hide' ? (barHid ? 0 : 400) : 8000;
   if (ms !== glassRate){ glassRate = ms; invoke('backdrop_rate', {ms}); if (off) document.documentElement.classList.remove('live'); }
   glassAim();
 }, 250);
@@ -6195,7 +6195,7 @@ async function runAssist(cmd){
 
 /* get the local AI loaded before you finish asking */
 let warmAt = 0;
-function warmAI(){ if (Date.now() - warmAt > 20000){ warmAt = Date.now(); invoke('ai_warm'); } }
+function warmAI(){ if (S.gemini) invoke('gemini_wake'); if (Date.now() - warmAt > 20000){ warmAt = Date.now(); invoke('ai_warm'); } }
 
 /* typing to ULTRON */
 const askIn = $('askIn');
@@ -8143,6 +8143,7 @@ if (TAURI){
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
+  new MutationObserver(() => { if (S.gemini && notch.classList.contains('open')) invoke('gemini_wake'); }).observe(notch, {attributes:true, attributeFilter:['class']});
   listen('intro-start', () => { document.body.classList.add('intro'); setOpen(false); closeDD(); closePanels(); });
   listen('intro-say', t => t ? Voice.say(t) : Voice.stop());
   listen('intro-done', d => {
@@ -8439,6 +8440,11 @@ async function prewarm(tries = 0){
       if (b && MENUS[name]){ openDD(b); await frames(4); }
     }
     closeDD(); await frames(3);
+    // (the panels too: their first opening stalled a fifth to half a second on the same first-time work)
+    for (const [open, close] of [[() => openSettings('look'), closeSettings], [openCal, closeCal]]){
+      if (notch.classList.contains('open') || (cursorY > -1 && cursorY < 90)) break;
+      open(); await frames(6); close(); await new Promise(r => setTimeout(r, 520));
+    }
   } catch(_){} finally { document.documentElement.classList.remove('prewarm'); prewarming = false; syncHit(); }
 }
 if (TAURI) setTimeout(prewarm, 7000);

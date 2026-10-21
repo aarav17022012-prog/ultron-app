@@ -20,6 +20,9 @@ const LABEL: &str = "gemini";
 static FRESH: AtomicBool = AtomicBool::new(false);
 static LAST: Mutex<Option<Instant>> = Mutex::new(None);
 static ONE: Mutex<()> = Mutex::new(());
+/// Until when the page stays drawn and ready (a page put to rest first had to wake before it even sent the question).
+static AWAKE_UNTIL: Mutex<Option<Instant>> = Mutex::new(None);
+static SLEEPER: AtomicBool = AtomicBool::new(false);
 /// Questions asked in the chat that's open there (a long chat answers more slowly: a new one every few questions).
 static TURNS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
@@ -35,10 +38,16 @@ const TYPE: &str = r#"(() => { const ed = document.querySelector('rich-textarea 
   if (!ed.innerText.trim()){ ed.innerText = QUESTION; ed.dispatchEvent(new InputEvent('input', {bubbles: true})); }
   // (sent as soon as the page has seen it: its send button comes on a moment after the words go in)
   let n = 0; const go = () => { const b = document.querySelector('.send-button:not(.stop)');
-    if (b && !b.disabled && b.getAttribute('aria-disabled') !== 'true') b.click(); else if (++n < 40) requestAnimationFrame(go);
+    if (b && !b.disabled && b.getAttribute('aria-disabled') !== 'true'){ performance.clearResourceTimings(); window.__sentAt = performance.now(); b.click(); } else if (++n < 40) requestAnimationFrame(go);
     else ed.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true})); };
   requestAnimationFrame(go);
   return 'ok'; })()"#;
+/// When the page sent the question on (its own request to Google), and when the answer began and ended, after the click.
+const TIMES: &str = r#"(() => { const e = performance.getEntriesByType('resource').filter(x => x.name.includes('StreamGenerate')).pop(), s = window.__sentAt || 0;
+  return e ? [Math.round(e.startTime - s), Math.round(e.responseStart - s), Math.round(e.responseEnd - s)] : null; })()"#;
+/// Its chat code loaded ahead of the first question: a character typed into its box and taken out again.
+const PRIME: &str = r#"(() => { const ed = document.querySelector('rich-textarea .ql-editor'); if (!ed) return 'no box';
+  ed.focus(); document.execCommand('insertText', false, '.'); setTimeout(() => { document.execCommand('selectAll', false); document.execCommand('delete', false); }, 400); return 'ok'; })()"#;
 /// Sending, when the question is still sitting in the box (the page was slow to see it).
 const SEND: &str = r#"(() => { const b = document.querySelector('.send-button:not(.stop)');
   if (b && !b.disabled && b.getAttribute('aria-disabled') !== 'true'){ b.click(); return 'ok'; }
@@ -51,11 +60,63 @@ pub fn forget() {
     FRESH.store(true, SeqCst);
 }
 
-/// Open the hidden window before the first question (when it's chosen, and a little after ULTRON starts).
+/// Open the hidden window before the first question (when it's chosen, and a little after ULTRON starts), and once
+/// its page is up, load its chat code (it's loaded on first use otherwise, which held the first question up).
 pub fn warm(app: &AppHandle) {
-    if let Err(e) = window(app) {
-        crate::log_line(&format!("gemini: couldn't open its window: {e}"));
+    let fresh = app.get_webview_window(LABEL).is_none();
+    match window(app) {
+        Err(e) => crate::log_line(&format!("gemini: couldn't open its window: {e}")),
+        Ok(w) if fresh => {
+            awake(&w, true);
+            let t0 = Instant::now();
+            while t0.elapsed() < Duration::from_secs(25) {
+                if run(&w, STATE).is_some_and(|v| v["ready"] == true) {
+                    run(&w, PRIME);
+                    std::thread::sleep(Duration::from_millis(900));
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(250));
+            }
+            keep_awake(app, 20);
+        }
+        Ok(_) => {}
     }
+}
+
+/// You've opened the notch or started typing to ULTRON: the page is woken now, so it's drawing and ready by the time
+/// a question comes, and kept so a while.
+pub fn wake(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window(LABEL) {
+        awake(&w, true);
+        keep_awake(app, 120);
+    }
+}
+
+/// The page stays awake for `secs` more, then is put to rest (by one small watcher).
+fn keep_awake(app: &AppHandle, secs: u64) {
+    {
+        let mut u = AWAKE_UNTIL.lock().unwrap_or_else(|e| e.into_inner());
+        let t = Instant::now() + Duration::from_secs(secs);
+        if u.is_none_or(|old| old < t) {
+            *u = Some(t);
+        }
+    }
+    if SLEEPER.swap(true, SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(5));
+        let due = AWAKE_UNTIL.lock().unwrap_or_else(|e| e.into_inner()).is_none_or(|t| Instant::now() >= t);
+        if due && ONE.try_lock().is_ok() {
+            if let Some(w) = app.get_webview_window(LABEL) {
+                awake(&w, false);
+            }
+            *AWAKE_UNTIL.lock().unwrap_or_else(|e| e.into_inner()) = None;
+            SLEEPER.store(false, SeqCst);
+            return;
+        }
+    });
 }
 
 fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
@@ -133,8 +194,12 @@ pub fn chat(app: &AppHandle, question: &str, mut on_piece: impl FnMut(&str), sto
     }
     awake(&w, true);
     TURNS.fetch_add(1, SeqCst);
+    let t0 = Instant::now();
     let r = ask(&w, question, &mut on_piece, &stop);
-    awake(&w, false);
+    if let Some(t) = run(&w, TIMES).and_then(|v| v.as_array().cloned()) {
+        crate::log_line(&format!("uplink: sent on after {} ms, answer began at {} ms, ended at {} ms (all after the click); {} ms in all", t[0], t[1], t[2], t0.elapsed().as_millis()));
+    }
+    keep_awake(app, 120);
     *LAST.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
     r
 }
