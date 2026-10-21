@@ -73,6 +73,21 @@ pub fn remove(app: &AppHandle, index: Option<usize>) {
     save(app, &facts);
 }
 
+/// Change one thing (by its place in the list) to what you've written; empty, it's forgotten.
+pub fn edit(app: &AppHandle, index: usize, text: &str) {
+    let _g = LOCK.lock().unwrap();
+    let mut facts = all(app);
+    if index < facts.len() {
+        let t = text.trim();
+        if t.is_empty() {
+            facts.remove(index);
+        } else {
+            facts[index].text = t.to_string();
+        }
+        save(app, &facts);
+    }
+}
+
 /// "forget that my sister is Priya" / "forget about my exam": drop the facts that match best.
 fn forget_matching(app: &AppHandle, what: &str) -> usize {
     let want = words(what);

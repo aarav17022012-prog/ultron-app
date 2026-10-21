@@ -1276,6 +1276,19 @@ fn quick_math(q: &str) -> Option<String> {
     Some(format!("That's {shown}."))
 }
 
+/// A greeting, thanks, "how are you": small talk, which needs no lookup and no big model.
+fn small_talk(user: &str) -> bool {
+    const SAID: [&str; 44] = [
+        "hi", "hello", "hey", "hey there", "hi there", "hello there", "yo", "sup", "whats up", "how are you", "how are you doing", "how r u", "hows it going",
+        "good morning", "good afternoon", "good evening", "good night", "thanks", "thank you", "thank you so much", "thanks a lot", "thx", "ty", "ok", "okay",
+        "cool", "nice", "great", "awesome", "lol", "haha", "bye", "goodbye", "see you", "see ya", "i love you", "love you", "who are you", "whats your name",
+        "what is your name", "youre awesome", "you are awesome", "good job", "well done",
+    ];
+    let t: String = user.to_lowercase().chars().filter(|c| c.is_alphanumeric() || c.is_whitespace()).collect();
+    let t = t.split_whitespace().filter(|w| *w != "ultron").collect::<Vec<_>>().join(" ");
+    SAID.contains(&t.as_str())
+}
+
 pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // a sum is worked out exactly, at once
     if let Some(r) = quick_math(user) {
@@ -1290,7 +1303,8 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // with a key of your own, the service answers (and no brain here has to be up for it);
     // without one, or if it can't be reached, it's the brains on this PC as always
     let cloud = crate::cloud::active(app);
-    let gem = config(app).gemini;
+    // (Uplink chosen: everything goes to it except small talk, answered at once here when the quick brain is up)
+    let gem = config(app).gemini && !(small_talk(user) && crate::quick::port().is_some());
     // everything else waits a moment for the quick brain if it's still warming up (just after ULTRON starts)
     let quick = if thinking { None } else if cloud.is_some() || gem { crate::quick::port() } else { crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30))) };
     if cloud.is_none() && !gem && quick.is_none() && !ready(app) {
@@ -1341,7 +1355,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             "detailed" => "Reply concisely in plain text, no preamble.",
             _ => "Reply in one or two short sentences. Plain text, no preamble, no follow-up questions.",
         };
-        let _ = app.emit_to("main", "ai-phase", "Asking Cloud AI…");
+        let _ = app.emit_to("main", "ai-phase", "Thinking…");
         match crate::gemini::chat(app, &format!("{user}\n\n({how})"), |f| emit(f), cancelled) {
             Ok(t) => {
                 text = Some(t);
@@ -1350,7 +1364,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             Err(e) => {
                 crate::log_line(&format!("gemini: {e}; answering without it"));
                 if !cancelled() {
-                    let _ = app.emit_to("main", "ai-phase", "Cloud AI didn't answer, answering here…");
+                    let _ = app.emit_to("main", "ai-phase", "One moment…");
                 }
             }
         }
@@ -1375,9 +1389,13 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             if cancelled() {
                 return Some(Reply { reply: "Stopped.".into(), action: String::new(), icon: "chat", ok: true });
             }
+            // (Uplink didn't answer and the quick brain isn't up: say so at once, rather than load the big brain for a minute)
+            if gem && quick.is_none() {
+                return Some(Reply { reply: "I couldn't answer just now. Try again in a moment.".into(), action: String::new(), icon: "chat", ok: false });
+            }
             if quick.is_none() && !ready(app) {
                 if gem {
-                    return Some(Reply { reply: "Cloud AI couldn't answer just now. Try again in a moment.".into(), action: String::new(), icon: "chat", ok: false });
+                    return Some(Reply { reply: "I couldn't answer just now. Try again in a moment.".into(), action: String::new(), icon: "chat", ok: false });
                 }
                 return None;
             }

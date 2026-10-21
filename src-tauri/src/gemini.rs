@@ -20,18 +20,26 @@ const LABEL: &str = "gemini";
 static FRESH: AtomicBool = AtomicBool::new(false);
 static LAST: Mutex<Option<Instant>> = Mutex::new(None);
 static ONE: Mutex<()> = Mutex::new(());
+/// Questions asked in the chat that's open there (a long chat answers more slowly: a new one every few questions).
+static TURNS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 /// Where the page stands: ready to type into, how many answers it shows, the last one's text, still writing it.
 const STATE: &str = r#"(() => { const ed = document.querySelector('rich-textarea .ql-editor');
   const rs = document.querySelectorAll('model-response'), last = rs[rs.length - 1];
   const md = last && last.querySelector('.markdown'), b = last && last.querySelector('[aria-busy]');
-  return {ready: !!ed, n: rs.length, text: md ? md.innerText : '',
+  return {ready: !!ed, n: rs.length, text: md ? md.innerText : '', typed: !!(ed && ed.innerText.trim()),
     busy: !!document.querySelector('.send-button.stop') || !b || b.getAttribute('aria-busy') === 'true'}; })()"#;
 /// The question typed into Gemini's box (as typing does, so the page sees it and its send button comes on).
 const TYPE: &str = r#"(() => { const ed = document.querySelector('rich-textarea .ql-editor'); if (!ed) return 'no box';
   ed.focus(); document.execCommand('selectAll', false); document.execCommand('insertText', false, QUESTION);
   if (!ed.innerText.trim()){ ed.innerText = QUESTION; ed.dispatchEvent(new InputEvent('input', {bubbles: true})); }
+  // (sent as soon as the page has seen it: its send button comes on a moment after the words go in)
+  let n = 0; const go = () => { const b = document.querySelector('.send-button:not(.stop)');
+    if (b && !b.disabled && b.getAttribute('aria-disabled') !== 'true') b.click(); else if (++n < 40) requestAnimationFrame(go);
+    else ed.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true})); };
+  requestAnimationFrame(go);
   return 'ok'; })()"#;
+/// Sending, when the question is still sitting in the box (the page was slow to see it).
 const SEND: &str = r#"(() => { const b = document.querySelector('.send-button:not(.stop)');
   if (b && !b.disabled && b.getAttribute('aria-disabled') !== 'true'){ b.click(); return 'ok'; }
   const ed = document.querySelector('rich-textarea .ql-editor'); if (!ed) return 'no box';
@@ -90,6 +98,19 @@ fn run(w: &WebviewWindow, js: &str) -> Option<Value> {
 fn awake(w: &WebviewWindow, on: bool) {
     use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL};
     use wcore62::Interface;
+    // (the window itself shown off the screen, where nothing of it is seen: a hidden window's page writes nothing out
+    //  until the answer is done, so the first words came no sooner than the last)
+    if let Some(h) = crate::hit::hwnd_of(w) {
+        use windows::Win32::UI::WindowsAndMessaging::{GetWindowLongW, SetWindowLongW, ShowWindow, GWL_EXSTYLE, SW_HIDE, SW_SHOWNOACTIVATE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT};
+        unsafe {
+            let ex = GetWindowLongW(h, GWL_EXSTYLE) as u32;
+            let want = ex | WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0 | WS_EX_TRANSPARENT.0;
+            if ex != want {
+                SetWindowLongW(h, GWL_EXSTYLE, want as i32);
+            }
+            let _ = ShowWindow(h, if on { SW_SHOWNOACTIVATE } else { SW_HIDE });
+        }
+    }
     let _ = w.with_webview(move |pv| unsafe {
         let c = pv.controller();
         let _ = c.SetIsVisible(on);
@@ -105,11 +126,13 @@ pub fn chat(app: &AppHandle, question: &str, mut on_piece: impl FnMut(&str), sto
     let _one = ONE.lock().unwrap_or_else(|e| e.into_inner());
     let w = window(app)?;
     let stale = LAST.lock().unwrap_or_else(|e| e.into_inner()).is_some_and(|t| t.elapsed() > Duration::from_secs(20 * 60));
-    if FRESH.swap(false, SeqCst) || stale {
+    if FRESH.swap(false, SeqCst) || stale || TURNS.load(SeqCst) >= 8 {
+        TURNS.store(0, SeqCst);
         let _ = w.navigate(HOME.parse().map_err(|_| "bad address")?);
         std::thread::sleep(Duration::from_millis(400));
     }
     awake(&w, true);
+    TURNS.fetch_add(1, SeqCst);
     let r = ask(&w, question, &mut on_piece, &stop);
     awake(&w, false);
     *LAST.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
@@ -136,9 +159,7 @@ fn ask(w: &WebviewWindow, question: &str, on_piece: &mut impl FnMut(&str), stop:
     if run(w, &TYPE.replace("QUESTION", &q)).as_ref().and_then(Value::as_str) != Some("ok") {
         return Err("couldn't type the question".into());
     }
-    std::thread::sleep(Duration::from_millis(60));
-    run(w, SEND);
-    let (sent, mut text, mut changed) = (Instant::now(), String::new(), Instant::now());
+    let (sent, mut text, mut changed, mut nudged) = (Instant::now(), String::new(), Instant::now(), 0u32);
     loop {
         std::thread::sleep(Duration::from_millis(60));
         if stop() {
@@ -147,7 +168,12 @@ fn ask(w: &WebviewWindow, question: &str, on_piece: &mut impl FnMut(&str), stop:
         }
         let Some(v) = run(w, STATE) else { continue };
         if v["n"].as_u64().unwrap_or(0) <= before {
-            if sent.elapsed() > Duration::from_secs(15) {
+            // (still in the box after a moment: it wasn't sent; send it again, a few times at most)
+            if v["typed"] == true && sent.elapsed() > Duration::from_millis(350 + 400 * nudged as u64) && nudged < 4 {
+                nudged += 1;
+                run(w, SEND);
+            }
+            if sent.elapsed() > Duration::from_secs(12) {
                 return Err("no answer came".into());
             }
             continue;

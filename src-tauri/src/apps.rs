@@ -102,7 +102,7 @@ fn process_identity(pid: u32) -> Option<(String, Option<String>)> {
     }
 }
 
-fn file_description(exe: &str) -> Option<String> {
+pub(crate) fn file_description(exe: &str) -> Option<String> {
     unsafe {
         let path = HSTRING::from(exe);
         let size = GetFileVersionInfoSizeW(&path, None);
@@ -522,11 +522,35 @@ fn window_title(h: HWND) -> String {
     String::from_utf16_lossy(&buf[..n.max(0) as usize])
 }
 
+/// The thread that watches the window in front, woken the moment Windows brings another one forward (it used to look
+/// only every 120 ms, so the bar caught up a beat late).
+static WATCHER: std::sync::OnceLock<std::thread::Thread> = std::sync::OnceLock::new();
+
+unsafe extern "system" fn on_front(_: windows::Win32::UI::Accessibility::HWINEVENTHOOK, _: u32, _: HWND, _: i32, _: i32, _: u32, _: u32) {
+    if let Some(t) = WATCHER.get() {
+        t.unpark();
+    }
+}
+
+fn hook_front() {
+    std::thread::spawn(|| unsafe {
+        use windows::Win32::UI::WindowsAndMessaging::{DispatchMessageW, GetMessageW, TranslateMessage, EVENT_SYSTEM_FOREGROUND, MSG, WINEVENT_OUTOFCONTEXT};
+        let _hook = windows::Win32::UI::Accessibility::SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, None, Some(on_front), 0, 0, WINEVENT_OUTOFCONTEXT);
+        let mut m = MSG::default();
+        while GetMessageW(&mut m, None, 0, 0).as_bool() {
+            let _ = TranslateMessage(&m);
+            DispatchMessageW(&m);
+        }
+    });
+}
+
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
+        let _ = WATCHER.set(std::thread::current());
+        hook_front();
         let own = unsafe { GetCurrentProcessId() };
         let apps = app.state::<Apps>();
         *apps.index.write().unwrap() = build_index();
@@ -548,7 +572,7 @@ pub fn start(app: AppHandle) {
                     col_win = fg.0 as isize;
                     col_title = title;
                     let now = std::time::Instant::now();
-                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(60), now + Duration::from_millis(450), now + Duration::from_millis(1500)] } else { vec![now + Duration::from_millis(400)] };
+                    col_due = if desk { Vec::new() } else if fresh { vec![now + Duration::from_millis(30), now + Duration::from_millis(450), now + Duration::from_millis(1500)] } else { vec![now + Duration::from_millis(400)] };
                     if desk {
                         let _ = app.emit_to("main", "front-colour", serde_json::Value::Null);
                     }
@@ -580,7 +604,7 @@ pub fn start(app: AppHandle) {
             if ticks % 4000 == 0 {
                 *apps.index.write().unwrap() = build_index();
             }
-            std::thread::sleep(Duration::from_millis(if col_due.is_empty() { 120 } else { 40 }));
+            std::thread::park_timeout(Duration::from_millis(if col_due.is_empty() { 120 } else { 40 }));
         }
     });
 }
