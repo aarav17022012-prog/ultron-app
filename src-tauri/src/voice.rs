@@ -563,6 +563,7 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
         if voice.paused.load(Ordering::SeqCst) {
             if !was_paused {
                 was_paused = true;
+                set_status(&app, "paused", "", 0.0);
                 vad.reset();
                 out16.clear();
                 buf48.clear();
@@ -570,6 +571,10 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
                 let _ = app.emit_to("main", "mic-level", 0.0f32);
             }
             continue;
+        }
+        // (listening again: the page is told, or it went on showing "Microphone off" while dictation was hearing you)
+        if was_paused {
+            set_status(&app, "listening", "", 0.0);
         }
         was_paused = false;
         to16.push(&chunk, rate, &mut out16);

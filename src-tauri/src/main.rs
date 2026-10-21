@@ -14,6 +14,7 @@ mod songs;
 mod hit;
 mod backdrop;
 mod calls;
+mod keepbelow;
 mod cursorfx;
 mod shelf;
 mod thumbs;
@@ -1367,6 +1368,7 @@ fn main() {
             routines::start(handle.clone());
             calls::start(handle.clone());
             lid::start(handle.clone());
+            keepbelow::start();
             mail::watch(handle.clone());
             rec::hotkeys(handle.clone());
             spotkey::start(handle.clone());

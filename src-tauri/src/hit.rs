@@ -49,6 +49,18 @@ fn set_click_through(hwnd: HWND, on: bool) {
     }
 }
 
+/// ULTRON back on top of every other always-on-top window, at once (called as soon as another app comes to the front,
+/// so nothing that opens stays over the bar or the notch for long).
+pub fn raise_all(app: &AppHandle) {
+    if let Some(h) = app.get_webview_window("main").and_then(|w| hwnd_of(&w)) {
+        raise(h);
+    }
+    crate::thumbs::raise();
+    if let Some(h) = app.get_webview_window("browser").and_then(|b| hwnd_of(&b)) {
+        raise(h);
+    }
+}
+
 /// Put a window at the very top of the always-on-top band, without focusing it.
 pub fn raise(hwnd: HWND) {
     unsafe {
@@ -125,7 +137,7 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 }
             }
             // other always-on-top windows can climb above us; quietly take the top back
-            if last_topmost.elapsed() > Duration::from_secs(3) {
+            if last_topmost.elapsed() > Duration::from_secs(1) {
                 last_topmost = Instant::now();
                 for t in &targets {
                     unsafe {

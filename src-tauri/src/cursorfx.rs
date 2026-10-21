@@ -129,13 +129,20 @@ unsafe fn run() {
         let mut strength = 0.0f32;
         let mut shown = false;
         loop {
+            // (its window answers Windows' messages: one that never did would leave anything that sends to every
+            // window, a setting or wallpaper change, waiting on it, and that froze things)
+            let mut msg = windows::Win32::UI::WindowsAndMessaging::MSG::default();
+            while windows::Win32::UI::WindowsAndMessaging::PeekMessageW(&mut msg, None, 0, 0, windows::Win32::UI::WindowsAndMessaging::PM_REMOVE).as_bool() {
+                let _ = windows::Win32::UI::WindowsAndMessaging::TranslateMessage(&msg);
+                windows::Win32::UI::WindowsAndMessaging::DispatchMessageW(&msg);
+            }
             if !ON.load(SeqCst) {
                 if shown {
                     let _ = ShowWindow(win, SW_HIDE);
                     shown = false;
                 }
                 trail.clear();
-                std::thread::sleep(Duration::from_millis(250));
+                std::thread::sleep(Duration::from_millis(60));
                 continue;
             }
             if DwmFlush().is_err() {

@@ -503,6 +503,7 @@ pub fn start(app: AppHandle) {
                 if name != last_name {
                     last_name = name.clone();
                     let _ = app.emit_to("main", "front-app", &name);
+                    crate::hit::raise_all(&app);
                     *app.state::<crate::ai::Ai>().front_app.lock().unwrap() = name.clone();
                 }
             }

@@ -1987,7 +1987,7 @@ body.fullscreen .barfil, body.barhid .barfil{--fr:0px; visibility:hidden}
     linear-gradient(180deg, var(--bt) var(--bar), color-mix(in srgb, var(--bt2) 80%, var(--bt)) calc(var(--bar) + 60px), var(--bt2) calc(var(--bar) + 160px))}
 /* (where the sheet meets the bar both are the same: the bar's tint, nothing darker or lighter on either side; what's
     behind them is made the same too, see glassDraw) */
-.ears.glass::before{background:linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px)}
+.ears.glass::before{background:linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .9s ease, --bt2 .9s ease}
 body.sheet .mbar.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%), var(--tint, rgba(20,20,26,.3))}
 .notch.glass::before{transition:opacity .1s linear .3s, --bt .9s ease, --bt2 .9s ease}
 
@@ -2782,7 +2782,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .wf-ask.busy [data-wa="join"]{opacity:.7}
 /* the notch: the wallpaper's glass only (what's behind it on screen doesn't show through, nor the window's colour) */
 /* (while the sheet is open the bar is the sheet's colour, not the window's: one piece, no line where they meet) */
-body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.34); --bt2:rgba(14,14,20,.58); transition:--bt .22s ease, --bt2 .22s ease}
+
 /* the voice-typing shortcut in the notch's settings */
 .row .hk-wrap{margin-left:auto}
 
@@ -2821,6 +2821,14 @@ body.sheet .mbar.glass::before, body.sheet #barFil::before{--bt:rgba(16,16,20,.3
 /* rewriting or translating: each new word rises into place, a moment after the one before */
 .pk-new span{animation:pkWord .5s var(--glide) backwards; animation-delay:var(--wd, 0ms)}
 @keyframes pkWord{from{opacity:0; transform:translateY(7px) scale(.96)}}
+
+/* the Drop Shelf leaving: it sinks back into the bottom edge, narrowing a little as it goes */
+.dshelf.leaving{visibility:visible}
+.dshelf.leaving .ds-tray{animation:dsSink .42s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes dsSink{from{transform:none; opacity:1} 70%{opacity:1} to{transform:translateY(200px) scale(.86, .7); opacity:0}}
+/* starting up: the glass's picture fades in rather than appearing in one frame */
+html.wallin .glass > .gw{animation:gwIn .7s ease}
+@keyframes gwIn{from{opacity:0}}
 
 /* ---------- the Mac finish: one layer over everything above ----------
    Type is Inter (bundled, src/fonts; SF Pro can't ship on Windows), the closest free match for SF Pro: its optical
@@ -3772,7 +3780,7 @@ function applySetting(k){
   if (k === 'notes') nfMode();
   if (k === 'nfQuiet'){ nfBadge(); if (nfw.classList.contains('open')) nfQuietSet(); }
   if (k === 'hearSongs') songReq();
-  if (k === 'muted'){ invoke('voice_config', {paused:S.muted}); paintMute(); }
+  if (k === 'muted'){ invoke('voice_config', {paused:micPaused()}); paintMute(); }
   if (k === 'voiceName'){ Voice.stop(); invoke('tts_voice', {name:S.voiceName}); }
 }
 document.querySelectorAll('.rng').forEach(r => r.addEventListener('input', () => { S[r.dataset.set] = +r.value; save(); paintSettings(); if (r.dataset.set === 'sens') pushSens(); }));
@@ -4430,7 +4438,7 @@ const you = $('you'), reply = $('reply'), statusEl = $('status'), stxt = $('stxt
 const STATUS = {loading:'Warming up', downloading:'Getting the voice model', listening:'Listening', hearing:'Hearing you',
   transcribing:'Understanding', paused:'Microphone off', error:'Voice unavailable'};
 function setVoice(st){
-  voiceState = S.muted && st.state !== 'downloading' && st.state !== 'error' ? 'paused' : st.state;
+  voiceState = micPaused() && st.state !== 'downloading' && st.state !== 'error' ? 'paused' : st.state;
   statusEl.dataset.s = voiceState;
   const ms = document.getElementById('micSt'); if (ms) ms.dataset.s = voiceState;
   let text = STATUS[voiceState] || voiceState;
@@ -4507,7 +4515,7 @@ const Voice = (() => {
     // (between sentences, and while the last word is still in the air, it used to catch its own voice)
     clearTimeout(unmuteT);
     if (on) invoke('voice_config', {paused:true});
-    else unmuteT = setTimeout(() => { lastSpoke = Date.now(); invoke('voice_config', {paused:S.muted}); }, 800);
+    else unmuteT = setTimeout(() => { lastSpoke = Date.now(); invoke('voice_config', {paused:micPaused()}); }, 800);
     syncStop();
   }
   async function pump(){
@@ -4621,7 +4629,7 @@ function speakOld(text){
   u.rate = 1.04; u.pitch = .92;
   // don't let it hear itself
   u.onstart = () => { speaking = true; invoke('voice_config', {paused:true}); };
-  u.onend = u.onerror = () => { speaking = false; invoke('voice_config', {paused:S.muted}); };
+  u.onend = u.onerror = () => { speaking = false; invoke('voice_config', {paused:micPaused()}); };
   speechSynthesis.cancel(); speechSynthesis.speak(u);
 }
 function scheduleAutoClose(){
@@ -5716,12 +5724,14 @@ addEventListener('click', e => {
    dictation" or a minute of quiet. While it's on the recognizer waits out longer pauses, and is given the last
    words typed so that each piece is heard in the light of the one before. */
 var DICT = {on:false, tail:'', idleT:0, send:(text, after) => invoke('dictate_type', {text, after})};
+// (the microphone as it should be: off when you've turned it off, except while dictating)
+function micPaused(){ return !!S.muted && !(window.DICT && DICT.on); }
 const DICT_START = /^(?:please\s+)?(?:start|begin|take)\s+(?:a\s+)?dictat(?:ion|ing)\b|^dictation(?:\s+mode)?[.!]?$|^dictate[.!]?$/i;
 const DICT_STOP = /^(?:(?:hey|ok|okay)\s+)?(?:ultron[\s,.!]*)?(?:stop|end|finish|exit)\s+(?:the\s+)?dictat(?:ion|ing)\b|^(?:ultron[\s,.!]*)?that'?s all[.!]?$/i;
 function dictIdle(){ clearTimeout(DICT.idleT); DICT.idleT = setTimeout(() => dictOff('Dictation ended after a minute of quiet.'), 60000); }
 function dictOn(){
   DICT.on = true; DICT.tail = '';
-  invoke('voice_config', {patient:true, wake:false, prompt:''}); wakeTold = false;
+  invoke('voice_config', {patient:true, wake:false, prompt:'', paused:false}); wakeTold = false;
   $('micSt').classList.add('ptt');
   openedAt = 0; setOpen(false);
   nbShow('<div class="nb-say">Dictating. Say <b>“stop dictation”</b> when you’re done.</div>', 5000);
@@ -5730,7 +5740,7 @@ function dictOn(){
 function dictOff(why){
   if (!DICT.on) return;
   DICT.on = false; clearTimeout(DICT.idleT);
-  invoke('voice_config', {patient:false}); pushPrompt(); wakeTold = null;
+  invoke('voice_config', {patient:false, paused:micPaused()}); pushPrompt(); wakeTold = null;
   $('micSt').classList.remove('ptt');
   nbShow(`<div class="nb-say">${esc(why || 'Dictation off.')}</div>`, 3000);
 }
@@ -5941,7 +5951,7 @@ function paintMute(){
 muteBtn.addEventListener('click', e => {
   e.stopPropagation();
   S.muted = !S.muted; save(); paintMute();
-  invoke('voice_config', {paused:S.muted});
+  invoke('voice_config', {paused:micPaused()});
   if (S.muted) micTarget = 0;
 });
 
@@ -5956,10 +5966,11 @@ setInterval(() => {
 
 /* teach the recognizer the words you're likely to say (app names especially) */
 async function pushPrompt(){
+  if (window.DICT && DICT.on) return;                   // (dictating: the words just typed are what it listens with)
   const names = (await invoke('app_names')) || [];
   const base = 'Ultron, open Spotify. Ultron, set the volume to 40 percent. Play the next song. Search for the weather in Mumbai. Type hello, how are you? Open YouTube.';
   const extra = names.length ? ' Apps: ' + names.slice(0, 24).join(', ') + '.' : '';
-  invoke('voice_config', {prompt:base + extra, sens:S.sens, paused:S.muted});
+  invoke('voice_config', {prompt:base + extra, sens:S.sens, paused:micPaused()});
 }
 
 /* ---------- browser ---------- */
@@ -6860,7 +6871,13 @@ let wallUrl = '';
 function setWall(url){
   if (!url) return;
   wallUrl = url;
-  document.documentElement.style.setProperty('--wall', `url("${url}")`);
+  // (the picture is ready before it's shown; the first time, the glass fades it in)
+  const im = new Image(), first = !setWall.done; im.src = url; setWall.done = true;
+  im.decode().catch(() => {}).then(() => {
+    if (wallUrl !== url) return;
+    if (first){ document.documentElement.classList.add('wallin'); setTimeout(() => document.documentElement.classList.remove('wallin'), 800); }
+    document.documentElement.style.setProperty('--wall', `url("${url}")`);
+  });
 }
 function placeGlass(el){
   const gw = el.querySelector(':scope > .gw'); if (!gw) return;
@@ -7617,7 +7634,9 @@ function barTint(c){
     a = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(L * 100)}% / .5)`;
     b = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 90)}% ${Math.round(L * 72)}% / .66)`;
   }
-  for (const el of [mbar, $('barFil')]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }   // (the notch keeps its own: just the wallpaper's glass)
+  // (the bar, the notch and its corner fillets always the same colour, changing together over the same .9 s: where the
+  //  notch hangs from the bar there's nothing to tell them apart)
+  for (const el of [mbar, notch, earsEl, $('barFil')]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
 }
 function setAppName(n){
   if (!n) return;
@@ -8762,7 +8781,7 @@ addEventListener('keydown', e => {
   const vk = e.keyCode, names = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
   const mods = (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0), b = $('dicKeyBtn');
   if ([16, 17, 18, 91, 92].includes(vk)){ b.innerHTML = hkCaps(names) + '<span class="hk-plus">+ …</span>'; return; }
-  if (!mods){ b.innerHTML = '<span class="hk-say">Hold Ctrl, Alt or Shift with it</span>'; return; }
+  if (!mods){ b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); b.innerHTML = '<span class="hk-say">Hold Ctrl, Alt or Shift with it</span>'; setTimeout(() => { b.classList.remove('bad'); if (DIK.rec) b.innerHTML = '<span class="hk-say">Press the keys…</span>'; }, 1300); return; }
   S.dicKey = {mods, vk, names:[...names, hkName(vk)]}; save();
   DIK.rec = false; dikPaint(); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1000);
   invoke('dictate_key', {mods, vk});
@@ -9617,7 +9636,7 @@ const dsTall = () => new Promise(res => {
 async function dsShow(kind, force){
   if (DS.on){ if (kind === 'drop'){ DS.mode = 'drop'; dsEl.classList.add('dragging'); } return; }
   if (!force && !dsCan()) return;
-  DS.on = true; DS.mode = kind;
+  DS.on = true; DS.mode = kind; clearTimeout(DS.leftT); dsEl.classList.remove('leaving');
   clearTimeout(DS.shrinkT);
   // (2 px short of the screen: a screen-sized window in front would be taken by Windows for a full-screen app)
   const tall = Math.round(screen.height || 864) - 2;
@@ -9632,7 +9651,8 @@ async function dsShow(kind, force){
 function dsHide(){
   if (!DS.on || DS.out) return;
   DS.on = false; DS.mode = ''; DS.over = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT);
-  dsEl.classList.remove('on', 'over', 'dragging');
+  dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging');
+  clearTimeout(DS.leftT); DS.leftT = setTimeout(() => { if (!DS.on) dsEl.classList.remove('leaving'); }, 480);
   syncHit();
   clearTimeout(DS.shrinkT);
   DS.shrinkT = setTimeout(() => { if (DS.on || (window.LK && LK.on) || (window.CTS && CTS.on) || winH === 700) return; winH = 700; invoke('set_window_height', {h:700}); syncHit(); }, 1200);
