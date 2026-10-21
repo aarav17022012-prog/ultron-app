@@ -3125,6 +3125,9 @@ html.vision .ds-tray.glass::before{background:linear-gradient(180deg, var(--g2),
 .pr-none{margin:4px 2px; font-size:12.5px; color:rgba(255,255,255,.5)}
 html.vision .pr-row{background:var(--g2); box-shadow:inset 0 0 0 1px var(--hair)}
 html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--hair2), inset 2px 0 0 var(--ink)}
+/* the floating player's blurred art and its glass each kept as a picture of their own, so a new lyric or a new
+   picture of the screen doesn't redraw the blur (that flickered) */
+#flyr .fl-art img, #flyr > .gw{will-change:transform}
 </style>
 </head>
 <body>
@@ -3675,7 +3678,7 @@ listen('backdrop', async url => {
   if (n < glassDone){ bmp.close(); return; }                                       // (a newer picture is already up)
   glassDone = n; if (glassBmp) glassBmp.close(); glassBmp = bmp;
   const now = performance.now(), gap = now - glassAt; glassAt = now;
-  if (gap > 300 && document.documentElement.classList.contains('live')) glassMixT = now + 260;
+  if (gap > 300 && document.documentElement.classList.contains('live')) glassMixT = Math.max(glassMixT, now + 260);
   if (now < glassMixT){ if (!glassMixRaf){ glassMixLast = now; glassMixRaf = requestAnimationFrame(glassMixStep); } }
   else for (const g of glassEls) glassDraw(g);
   document.documentElement.classList.add('live');
@@ -4499,6 +4502,7 @@ function placeFloat(){
   const gw = flyr.querySelector(':scope > .gw');
   flyr.style.left = '0px'; flyr.style.top = '0px'; flyr.style.translate = `${x}px ${y}px`; flyr._x = x; flyr._y = y;
   gw.style.left = '0px'; gw.style.top = '0px'; gw.style.translate = `${-x}px ${-y}px`;
+  if (!flDrag) syncHit();
   if (gw.style.width !== (screen.width || innerWidth) + 'px'){ gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw); }
 }
 function showFloat(on){
@@ -4566,11 +4570,11 @@ $('flCtl').addEventListener('click', e => {
   if (b.dataset.fl === 'play' && cur) flyr.classList.toggle('playing', !cur.playing);
   $(b.dataset.fl).click();
 });
-$('flCtl').addEventListener('pointerdown', e => e.stopPropagation());
+$('flCtl').addEventListener('pointerdown', e => { if (e.target.closest('.fl-b')) e.stopPropagation(); });
 // drag it anywhere on screen
 var flDrag = null;
 flyr.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || e.target.closest('.fl-x, .fl-ctl')) return;
+  if (e.button !== 0 || e.target.closest('.fl-x, .fl-b')) return;           // (anywhere but its buttons: the wheel's rim too)
   e.stopPropagation(); flyr.setPointerCapture(e.pointerId);
   flDrag = {dx:e.clientX - (flyr._x || 0), dy:e.clientY - (flyr._y || 0)}; flyr.classList.add('drag'); syncHit();
 });
@@ -4598,9 +4602,14 @@ flyr.addEventListener('pointerup', flDrop); flyr.addEventListener('pointercancel
 flyr.addEventListener('dblclick', e => { if (!e.target.closest('.fl-x, .fl-ctl')){ setOpen(true); selectTab('lyrics'); } });
 $('flX').addEventListener('click', e => { e.stopPropagation(); S.floatLyrics = false; save(); paintFloatBtn(); });
 addEventListener('resize', () => { if (flyr.classList.contains('on')) placeFloat(); });
+var floatOff = 0;
 function floatTick(){
   const want = !!S.floatLyrics && !notch.classList.contains('open') && !!disp && !!lyr && !!(lyr.synced || lyr.plain);
-  if (want !== floatShown){ floatShown = want; floatKey = ''; showFloat(want); }
+  // (it goes only once it's been unwanted for a second and a half: the song's details or its lyrics drop out for a
+  //  moment now and then as the player updates, and it blinked out and back in: the flicker)
+  if (want) floatOff = 0; else if (floatShown && !floatOff) floatOff = performance.now();
+  const go = want || (floatOff && performance.now() - floatOff > 1500) || notch.classList.contains('open') || !S.floatLyrics;
+  if (want !== floatShown && go){ floatShown = want; floatKey = ''; showFloat(want); }
   if (!want) return;
   let lines, li = 0, dur = 4, at = 0, key, listKey;
   if (lyr.synced){
@@ -7151,14 +7160,43 @@ function setWall(url){
 }
 function placeGlass(el){
   const gw = el.querySelector(':scope > .gw'); if (!gw) return;
-  let x = el.offsetLeft, y = el.offsetTop;
-  if (el.id === 'start' || el.id === 'setw') x = (innerWidth - el.offsetWidth) / 2;     // centred with a transform
+  // (where it's laid out; any transform it has, at rest or moving, is undone on the glass by glassHold)
+  const x = el.offsetLeft, y = el.offsetTop;
   gw.style.left = -x + 'px'; gw.style.top = -y + 'px';
+  glassHoldOne(el, gw);
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px';
   // (Drawn now, not a frame or two on: until its picture came, glass that had just opened showed the wallpaper, or the
   //  picture from the last time it was open. That was the dark box a menu started as.)
   glassDraw(gw);
 }
+// A panel opening or closing grows and slides by a transform, and its glass's picture went with it: out of line with
+// the screen until it stopped ("settling"). Now, every frame it moves, the picture is moved and scaled back the other
+// way (the panel's own transform, undone), so what shows through stays still against the screen the whole way.
+const GL_MOVING = new Set(); let glHoldRaf = 0;
+function glassHoldOne(el, gw){
+  const cs = getComputedStyle(el), t = cs.transform;
+  if (!t || t === 'none'){ if (gw.style.transform) gw.style.transform = ''; return; }
+  const [ox, oy] = cs.transformOrigin.split(' ').map(parseFloat);
+  const tr = (gw.style.translate || '0px 0px').split(' ').map(parseFloat);
+  gw.style.transformOrigin = `${ox + el.offsetLeft - (tr[0] || 0)}px ${oy + el.offsetTop - (tr[1] || 0)}px`;     // (the panel's origin, in the glass's own place)
+  gw.style.transform = new DOMMatrix(t).inverse().toString();
+}
+function glassHold(){
+  glHoldRaf = 0;
+  for (const el of GL_MOVING){
+    const gw = el.querySelector(':scope > .gw'); if (!gw){ GL_MOVING.delete(el); continue; }
+    glassHoldOne(el, gw);
+    if (!el.getAnimations().some(a => a.playState === 'running')) GL_MOVING.delete(el);
+  }
+  if (GL_MOVING.size) glHoldRaf = requestAnimationFrame(glassHold);
+}
+const glassMoves = e => {
+  const el = e.target; if (!el.classList || !el.classList.contains('glass') || el.classList.contains('notch') || el.classList.contains('mbar') || el.classList.contains('ears')) return;
+  if (e.type === 'transitionrun' && e.propertyName !== 'transform') return;
+  GL_MOVING.add(el); if (!glHoldRaf) glHoldRaf = requestAnimationFrame(glassHold);
+};
+document.addEventListener('transitionrun', glassMoves, true);
+document.addEventListener('animationstart', glassMoves, true);
 placeGlass(mbar);
 
 /* ---------- Wi-Fi ---------- */
@@ -8009,7 +8047,9 @@ function syncHit(){
   if (tourOn || (window.LK && LK.on) || (window.CTS && CTS.on)) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
   if (bwWide.classList.contains('on')){ const w = bwWide.getBoundingClientRect(); rects.push({x:Math.floor(w.left - 4), y:Math.floor(w.top - 14), w:Math.ceil(w.width + 8), h:Math.ceil(w.height + 18)}); }
   const fl = $('flyr');
-  if (fl.classList.contains('on')) rects.push({x:Math.floor(fl.offsetLeft - 4), y:Math.floor(fl.offsetTop - 4), w:fl.offsetWidth + 8, h:fl.offsetHeight + 8});
+  // (where it is: it's moved by translate, so its offsetLeft/Top are 0. Those put its hit area in the screen's corner, and
+  //  clicks on it went through to the app behind: it couldn't be moved)
+  if (fl.classList.contains('on')) rects.push({x:Math.floor((fl._x || 0) - 6), y:Math.floor((fl._y || 0) - 6), w:fl.offsetWidth + 12, h:fl.offsetHeight + 12});
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
@@ -8117,6 +8157,12 @@ if (TAURI){
   invoke('ai_status').then(st => { if (st){ aiStat = st; setVoice(lastVoice); } });
   pushAI(); document.body.classList.toggle('calm', !!S.reduceMotion); tickTimers();
   listen('front-app', setAppName);
+  // (another app in front: the bar and the notch show what's under the bar, which has just changed. Only the bar
+  //  showing, its picture came every 8 s: the old one stayed a while and then jumped. Now it's looked at again at
+  //  once, and once more as the app finishes drawing, each new picture melting in over the last)
+  const glassLook = () => { if (!glassOn()) return; glassMixT = performance.now() + 420; invoke('backdrop_now'); };
+  listen('front-app', () => { glassLook(); setTimeout(glassLook, 380); setTimeout(glassLook, 1100); });
+  listen('front-colour', () => glassLook());
   listen('front-colour', barTint);
   listen('dyn-max', m => document.body.classList.toggle('dynmax', !!m && !!S.dynWin));
   listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); if (on && notch.classList.contains('open')){ openedAt = 0; setOpen(false); } syncHit(); });
