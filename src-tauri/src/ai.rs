@@ -49,7 +49,7 @@ pub fn free_commit_gb() -> f64 {
 /// squeezing the PC: with a quick brain answering everyday questions, a 16 GB PC that's nearly full is
 /// better off getting those gigabytes back (it reloads in a few seconds when a thinking question comes).
 fn keep_loaded(app: &AppHandle) -> bool {
-    config(app).keep && (crate::quick::port().is_none() || (free_ram_gb() > 3.0 && free_commit_gb() > 4.0))
+    config(app).keep && !config(app).gemini && (crate::quick::port().is_none() || (free_ram_gb() > 3.0 && free_commit_gb() > 4.0))
 }
 
 /// The red stop button: stop talking, thinking and doing. Each press ends the requests that are running
@@ -567,10 +567,16 @@ pub fn start(app: AppHandle) {
                 }
             }
         });
-        // ready before you ask
+        // ready before you ask (once the page has said what it wants: with Cloud AI chosen, the big brain isn't loaded)
         std::thread::sleep(Duration::from_secs(4));
+        for _ in 0..80 {
+            if CFG_IN.load(Ordering::SeqCst) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
         // (with a graphics card the quick brain covers everyday questions: the big one waits until it's needed, or there's room)
-        if config(&app).keep && (crate::router::specs().vram_gb < 3.5 || (free_ram_gb() > 6.0 && free_commit_gb() > 6.0)) {
+        if config(&app).keep && !config(&app).gemini && (crate::router::specs().vram_gb < 3.5 || (free_ram_gb() > 6.0 && free_commit_gb() > 6.0)) {
             ensure_loaded(&app);
         }
         loop {
@@ -680,6 +686,10 @@ fn finish_load(app: &AppHandle, brain: &str, device: &str) {
 
 /// Called when you open the notch, start typing or start talking: have the brain ready by the time you ask.
 pub fn warm(app: &AppHandle) {
+    // (Cloud AI answers: the big brain isn't loaded ahead of time; a task loads it when it needs it)
+    if config(app).gemini {
+        return;
+    }
     let app = app.clone();
     std::thread::spawn(move || {
         let ai = app.state::<Ai>();
@@ -696,7 +706,11 @@ pub fn warm(app: &AppHandle) {
 }
 
 /// Apply new settings from the Settings window.
+/// The page has sent its settings at least once since ULTRON started.
+static CFG_IN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 pub fn set_config(app: &AppHandle, c: Config) {
+    CFG_IN.store(true, Ordering::SeqCst);
     let ai = app.state::<Ai>();
     let old = std::mem::replace(&mut *ai.cfg.lock().unwrap(), c.clone());
     let running = ai.server.lock().unwrap().as_ref().map(|s| s.brain.clone());
@@ -705,6 +719,10 @@ pub fn set_config(app: &AppHandle, c: Config) {
         restart(app);
     } else if c.keep && !old.keep {
         warm(app);
+    }
+    if c.gemini && !old.gemini {
+        // (Cloud AI answers now: the big brain's gigabytes go back to the PC; it comes back by itself for a task)
+        shutdown(app);
     }
     let t = crate::router::text_model();
     if c.brain == "smart" && old.brain != "smart" && model_path(app, t.file).is_none() {
@@ -1318,8 +1336,12 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     let mut text = None;
     if gem {
         // (Gemini on the web looks things up itself; told how long an answer ULTRON shows)
-        let how = match config(app).length.as_str() { "short" => "Answer in one or two sentences, in plain text.", "detailed" => "Answer in plain text.", _ => "Answer briefly and directly, in plain text." };
-        let _ = app.emit_to("main", "ai-phase", "Asking Gemini…");
+        let how = match config(app).length.as_str() {
+            "short" => "Reply in one short sentence. Plain text, no preamble.",
+            "detailed" => "Reply concisely in plain text, no preamble.",
+            _ => "Reply in one or two short sentences. Plain text, no preamble, no follow-up questions.",
+        };
+        let _ = app.emit_to("main", "ai-phase", "Asking Cloud AI…");
         match crate::gemini::chat(app, &format!("{user}\n\n({how})"), |f| emit(f), cancelled) {
             Ok(t) => {
                 text = Some(t);
@@ -1328,7 +1350,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             Err(e) => {
                 crate::log_line(&format!("gemini: {e}; answering without it"));
                 if !cancelled() {
-                    let _ = app.emit_to("main", "ai-phase", "Gemini didn't answer, answering here…");
+                    let _ = app.emit_to("main", "ai-phase", "Cloud AI didn't answer, answering here…");
                 }
             }
         }
@@ -1354,6 +1376,9 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
                 return Some(Reply { reply: "Stopped.".into(), action: String::new(), icon: "chat", ok: true });
             }
             if quick.is_none() && !ready(app) {
+                if gem {
+                    return Some(Reply { reply: "Cloud AI couldn't answer just now. Try again in a moment.".into(), action: String::new(), icon: "chat", ok: false });
+                }
                 return None;
             }
             if many && quick.is_none() {
@@ -1839,6 +1864,11 @@ pub fn translate(app: &AppHandle, text: &str, from: &str, to: &str, id: u64) -> 
 
 /// Wake the big brain now (the Language menu was opened, a task is coming): it's loaded by the time it's needed.
 pub fn wake(app: &AppHandle) {
+    // (not with Cloud AI answering: ULTRON's menus are opened unseen at start to be quick, and the Language menu's
+    //  wake loaded the big brain every time; a task loads it when it needs it)
+    if config(app).gemini {
+        return;
+    }
     let app = app.clone();
     std::thread::spawn(move || {
         if app.state::<Ai>().is_ready() {

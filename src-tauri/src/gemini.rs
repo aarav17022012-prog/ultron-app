@@ -3,7 +3,10 @@
 //! works signed out, as Google allows. Each new conversation in ULTRON (or a long pause) starts a new chat there. If
 //! Gemini can't be reached or doesn't answer, ULTRON answers as before.
 //!
-//! (Google's terms don't provide for automating its website, so this only runs when you choose it in Settings › Brain.)
+//! Each PC's ULTRON has a Gemini of its own: its own hidden window, private (nothing kept between runs, nothing shared
+//! with any other window or account), over that PC's own connection. Nothing goes through anyone else's server.
+//!
+//! (Google's terms don't provide for automating its website, so this only runs when Cloud AI is chosen in Settings › Brain.)
 
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::sync::{mpsc, Mutex};
@@ -58,6 +61,7 @@ fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
         .skip_taskbar(true)
         .decorations(false)
         .shadow(false)
+        .incognito(true)
         .inner_size(820.0, 760.0)
         .position(-3000.0, -3000.0)
         .additional_browser_args(crate::BROWSER_ARGS) // (the same as every other ULTRON window, or the engine refuses it)
@@ -84,8 +88,15 @@ fn run(w: &WebviewWindow, js: &str) -> Option<Value> {
 /// The page is drawn as if it were on screen while it answers, so the answer is written out as it comes (a hidden
 /// page holds it all back to the end), and put to rest again after.
 fn awake(w: &WebviewWindow, on: bool) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL};
+    use wcore62::Interface;
     let _ = w.with_webview(move |pv| unsafe {
-        let _ = pv.controller().SetIsVisible(on);
+        let c = pv.controller();
+        let _ = c.SetIsVisible(on);
+        // (and its spare memory handed back between questions)
+        if let Ok(c19) = c.CoreWebView2().and_then(|w| w.cast::<ICoreWebView2_19>()) {
+            let _ = c19.SetMemoryUsageTargetLevel(if on { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL } else { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW });
+        }
     });
 }
 
@@ -119,17 +130,17 @@ fn ask(w: &WebviewWindow, question: &str, on_piece: &mut impl FnMut(&str), stop:
             let seen = run(w, "({url: location.href, title: document.title, text: (document.body ? document.body.innerText : '').slice(0, 240)})");
             return Err(format!("its page didn't open ({})", seen.map(|v| v.to_string()).unwrap_or_else(|| "no reply from the page".into())));
         }
-        std::thread::sleep(Duration::from_millis(150));
+        std::thread::sleep(Duration::from_millis(80));
     };
     let q = serde_json::to_string(question).unwrap_or_default();
     if run(w, &TYPE.replace("QUESTION", &q)).as_ref().and_then(Value::as_str) != Some("ok") {
         return Err("couldn't type the question".into());
     }
-    std::thread::sleep(Duration::from_millis(150));
+    std::thread::sleep(Duration::from_millis(60));
     run(w, SEND);
     let (sent, mut text, mut changed) = (Instant::now(), String::new(), Instant::now());
     loop {
-        std::thread::sleep(Duration::from_millis(90));
+        std::thread::sleep(Duration::from_millis(60));
         if stop() {
             run(w, STOP);
             return Err("stopped".into());

@@ -147,7 +147,10 @@ fn ours() -> Vec<u32> {
 /// The page says whether anything is open (false) or it's been quiet a while (true).
 pub fn idle(app: &tauri::AppHandle, on: bool) {
     let gen = IDLE_GEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-    memory_level(app, on);
+    // (only when memory is short: handed back with gigabytes free, it all had to come back in from the disk the next
+    //  time anything was opened, which was the lag after a pause. It helps only a PC that needs the room)
+    let tight = || crate::ai::free_ram_gb() < 3.5;
+    memory_level(app, on && tight());
     if !on {
         return;
     }
@@ -155,13 +158,15 @@ pub fn idle(app: &tauri::AppHandle, on: bool) {
         std::thread::sleep(Duration::from_secs(3));
         let mut n = 0;
         while IDLE_GEN.load(std::sync::atomic::Ordering::SeqCst) == gen {
-            for pid in ours() {
-                trim(pid);
+            if tight() {
+                for pid in ours() {
+                    trim(pid);
+                }
+                if n == 0 {
+                    crate::log_line("idle: memory handed back (nothing open, and memory is short)");
+                }
+                n += 1;
             }
-            if n == 0 {
-                crate::log_line("idle: memory handed back (nothing open)");
-            }
-            n += 1;
             // (and again now and then: what the bar's clock and the character touch creeps back in)
             for _ in 0..(4 * 60) {
                 if IDLE_GEN.load(std::sync::atomic::Ordering::SeqCst) != gen {

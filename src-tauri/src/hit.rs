@@ -55,7 +55,6 @@ pub fn raise_all(app: &AppHandle) {
     if let Some(h) = app.get_webview_window("main").and_then(|w| hwnd_of(&w)) {
         raise(h);
     }
-    crate::thumbs::raise();
     if let Some(h) = app.get_webview_window("browser").and_then(|b| hwnd_of(&b)) {
         raise(h);
     }
@@ -149,8 +148,6 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                         );
                     }
                 }
-                // the shelf's live pictures go over the page (they're see-through and let clicks through)
-                crate::thumbs::raise();
                 // the notch browser must stay above the notch itself
                 if let Some(h) = app.get_webview_window("browser").and_then(|b| hwnd_of(&b)) {
                     raise(h);
