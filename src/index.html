@@ -1984,10 +1984,10 @@ body.fullscreen .barfil, body.barhid .barfil{--fr:0px; visibility:hidden}
    into a fuller shade of the same colour (not grey), fading over from one window's to the next with the bar ---------- */
 .notch.glass.open::before, .notch.glass.call::before{
   background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) calc(var(--bar) * .42)),
-    linear-gradient(180deg, var(--bt) var(--bar), color-mix(in srgb, var(--bt2) 80%, var(--bt)) calc(var(--bar) + 60px), var(--bt2) calc(var(--bar) + 160px))}
+    linear-gradient(180deg, rgba(18,18,24,.3) var(--bar), color-mix(in srgb, rgba(18,18,24,.3), var(--bt) 45%) calc(var(--bar) + 36px), var(--bt) calc(var(--bar) + 96px), var(--bt2) calc(var(--bar) + 210px))}
 /* (where the sheet meets the bar both are the same: the bar's tint, nothing darker or lighter on either side; what's
     behind them is made the same too, see glassDraw) */
-.ears.glass::before{background:linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .55s ease, --bt2 .55s ease}
+.ears.glass::before{background:linear-gradient(180deg, rgba(18,18,24,.3) 1px, color-mix(in srgb, rgba(18,18,24,.3), var(--bt) 18%) 13px); transition:--bt .55s ease, --bt2 .55s ease}
 body.sheet .mbar.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%), var(--tint, rgba(20,20,26,.3))}
 .notch.glass::before{transition:opacity .1s linear .3s, --bt .55s ease, --bt2 .55s ease}
 
@@ -3128,6 +3128,16 @@ html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--ha
 /* the floating player's blurred art and its glass each kept as a picture of their own, so a new lyric or a new
    picture of the screen doesn't redraw the blur (that flickered) */
 #flyr .fl-art img, #flyr > .gw{will-change:transform}
+/* ---------- where the opened notch meets the bar: nothing to see ----------
+   The bar shows the wallpaper's glass (the picture ULTRON keeps of it), and so does the top of the sheet: from the
+   bar's foot the sheet is the bar's own glass and tint, then over ~90 px it melts into what's really behind it (the
+   app) and the app's colour. No row where one stops and the other starts. The sheet's view of the app is softened a
+   little more than the rest, so the app's text and edges read as colour, not blotches. */
+.mbar.glass > .gw > .gwc{visibility:hidden}
+.notch.glass > .gw > .gwc, .ears.glass > .gw > .gwc{
+  -webkit-mask:linear-gradient(180deg, transparent calc(var(--bar) + 4px), rgba(0,0,0,.3) calc(var(--bar) + 36px), rgba(0,0,0,.8) calc(var(--bar) + 70px), #000 calc(var(--bar) + 96px));
+  mask:linear-gradient(180deg, transparent calc(var(--bar) + 4px), rgba(0,0,0,.3) calc(var(--bar) + 36px), rgba(0,0,0,.8) calc(var(--bar) + 70px), #000 calc(var(--bar) + 96px))}
+.notch.glass > .gw > .gwc{filter:blur(7px) saturate(1.15)}
 </style>
 </head>
 <body>
@@ -3685,9 +3695,8 @@ setInterval(() => {
   const spotOn = $('spot').classList.contains('open');
   const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
-  const settling = notch.classList.contains('open') && performance.now() - openedAt < 600;
   // (the Drop Shelf too: it wasn't on this list, so its glass got a picture only every 8 seconds and never caught up)
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), settling ? null : notch].some(el => el && el.classList.contains('open')) || !!(window.DS && DS.on);
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), notch].some(el => el && el.classList.contains('open')) || !!(window.DS && DS.on);
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -8138,7 +8147,12 @@ if (TAURI){
   barMode();
   listen('app-quit', () => { openedAt = 0; document.body.classList.add('leaving'); syncBrowser(); setOpen(false); closeDD(); closePanels(); });
   listen('notch-open', () => setOpen(true));
-  new MutationObserver(() => { if (S.gemini && notch.classList.contains('open')) invoke('gemini_wake'); }).observe(notch, {attributes:true, attributeFilter:['class']});
+  let notchWas = false;
+  new MutationObserver(() => {
+    const o = notch.classList.contains('open');
+    if (o && !notchWas){ if (S.gemini) invoke('gemini_wake'); if (glassOn()) invoke('backdrop_now'); }   // (a fresh picture of what's under it as it opens)
+    notchWas = o;
+  }).observe(notch, {attributes:true, attributeFilter:['class']});
   listen('intro-start', () => { document.body.classList.add('intro'); setOpen(false); closeDD(); closePanels(); });
   listen('intro-say', t => t ? Voice.say(t) : Voice.stop());
   listen('intro-done', d => {
