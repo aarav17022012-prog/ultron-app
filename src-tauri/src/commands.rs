@@ -120,11 +120,11 @@ fn endpoint() -> Option<IAudioEndpointVolume> {
     }
 }
 
-fn volume() -> Option<f32> {
+pub(crate) fn volume() -> Option<f32> {
     unsafe { endpoint()?.GetMasterVolumeLevelScalar().ok() }
 }
 
-fn set_volume(v: f32) -> bool {
+pub(crate) fn set_volume(v: f32) -> bool {
     unsafe {
         let Some(e) = endpoint() else { return false };
         let _ = e.SetMute(false, std::ptr::null());
@@ -132,8 +132,12 @@ fn set_volume(v: f32) -> bool {
     }
 }
 
-fn set_mute(m: bool) -> bool {
+pub(crate) fn set_mute(m: bool) -> bool {
     unsafe { endpoint().map(|e| e.SetMute(m, std::ptr::null()).is_ok()).unwrap_or(false) }
+}
+
+pub(crate) fn muted() -> Option<bool> {
+    unsafe { endpoint()?.GetMute().ok().map(|b| b.as_bool()) }
 }
 
 fn key(vk: VIRTUAL_KEY, up: bool) -> INPUT {

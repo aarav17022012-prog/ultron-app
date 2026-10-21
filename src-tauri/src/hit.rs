@@ -12,7 +12,7 @@ use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetCursorPos, GetWindowLongW, GetWindowRect, IsWindowVisible, SetWindowLongW, SetWindowPos, GWL_EXSTYLE, HWND_TOPMOST,
+    FindWindowW, GetCursorPos, GetWindowLongW, GetWindowRect, IsWindowVisible, SetWindowLongW, SetWindowPos, GWL_EXSTYLE, HWND_TOPMOST,
     SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, WS_EX_LAYERED, WS_EX_TRANSPARENT,
 };
 
@@ -153,7 +153,11 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                     t.last_emit = Instant::now();
                     // (and whether a button is held: a drag that reaches the bottom edge mustn't bring the shelf up)
                     let down = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) < 0 || GetAsyncKeyState(VK_RBUTTON.0 as i32) < 0 };
-                    let _ = app.emit_to(t.label.as_str(), "cursor", (x, y, down));
+                    // (and whether what's held is something being dragged: Windows shows its picture in a window of its own
+                    //  while it's moved. Only that brings the Drop Shelf up: not a held button at the screen's foot, as when
+                    //  you select text down a page or pull a window's edge)
+                    let drag = down && unsafe { FindWindowW(windows::core::w!("SysDragImage"), windows::core::PCWSTR::null()) }.is_ok_and(|w| unsafe { IsWindowVisible(w) }.as_bool());
+                    let _ = app.emit_to(t.label.as_str(), "cursor", (x, y, down, drag));
                 }
             }
             // other always-on-top windows can climb above us; quietly take the top back

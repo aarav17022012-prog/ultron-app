@@ -57,6 +57,7 @@ mod voice;
 mod tts;
 mod web;
 mod procs;
+mod coders;
 mod gemini;
 mod watchdog;
 
@@ -1009,6 +1010,59 @@ async fn gemini_warm(app: AppHandle) {
     let _ = tauri::async_runtime::spawn_blocking(move || gemini::warm(&app)).await;
 }
 
+/// Agent watch (the notch's Settings): on or off, and which notifications count.
+#[tauri::command]
+fn agent_watch(on: bool, notes: bool, all: bool) {
+    coders::set(on, notes, all);
+}
+
+/// Claude Code's hooks are connected.
+#[tauri::command]
+async fn agent_hooks_state() -> bool {
+    tauri::async_runtime::spawn_blocking(coders::hooks_state).await.unwrap_or(false)
+}
+
+/// Connect Claude Code (or disconnect it): only ever from the button you press in Settings.
+#[tauri::command]
+async fn agent_hooks(on: bool) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || coders::hooks_set(on)).await.map_err(|e| e.to_string())?
+}
+
+#[derive(serde::Serialize)]
+struct QuickState {
+    vol: f32,
+    mute: bool,
+    dark: bool,
+}
+
+/// Quick settings (the sliders button in the bar): the sound and dark mode, as they are.
+#[tauri::command]
+async fn qs_state() -> QuickState {
+    tauri::async_runtime::spawn_blocking(|| QuickState { vol: commands::volume().unwrap_or(0.5), mute: commands::muted().unwrap_or(false), dark: skills::is_dark() })
+        .await
+        .unwrap_or(QuickState { vol: 0.5, mute: false, dark: true })
+}
+
+/// The screen's brightness (a laptop's; a desktop's monitor has none to give), asked for apart: it takes a moment.
+#[tauri::command]
+async fn qs_bright() -> Option<u32> {
+    tauri::async_runtime::spawn_blocking(skills::brightness).await.ok().flatten()
+}
+
+/// Quick settings: the sound's level, mute, the screen's brightness, dark mode.
+#[tauri::command]
+async fn qs_set(what: String, v: f64) -> bool {
+    tauri::async_runtime::spawn_blocking(move || match what.as_str() {
+        "vol" => commands::set_volume(v as f32),
+        "mute" => commands::set_mute(v > 0.5),
+        "bright" => skills::set_brightness(v.round().clamp(0.0, 100.0) as u32),
+        "dark" => skills::dark_mode(Some(v > 0.5)).is_some(),
+        _ => false,
+    })
+    .await
+    .unwrap_or(false)
+}
+
 /// You've opened the notch or started typing to ULTRON: Uplink's page is woken, ready for the question.
 #[tauri::command]
 fn gemini_wake(app: AppHandle) {
@@ -1392,6 +1446,11 @@ async fn read_selection(app: AppHandle) -> Option<String> {
 /* ---------------- setup ---------------- */
 
 fn main() {
+    // (started by Claude Code's hooks, once connected in Settings: hand what it said to the running ULTRON, and end)
+    if std::env::args().any(|a| a == "--agent") {
+        coders::relay();
+        return;
+    }
     // (started only to bring Windows' taskbar back when the ULTRON that hid it has gone: see dock.rs)
     if dock::guard_if_asked() {
         return;
@@ -1423,7 +1482,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
@@ -1458,6 +1517,7 @@ fn main() {
             dev_inbox(handle.clone());
             routines::start(handle.clone());
             calls::start(handle.clone());
+            coders::start(handle.clone());
             lid::start(handle.clone());
             keepbelow::start();
             watchdog::start(handle.clone());

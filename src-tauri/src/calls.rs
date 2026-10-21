@@ -145,6 +145,7 @@ pub fn start(app: AppHandle) {
             // (one look at Windows' list a turn, shared with ULTRON's own notifications when those are on)
             let list: Vec<UserNotification> = listener.GetNotificationsAsync(NotificationKinds::Toast).ok().and_then(|a| a.get().ok()).map(|v| v.into_iter().collect()).unwrap_or_default();
             crate::notes::poll(&app, &list);
+            crate::coders::from_notes(&app, &list);
             let now = ringing(&list);
             let mut cur = CURRENT.lock().unwrap();
             if now != *cur {

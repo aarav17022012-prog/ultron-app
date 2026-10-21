@@ -427,6 +427,25 @@ pub fn set_brightness(v: u32) -> bool {
         .unwrap_or(false)
 }
 
+/// Apps are in dark mode (read from Windows' settings directly: no program started for it).
+pub fn is_dark() -> bool {
+    use windows::core::w;
+    use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
+    let (mut v, mut n) = (1u32, 4u32);
+    unsafe {
+        let _ = RegGetValueW(
+            HKEY_CURRENT_USER,
+            w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
+            w!("AppsUseLightTheme"),
+            RRF_RT_REG_DWORD,
+            None,
+            Some(&mut v as *mut u32 as *mut core::ffi::c_void),
+            Some(&mut n),
+        );
+    }
+    v == 0
+}
+
 /// Dark mode for apps and Windows (None = flip it).
 pub fn dark_mode(on: Option<bool>) -> Option<bool> {
     let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
