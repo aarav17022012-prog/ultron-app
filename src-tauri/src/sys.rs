@@ -70,7 +70,7 @@ fn wallpaper_glass() -> Option<(String, String)> {
     let small = img.thumbnail(640, 640).blur(7.0);
     let mut out = Vec::new();
     let mut rgb = small.to_rgb8();
-    tone(&mut rgb, 1.6, 0.82);
+    tone(&mut rgb, 1.5, 0.92);
     rgb.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Jpeg).ok()?;
     Some((key, format!("data:image/jpeg;base64,{}", b64(&out))))
 }

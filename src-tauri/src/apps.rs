@@ -147,7 +147,75 @@ pub fn key_for(exe: Option<&str>, aumid: Option<&str>) -> String {
 
 /* ---------------- launching ---------------- */
 
+/// Open an app, a file, a folder or an address. The window it opens is brought to the front when it appears.
 pub fn shell_open(target: &str) -> bool {
+    let before = app_windows();
+    let ok = open_target(target);
+    if ok {
+        front_when_shown(before);
+    }
+    ok
+}
+
+/// Every app window there is now.
+fn app_windows() -> Vec<HWND> {
+    let own = unsafe { GetCurrentProcessId() };
+    let mut all: Vec<HWND> = Vec::new();
+    unsafe {
+        let _ = EnumWindows(Some(collect), LPARAM(&mut all as *mut _ as isize));
+    }
+    all.into_iter().filter(|h| is_app_window(*h, own)).collect()
+}
+
+/// ULTRON's own windows never take the keyboard, so Windows doesn't count ULTRON as the app you're in, and doesn't
+/// let what it starts come in front of that app: apps opened behind the one you were in. So the first new window to
+/// appear (within a few seconds) is brought to the front, unless something else has come to the front by then.
+fn front_when_shown(before: Vec<HWND>) {
+    let before: Vec<isize> = before.iter().map(|h| h.0 as isize).collect();
+    std::thread::spawn(move || {
+        let fg0 = unsafe { GetForegroundWindow() }.0 as isize;
+        let t0 = std::time::Instant::now();
+        while t0.elapsed() < Duration::from_secs(10) {
+            std::thread::sleep(Duration::from_millis(120));
+            if unsafe { GetForegroundWindow() }.0 as isize != fg0 {
+                return; // (it came to the front by itself, or you've gone somewhere else)
+            }
+            if let Some(h) = app_windows().into_iter().find(|h| !before.contains(&(h.0 as isize))) {
+                std::thread::sleep(Duration::from_millis(60));
+                force_front(h);
+                return;
+            }
+        }
+    });
+}
+
+/// Bring a window to the front with the keyboard. Windows only lets the app in front hand that over, so ULTRON joins
+/// the front app's input for a moment to do it (an Alt tap is the last resort).
+pub fn force_front(h: HWND) {
+    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+    use windows::Win32::UI::WindowsAndMessaging::BringWindowToTop;
+    unsafe {
+        if IsIconic(h).as_bool() {
+            let _ = ShowWindow(h, SW_RESTORE);
+        }
+        if SetForegroundWindow(h).as_bool() && GetForegroundWindow() == h {
+            return;
+        }
+        let ft = GetWindowThreadProcessId(GetForegroundWindow(), None);
+        let me = GetCurrentThreadId();
+        if ft != 0 && ft != me && AttachThreadInput(me, ft, true).as_bool() {
+            let _ = BringWindowToTop(h);
+            let _ = SetForegroundWindow(h);
+            let _ = AttachThreadInput(me, ft, false);
+        }
+        if GetForegroundWindow() != h {
+            tap_alt();
+            let _ = SetForegroundWindow(h);
+        }
+    }
+}
+
+fn open_target(target: &str) -> bool {
     unsafe {
         // (the app that opens may come to the front: ULTRON was just clicked, so it may hand that on)
         let _ = windows::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow(windows::Win32::UI::WindowsAndMessaging::ASFW_ANY);
@@ -207,15 +275,8 @@ pub fn focus_window(h: HWND) {
         if !windows::Win32::UI::WindowsAndMessaging::IsWindow(Some(h)).as_bool() || !IsWindowVisible(h).as_bool() {
             return;
         }
-        if IsIconic(h).as_bool() {
-            let _ = ShowWindow(h, SW_RESTORE);
-        }
-        if !SetForegroundWindow(h).as_bool() {
-            // Windows only lets the foreground process hand focus over; an Alt tap unlocks it
-            tap_alt();
-            let _ = SetForegroundWindow(h);
-        }
     }
+    force_front(h);
 }
 
 /* ---------------- running windows ---------------- */

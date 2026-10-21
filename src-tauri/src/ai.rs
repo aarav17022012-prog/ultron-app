@@ -215,11 +215,12 @@ pub struct Config {
     pub length: String, // short | normal | detailed
     pub ghost: bool,   // show ULTRON's cursor during tasks
     pub type_speed: String, // natural | fast | instant
+    pub gemini: bool,  // answers from Gemini on the web, no key (gemini.rs)
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Config { brain: "smart".into(), gpu: "auto".into(), keep: true, web: true, length: "normal".into(), ghost: true, type_speed: "natural".into() }
+        Config { brain: "smart".into(), gpu: "auto".into(), keep: true, web: true, length: "normal".into(), ghost: true, type_speed: "natural".into(), gemini: false }
     }
 }
 
@@ -1271,9 +1272,10 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // with a key of your own, the service answers (and no brain here has to be up for it);
     // without one, or if it can't be reached, it's the brains on this PC as always
     let cloud = crate::cloud::active(app);
+    let gem = config(app).gemini;
     // everything else waits a moment for the quick brain if it's still warming up (just after ULTRON starts)
-    let quick = if thinking { None } else if cloud.is_some() { crate::quick::port() } else { crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30))) };
-    if cloud.is_none() && quick.is_none() && !ready(app) {
+    let quick = if thinking { None } else if cloud.is_some() || gem { crate::quick::port() } else { crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30))) };
+    if cloud.is_none() && !gem && quick.is_none() && !ready(app) {
         return None;
     }
     if quick.is_some() {
@@ -1283,7 +1285,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // (thinking questions are reasoning, not facts: no lookup, so the smart brain has less to read)
     // (for a recipe it's what the dish really is, so the brain doesn't reinvent it; other many-part answers need no lookup)
     let look_up = if many { dish_of(user) } else { Some(user.to_string()) };
-    let web = if let (true, Some(q)) = (config(app).web && (!thinking || many || cloud.is_some()), look_up) {
+    let web = if let (true, Some(q)) = (config(app).web && !gem && (!thinking || many || cloud.is_some()), look_up) {
         let looking = std::thread::spawn(move || if many { crate::web::wiki(&q) } else { crate::web::lookup(&q) });
         std::thread::sleep(Duration::from_millis(200));
         if !looking.is_finished() {
@@ -1314,7 +1316,24 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     let t_gen = Instant::now();
     let mut via = "";
     let mut text = None;
-    if let Some(c) = &cloud {
+    if gem {
+        // (Gemini on the web looks things up itself; told how long an answer ULTRON shows)
+        let how = match config(app).length.as_str() { "short" => "Answer in one or two sentences, in plain text.", "detailed" => "Answer in plain text.", _ => "Answer briefly and directly, in plain text." };
+        let _ = app.emit_to("main", "ai-phase", "Asking Gemini…");
+        match crate::gemini::chat(app, &format!("{user}\n\n({how})"), |f| emit(f), cancelled) {
+            Ok(t) => {
+                text = Some(t);
+                via = "gemini";
+            }
+            Err(e) => {
+                crate::log_line(&format!("gemini: {e}; answering without it"));
+                if !cancelled() {
+                    let _ = app.emit_to("main", "ai-phase", "Gemini didn't answer, answering here…");
+                }
+            }
+        }
+    }
+    if let (true, Some(c)) = (text.is_none(), &cloud) {
         // (a service gets the ordinary conversation prompt: it needs no lean one to be quick)
         let msgs = if many { steps_messages(app, user, web.as_deref()) } else { build_messages(app, user, web.as_deref()) };
         match crate::cloud::chat(c, &msgs, max.max(160), 0.3, cap, |f| emit(f), cancelled) {

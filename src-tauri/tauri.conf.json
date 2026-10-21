@@ -24,7 +24,7 @@
         "minimizable": false,
         "visible": false,
         "focus": false,
-        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required --auto-select-desktop-capture-source=creen"
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --autoplay-policy=no-user-gesture-required --auto-select-desktop-capture-source=creen"
       }
     ],
     "security": {

@@ -237,7 +237,7 @@ fn finish(shot: &[u8], w: usize, hh: usize) -> Option<String> {
     }
     blur(&mut small, w, hh, 4);
     let mut bytes: Vec<u8> = small.iter().map(|v| v.round().clamp(0.0, 255.0) as u8).collect();
-    crate::sys::tone(&mut bytes, 1.35, 0.9); // the glass's toning, done here instead of by a filter on the page
+    crate::sys::tone(&mut bytes, 1.3, 1.0); // the glass's toning, done here instead of by a filter on the page
     let img = image::RgbImage::from_raw(w as u32, hh as u32, bytes)?;
     let mut out = std::io::Cursor::new(Vec::new());
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 82).encode_image(&img).ok()?;
