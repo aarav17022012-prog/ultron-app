@@ -2951,6 +2951,10 @@ input, textarea, select, button{font-family:inherit}
 .glass.panel-glass, .glass.panel-glass *, .dd, .dd *{text-shadow:none !important}
 .wifi, .cal{transform:translateY(-8px) scale(.96)}
 .wifi.open, .cal.open{transform:none; transition:opacity .2s, transform .46s var(--glide), visibility 0s}
+/* THE LINE under the bar at the notch: the wheel's disc waits just above the top of the screen while it's put away,
+   and its shadow (18 px down, 44 px soft) fell onto the screen as a dark band right under the bar's middle, over
+   whatever app was there. Put away, it casts none. */
+.wheel:not(.open) .wh-disc{box-shadow:none}
 </style>
 </head>
 <body>
