@@ -211,6 +211,21 @@ impl Resampler {
 
 /* ---------------- whisper ---------------- */
 
+/// The recognizer now and then writes a short phrase out twice ("How are you? How are you?"): what was said once is
+/// kept once (asked twice of ULTRON, and typed twice when dictating). Two words or more repeated whole; a word said
+/// over and over ("no, no, no") is left as it was.
+fn unrepeat(text: &str) -> String {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let key = |w: &str| w.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
+    let n = words.len();
+    for k in 2..=n / 2 {
+        if n % k == 0 && (k..n).all(|i| key(words[i]) == key(words[i % k])) {
+            return words[..k].join(" ");
+        }
+    }
+    text.to_string()
+}
+
 fn is_noise(text: &str) -> bool {
     let t = text.trim().trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
     if t.is_empty() || text.trim().starts_with('[') || text.trim().starts_with('(') || text.trim().starts_with('*') {
@@ -401,7 +416,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
                 }
             }
         }
-        let text = text.trim().to_string();
+        let text = unrepeat(text.trim());
         crate::log_line(&format!("heard {:.1}s in {} ms: {text:?} (no-speech {no_speech:.2})", seg.len() as f32 / RATE as f32, t0.elapsed().as_millis()));
         let back = if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" };
         let woke = has_wake(&text);

@@ -119,7 +119,7 @@ html.live .gw > .gwc{display:block}
 .tr-name button:active{transform:scale(.95)}
 .tr-name button.soft{background:#f0f0f3; color:#0c0c0e}
 
-html.prewarm .dd, html.prewarm .setw, html.prewarm .cal{opacity:.004 !important; pointer-events:none !important}
+html.prewarm .dd, html.prewarm .setw, html.prewarm .cal, html.prewarm .qs{opacity:.004 !important; pointer-events:none !important}
 html.prewarm .mt-pill{opacity:0 !important}
 
 /* ---------- an incoming call: the notch opens a little and shows who is calling, from which app, and what you can do ---------- */
@@ -2730,7 +2730,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .ds-ic .fbk{border-radius:12px; font-size:17px}
 /* Apps: under the shelf's row as the tray rises a little more; a search box and your apps, one clicked flies up onto the shelf */
 .ds-apps{position:relative; z-index:1; height:198px; margin-top:12px; display:flex; flex-direction:column; gap:8px; opacity:0; transform:translateY(18px); pointer-events:none;
-  transition:opacity .14s, transform .3s var(--glide)}
+  transition:opacity .26s ease .05s, transform .42s var(--glide)}
 .dshelf.on.apps .ds-apps{opacity:1; transform:none; pointer-events:auto; transition:opacity .3s ease .16s, transform .55s var(--glide) .12s}
 .ds-q{flex:none; height:30px; border:0; outline:0; border-radius:10px; padding:0 12px 0 31px; color:#fff; font:inherit; font-size:12.5px;
   background:rgba(255,255,255,.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.6' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4 4'/%3E%3C/svg%3E") 10px 50%/14px no-repeat;
@@ -3269,6 +3269,21 @@ html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--ha
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.28), 0 30px 80px rgba(0,0,0,.35); pointer-events:none; transform-origin:0 0}
 .qs-ghost svg{width:30px; height:30px; fill:none; stroke:#fff; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round}
 html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 30px 80px rgba(0,0,0,.35)}
+
+/* ---------- the floating player's wheel ---------- */
+/* play / pause: one sign or the other, swapped with a turn (paused, the whole sign used to go: nothing showed) */
+#flyr .fl-pp .pz{opacity:1 !important; transform:none !important}
+#flyr .fl-pp .pl, #flyr .fl-pp .pa{display:block !important; transform-box:fill-box; transform-origin:center; transition:opacity .18s, transform .45s var(--spring)}
+#flyr.playing .fl-pp .pl, #flyr:not(.playing) .fl-pp .pa{opacity:0; transform:scale(.3) rotate(-60deg)}
+/* a soft light under the pointer, gliding round the ring to the nearest control */
+#flyr .fl-hl{position:absolute; inset:2px; border-radius:50%; pointer-events:none; opacity:0; transition:opacity .3s, transform .55s cubic-bezier(.3,1.3,.4,1);
+  background:conic-gradient(from -52deg, rgba(255,255,255,0), rgba(255,255,255,.17) 24deg, rgba(255,255,255,.24) 52deg, rgba(255,255,255,.17) 80deg, rgba(255,255,255,0) 104deg, rgba(255,255,255,0));
+  -webkit-mask:radial-gradient(circle, transparent 32px, #000 34px, #000 calc(50% - 1px), transparent 50%); mask:radial-gradient(circle, transparent 32px, #000 34px, #000 calc(50% - 1px), transparent 50%)}
+#flyr .fl-wheel.hov:not(.hub) .fl-hl{opacity:1}
+#flyr .fl-wheel{cursor:pointer}
+#flyr .fl-b.lit{opacity:1; transform:scale(1.08)}
+#flyr .fl-hub{transition:transform .25s var(--glide), background .3s, box-shadow .3s}
+#flyr .fl-wheel.hub .fl-hub{background:radial-gradient(circle at 50% 35%, rgba(255,255,255,.44), rgba(255,255,255,.16)); box-shadow:inset 0 1px 1px rgba(255,255,255,.6), 0 3px 10px rgba(0,0,0,.28), 0 0 0 5px rgba(255,255,255,.07)}
 </style>
 </head>
 <body>
@@ -4758,13 +4773,32 @@ function renderFloat(m){
 // its own controls press the notch's (so the two always agree), and show it at once
 $('flCtl').addEventListener('click', e => {
   e.stopPropagation();                                     // (nothing pressed here is a press on the bar itself)
-  const b = e.target.closest('[data-fl]'); if (!b) return;
+  // (anywhere on the wheel presses the control it's lit up for, as on the real thing)
+  const b = e.target.closest('[data-fl]') || flLit; if (!b) return;
   b.classList.remove('tap'); void b.offsetWidth; b.classList.add('tap');
-  if (b.dataset.fl === 'menu'){ setOpen(true); selectTab('lyrics'); return; }
-  if (b.dataset.fl === 'play' && cur) flyr.classList.toggle('playing', !cur.playing);
-  $(b.dataset.fl).click();
+  const what = b.dataset.fl;
+  if (what === 'menu'){ setOpen(true); selectTab('lyrics'); return; }
+  if (what === 'play'){ if (cur) flyr.classList.toggle('playing', !cur.playing); if (!$('play').disabled) $('play').click(); else invoke('media_control', {action:'toggle'}); return; }
+  // (straight to the player: they went by way of the notch's own buttons, and did nothing while those were switched off)
+  swipeDir = what === 'next' ? 1 : -1; invoke('media_control', {action:what});
 });
-$('flCtl').addEventListener('pointerdown', e => { if (e.target.closest('.fl-b')) e.stopPropagation(); });
+$('flCtl').addEventListener('pointerdown', e => e.stopPropagation());
+// The wheel lights up under the pointer: a soft glow glides round the ring to whichever control it's nearest (the
+// middle button lights up on its own), so you can see what a press will do.
+var flLit = null;
+(() => {
+  const wh = $('flCtl'), hl = document.createElement('i'); hl.className = 'fl-hl'; wh.prepend(hl);
+  let ang = 0;
+  wh.addEventListener('pointermove', e => {
+    const r = wh.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const hub = Math.hypot(dx, dy) < r.width * .21, q = Math.round(((Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360) / 90) % 4;
+    wh.classList.add('hov'); wh.classList.toggle('hub', hub);
+    if (!hub){ const d = ((q * 90 - ang) % 360 + 540) % 360 - 180; if (d){ ang += d; hl.style.transform = `rotate(${ang}deg)`; } }
+    const b = wh.querySelector(hub ? '.fl-hub' : ['.fl-menu', '.fl-next', '.fl-pp', '.fl-prev'][q]);
+    if (b !== flLit){ if (flLit) flLit.classList.remove('lit'); flLit = b; b.classList.add('lit'); }
+  });
+  wh.addEventListener('pointerleave', () => { wh.classList.remove('hov', 'hub'); if (flLit) flLit.classList.remove('lit'); flLit = null; });
+})();
 // drag it anywhere on screen
 var flDrag = null;
 flyr.addEventListener('pointerdown', e => {
@@ -6573,7 +6607,7 @@ notch.addEventListener('click', e => { e.stopPropagation(); if (notch.classList.
 notch.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === notch){ e.preventDefault(); setOpen(!notch.classList.contains('open')); } });
 $('close').addEventListener('click', e => { e.stopPropagation(); openedAt = 0; setOpen(false); });
 addEventListener('click', () => { if (activeTab !== 'browser') setOpen(false); });
-addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.CP && CP.on){ cpClose(); return; } if (window.DS && DS.on){ dsHide(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
+addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.qsEl && qsEl.classList.contains('open')){ closeQS(); return; } if (window.CP && CP.on){ cpClose(); return; } if (window.DS && DS.on){ dsHide(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
 
 /* ---------- menu bar ---------- */
 const dd = $('dd'), mbar = $('mbar');
@@ -8640,7 +8674,7 @@ async function prewarm(tries = 0){
     }
     closeDD(); await frames(3);
     // (the panels too: their first opening stalled a fifth to half a second on the same first-time work)
-    for (const [open, close] of [[() => openSettings('look'), closeSettings], [openCal, closeCal]]){
+    for (const [open, close] of [[() => openSettings('look'), closeSettings], [openCal, closeCal], [openQS, () => closeQS(true)]]){
       if (notch.classList.contains('open') || (cursorY > -1 && cursorY < 90)) break;
       open(); await frames(6); close(); await new Promise(r => setTimeout(r, 520));
     }
@@ -10189,6 +10223,17 @@ function dsWatch(x, y, down, drag){
   const H = screen.height || innerHeight;
   if (DS.on){
     if (DS.out) return;
+    // Asked for from ULTRON's menu or the wheel, or just after Done: it stays where it is whatever the pointer does,
+    // until you click somewhere else (pressed and let go away from it; a file dragged over to it doesn't count)
+    const b = DS.box, inTray = !!b && x >= b.x - 14 && x <= b.x + b.w + 14 && y >= b.y - 14;
+    if (DS.sticky || DS.stay){
+      if (DS.stay && inTray) DS.stay = false;
+      if (down && !DS.wasDown) DS.pressOut = !inTray;
+      if (down && drag) DS.pressOut = false;
+      if (!down && DS.wasDown && DS.pressOut && !inTray){ DS.wasDown = false; dsHide(); return; }
+      DS.wasDown = down; return;
+    }
+    DS.wasDown = down;
     if (!down && y < (DS.box ? DS.box.y : innerHeight - 168) - 70){ if (!DS.leaveT) DS.leaveT = setTimeout(() => { DS.leaveT = 0; dsHide(); }, 260); }
     else if (DS.leaveT){ clearTimeout(DS.leaveT); DS.leaveT = 0; }
     // (opened for a drag that was let go somewhere else: it goes again)
@@ -10215,6 +10260,7 @@ async function dsShow(kind, force){
   if (DS.on){ if (kind === 'drop'){ DS.mode = 'drop'; dsEl.classList.add('dragging'); } return; }
   if (!force && !dsCan()) return;
   DS.on = true; DS.mode = kind; clearTimeout(DS.leftT); dsEl.classList.remove('leaving');
+  DS.sticky = !!force; DS.stay = false; DS.wasDown = false;            // (asked for from ULTRON's menu or the wheel: it stays put)
   clearTimeout(DS.shrinkT);
   // (2 px short of the screen: a screen-sized window in front would be taken by Windows for a full-screen app)
   const tall = Math.round(screen.height || 864) - 2;
@@ -10229,7 +10275,7 @@ async function dsShow(kind, force){
 }
 function dsHide(){
   if (!DS.on || DS.out) return;
-  DS.on = false; DS.mode = ''; DS.over = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT);
+  DS.on = false; DS.mode = ''; DS.over = false; DS.sticky = DS.stay = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT); clearTimeout(DS.appsT);
   if (DS.apps){ DS.apps = false; dsEl.querySelector('[data-ds="apps"] span').textContent = 'Apps'; invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 700); }
   dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging', 'apps');
   clearTimeout(DS.leftT); DS.leftT = setTimeout(() => { if (!DS.on) dsEl.classList.remove('leaving'); }, 480);
@@ -10329,15 +10375,25 @@ async function dsPick(from){
 // Apps: the tray rises a little more to show your apps under the shelf; one clicked flies up onto it, pinned there
 async function dsApps(on){
   if (on === !!DS.apps) return;
-  DS.apps = on; dsEl.classList.toggle('apps', on);
+  DS.apps = on; clearTimeout(DS.appsT);
   dsEl.querySelector('[data-ds="apps"] span').textContent = on ? 'Done' : 'Apps';
   if (on){
+    dsEl.classList.add('apps');
     if (!startApps) startApps = (await invoke('start_apps')) || [];
     if (!DS.apps) return;
     $('dsQ').value = ''; dsGridPaint();
     invoke('focus_main'); setTimeout(() => { if (DS.apps) $('dsQ').focus({preventScroll:true}); }, 140);
-  } else { invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 700); }
-  dsLay(); syncHit();
+    dsLay(); syncHit(); return;
+  }
+  // Done: the apps on view step down and out one after another, the search box fades, and then the tray settles back
+  // to the shelf. (It used to drop at once from under the pointer; and the shelf, its top now far below the pointer,
+  // took that for you leaving and went too. It stays now, until you're back over it or click somewhere else.)
+  DS.stay = true;
+  const g = $('dsGrid'), box = g.getBoundingClientRect();
+  [...g.querySelectorAll('.ds-ap:not(.off)')].filter(t => { const r = t.getBoundingClientRect(); return r.bottom > box.top && r.top < box.bottom; })
+    .forEach((t, k) => t.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(12px) scale(.84)'}], {duration:240, delay:Math.min(k, 16) * 12, easing:'cubic-bezier(.4,0,.7,.4)', fill:'forwards'}));
+  DS.appsT = setTimeout(() => { if (DS.apps) return; dsEl.classList.remove('apps'); dsLay(); syncHit(); }, 200);
+  invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 900);
 }
 function dsGridPaint(){
   const pinned = new Set(DS.items.filter(i => i.app).map(i => i.path.toLowerCase()));
@@ -10499,8 +10555,6 @@ const WD = [
   ['halo', 'head', 'Halo', '<ellipse cx="12" cy="8.5" rx="7.5" ry="2.8"/><path d="M8.5 15.5c1 1.4 2.2 2 3.5 2s2.5-.6 3.5-2" opacity=".55"/>'],
   ['phones', 'head', 'Phones', '<path d="M4.5 15v-2.5a7.5 7.5 0 0 1 15 0V15"/><rect x="3" y="14" width="4" height="6.5" rx="1.8"/><rect x="17" y="14" width="4" height="6.5" rx="1.8"/>'],
   ['flower', 'head', 'Flower', '<circle cx="12" cy="12" r="2.2"/><path d="M12 9.8c-1.6-2.6-.8-5.3 0-5.8.8.5 1.6 3.2 0 5.8zM14.2 12c2.6-1.6 5.3-.8 5.8 0-.5.8-3.2 1.6-5.8 0zM12 14.2c1.6 2.6.8 5.3 0 5.8-.8-.5-1.6-3.2 0-5.8zM9.8 12c-2.6 1.6-5.3.8-5.8 0 .5-.8 3.2-1.6 5.8 0z"/>'],
-  ['shades', 'face', 'Shades', '<path d="M3 9.5h18"/><path d="M4 9.5h6.5v3.2a3 3 0 0 1-3 3h-.5a3 3 0 0 1-3-3zM13.5 9.5H20v3.2a3 3 0 0 1-3 3h-.5a3 3 0 0 1-3-3z"/>'],
-  ['specs', 'face', 'Specs', '<circle cx="7.5" cy="12.5" r="3.5"/><circle cx="16.5" cy="12.5" r="3.5"/><path d="M11 12.2c.6-.5 1.4-.5 2 0M4 12l-1.5-1.5M20 12l1.5-1.5"/>'],
   ['bow', 'neck', 'Bow tie', '<path d="M12 12L4 7.5v9zM12 12l8-4.5v9z"/><rect x="10.3" y="10.3" width="3.4" height="3.4" rx="1"/>'],
 ];
 var WEAR = {made:{}, anim:[], warm:false};
@@ -10638,36 +10692,6 @@ const WEAR_MAKE = {
     const leaf = new THREE.Mesh(pg, wFabric(0x5c9f57, 0xc6efb2, {side:THREE.DoubleSide})); leaf.scale.set(1.05, 1.3, 1); leaf.rotation.z = -2.35; leaf.position.z = -.008; g.add(leaf);
     g.scale.setScalar(1.65); g.position.set(.175, .19, .155); g.rotation.set(-.2, .6, -.3); return [[.175, .19, .155], g];
   },
-  shades(){
-    const g = new THREE.Group(), acetate = wGloss(0x0b0c10, {roughness:.14}), glass = wm(0x070a10, {roughness:.03, metalness:.3, clearcoat:1, clearcoatRoughness:.02, envMapIntensity:2.6});
-    // a classic shape: wider across the top, its corners rounded
-    const outline = (w, h) => { const sh = new THREE.Shape(), t = w / 2, b = w / 2 * .84, r = h * .22, y = h / 2;
-      sh.moveTo(-t + r, y); sh.lineTo(t - r, y); sh.quadraticCurveTo(t, y, t, y - r); sh.lineTo(b, -y + r * 1.4); sh.quadraticCurveTo(b - .003, -y, b - r * 1.6, -y);
-      sh.lineTo(-b + r * 1.6, -y); sh.quadraticCurveTo(-b + .003, -y, -b, -y + r * 1.4); sh.lineTo(-t, y - r); sh.quadraticCurveTo(-t, y, -t + r, y); return sh; };
-    for (const k of [-1, 1]){
-      const e = new THREE.Group(); e.position.set(k * .081, .04, .297); e.rotation.y = k * .26;
-      const front = outline(.11, .076); front.holes.push(outline(.082, .052));
-      e.add(new THREE.Mesh(new THREE.ExtrudeGeometry(front, {depth:.006, bevelEnabled:true, bevelThickness:.003, bevelSize:.0025, bevelSegments:3, curveSegments:10}), acetate));
-      const lens = new THREE.Mesh(new THREE.ShapeGeometry(outline(.09, .06), 10), glass); lens.position.z = .002; e.add(lens);
-      g.add(e);
-      g.add(wTube([[k * .131, .052, .284], [k * .2, .057, .246], [k * .262, .06, .185], [k * .296, .06, .12]], .0055, acetate, 24));
-    }
-    g.add(wTube([[-.032, .056, .312], [0, .064, .318], [.032, .056, .312]], .0065, acetate, 12));
-    return [[0, .04, .3], g];
-  },
-  specs(){
-    const g = new THREE.Group(), gold = wMetal(0xcfae72, .24), glass = wm(0xffffff, {roughness:.02, clearcoat:1, clearcoatRoughness:.02, transparent:true, opacity:.12, depthWrite:false, envMapIntensity:2.6});
-    for (const k of [-1, 1]){
-      const e = new THREE.Group(); e.position.set(k * .081, .036, .3); e.rotation.y = k * .26;
-      e.add(new THREE.Mesh(new THREE.TorusGeometry(.048, .0056, 16, 80), gold));
-      const lens = new THREE.Mesh(new THREE.SphereGeometry(.2, 40, 6, 0, Math.PI * 2, 0, .24), glass); lens.rotation.x = Math.PI / 2; lens.position.z = -.194; e.add(lens);   // (shallow and curved)
-      const pad = new THREE.Mesh(new THREE.SphereGeometry(.0065, 12, 8), glass); pad.position.set(-k * .035, -.024, -.008); e.add(pad);
-      g.add(e);
-      g.add(wTube([[k * .127, .036, .288], [k * .135, .045, .282], [k * .2, .05, .244], [k * .262, .052, .18], [k * .297, .052, .11]], .0036, gold, 24));
-    }
-    g.add(wTube([[-.0356, .038, .312], [-.016, .05, .318], [.016, .05, .318], [.0356, .038, .312]], .0042, gold, 16));
-    return [[0, .04, .3], g];
-  },
   bow(){
     const g = new THREE.Group();
     const tex = wTex((c, n) => { c.fillStyle = '#8a1528'; c.fillRect(0, 0, n, n); c.fillStyle = 'rgba(250,232,216,.9)';
@@ -10683,7 +10707,6 @@ const WEAR_MAKE = {
   },
 };
 // specs move with the eyes: held on a pivot at the character's middle that turns as the eyes do
-const WEAR_FOLLOW = {specs:true};
 // how high each hat reaches (the character is framed to fit it in the bar), and how wide headphones are
 const WEAR_TOP = {cap:.36, beanie:.44, crown:.43, party:.56, halo:.43, phones:.37, flower:.3}, WEAR_WIDE = {phones:.4};
 function wearMake(id){
@@ -10691,39 +10714,64 @@ function wearMake(id){
   const [at, g] = WEAR_MAKE[id](), wrap = new THREE.Group();
   // (held at the point it grows from, so it pops on there rather than out of the middle of the character)
   wrap.position.set(...at); g.position.sub(new THREE.Vector3(...at)); wrap.add(g); wrap.userData.y = at[1];
-  if (WEAR_FOLLOW[id]){ const pivot = new THREE.Group(); pivot.add(wrap); wrap.userData.holder = pivot; }
   return WEAR.made[id] = wrap;
 }
-const wearHolder = w => w.userData.holder || w;
 function wearPut(id, on, quiet){
   if (!WEAR_MAKE[id]) return;
-  const w = wearMake(id), h = wearHolder(w);
-  WEAR.anim = WEAR.anim.filter(a => a.w !== w);
-  if (on){ if (!h.parent) mochi.add(h); if (quiet){ w.scale.setScalar(1); w.position.y = w.userData.y; } else { w.scale.setScalar(.001); WEAR.anim.push({w, on:true, t0:performance.now()}); } }
-  else if (h.parent){ if (quiet) mochi.remove(h); else WEAR.anim.push({w, on:false, t0:performance.now()}); }
+  const w = wearMake(id);
+  WEAR.anim = WEAR.anim.filter(a => a.w !== w); w.rotation.y = 0;
+  if (on){ if (!w.parent) mochi.add(w); if (quiet){ w.scale.setScalar(1); w.position.y = w.userData.y; } else { w.scale.setScalar(.001); WEAR.anim.push({w, on:true, t0:performance.now()}); } }
+  else if (w.parent){ if (quiet) mochi.remove(w); else WEAR.anim.push({w, on:false, t0:performance.now()}); }
   wake();
 }
-// each frame (the character's own): pieces popping on (dropped in, with a spring) or off (up and away); the specs
-// following the eyes (and dipping a touch as they blink), the eyes a little bigger behind their lenses
-function wearStep(){
-  const now = performance.now(), sp = WEAR.made.specs, sh = sp && sp.userData.holder;
-  const specsOn = !!(sh && sh.parent) && !WEAR.anim.some(a => a.w === sp && !a.on);
-  if (sh && sh.parent){
-    sh.rotation.x = eyePivot.rotation.x; sh.rotation.y = eyePivot.rotation.y;
-    const lid = faceCur ? 1 : Math.min(1, eyeL.scale.y / Math.max(.001, eyeL.scale.x));
-    sh.position.y += (-(1 - lid) * .006 - sh.position.y) * .5;
+// Where a piece lands, a small burst: sparks flying out and a ring of light spreading, both fading (made once)
+const WEAR_FX = {sparks:[], ring:null, t0:-1e9, at:new THREE.Vector3()};
+function wearBurst(at){
+  if (!WEAR_FX.ring){
+    const glow = () => new THREE.MeshBasicMaterial({color:0xfff0c4, transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false});
+    const geo = new THREE.OctahedronGeometry(.011);
+    for (let i = 0; i < 10; i++){
+      const s = new THREE.Mesh(geo, glow()), a = i / 10 * Math.PI * 2 + Math.random() * .4;
+      s.userData.d = new THREE.Vector3(Math.cos(a), Math.sin(a) * .7 + .3, .4 + Math.random() * .3).normalize(); s.userData.v = .16 + Math.random() * .1;
+      WEAR_FX.sparks.push(s);
+    }
+    WEAR_FX.ring = new THREE.Mesh(new THREE.TorusGeometry(1, .035, 8, 64), glow()); WEAR_FX.ring.rotation.x = Math.PI / 2;
   }
-  F.sx = F.sy = F.sx + ((specsOn ? 1.08 : 1) - F.sx) * .15;
+  WEAR_FX.t0 = performance.now(); WEAR_FX.at.copy(at);
+  for (const s of [...WEAR_FX.sparks, WEAR_FX.ring]) if (!s.parent) mochi.add(s);
+}
+function wearBurstStep(now){
+  const r = WEAR_FX.ring; if (!r || !r.parent) return;
+  const t = (now - WEAR_FX.t0) / 1000;
+  if (t > .75){ for (const s of [...WEAR_FX.sparks, r]) mochi.remove(s); return; }
+  const k = 1 - Math.pow(1 - Math.min(1, t / .6), 3);
+  for (const s of WEAR_FX.sparks){
+    s.position.copy(WEAR_FX.at).addScaledVector(s.userData.d, .03 + s.userData.v * k);
+    s.scale.setScalar(Math.max(.01, 1.3 - k)); s.rotation.z = t * 6; s.material.opacity = (1 - k) * .95;
+  }
+  r.position.copy(WEAR_FX.at); r.scale.set(.06 + .24 * k, .06 + .24 * k, 1); r.material.opacity = (1 - k) * .5;
+}
+// each frame (the character's own): a piece put on drops in from above, turning as it falls, lands with a squash and
+// a little burst, and springs to rest; one taken off hops up, spins and shrinks away
+function wearStep(){
+  const now = performance.now();
+  wearBurstStep(now);
   for (const a of [...WEAR.anim]){
     const w = a.w, s = (now - a.t0) / 1000, y0 = w.userData.y;
     if (a.on){
-      w.scale.setScalar(Math.max(.001, 1 - Math.exp(-7 * s) * Math.cos(10 * s)));
-      w.position.y = y0 + .16 * Math.exp(-9 * s);
-      if (s >= .9){ w.scale.setScalar(1); w.position.y = y0; WEAR.anim.splice(WEAR.anim.indexOf(a), 1); }
+      if (s < .34){
+        const f = s / .34;
+        w.position.y = y0 + .34 * (1 - f * f); w.rotation.y = -2.4 * (1 - f) * (1 - f); w.scale.setScalar(.35 + .65 * Math.min(1, f * 1.6));
+      } else {
+        if (!a.landed){ a.landed = true; wearBurst(w.position.clone().setY(y0)); }
+        const t = s - .34, q = Math.exp(-8 * t) * Math.cos(15 * t);
+        w.position.y = y0; w.rotation.y = 0; w.scale.set(1 + .2 * q, 1 - .3 * q, 1 + .2 * q);
+        if (t >= .8){ w.scale.setScalar(1); WEAR.anim.splice(WEAR.anim.indexOf(a), 1); }
+      }
     } else {
-      const k = Math.min(1, s / .28);
-      w.scale.setScalar(Math.max(.001, 1 - k * k)); w.position.y = y0 + .12 * k;
-      if (k >= 1){ mochi.remove(wearHolder(w)); w.scale.setScalar(1); w.position.y = y0; WEAR.anim.splice(WEAR.anim.indexOf(a), 1); }
+      const k = Math.min(1, s / .34);
+      w.position.y = y0 + .16 * Math.sin(k * Math.PI * .7); w.rotation.y = 3.2 * k * k; w.scale.setScalar(Math.max(.001, 1 - k * k));
+      if (k >= 1){ mochi.remove(w); w.scale.setScalar(1); w.position.y = y0; w.rotation.y = 0; WEAR.anim.splice(WEAR.anim.indexOf(a), 1); }
     }
   }
 }
@@ -10734,8 +10782,9 @@ function petFit(){
   const half = Math.max(.344, (top - bot) / 2 + .01, WEAR_WIDE[w.head] || 0);
   petFrame = {y:(top + bot) / 2, z:half / Math.tan(16 * Math.PI / 180)}; wake();
 }
-// Everything in the closet made, and the graphics card readied for it, the first time the Wardrobe is opened (once
-// it has settled in): a piece's first appearance then doesn't stall the frame it pops on in.
+// Everything in the closet made, and the graphics card readied for it, while nothing's going on a little after ULTRON
+// starts (or the first time the Wardrobe is opened, if that comes first): readied as the tab opened, it cost one long
+// frame of its opening; not readied at all, the frame a piece first popped on in.
 function wearWarm(){
   if (WEAR.warm) return; WEAR.warm = true;
   const ids = Object.keys(WEAR_MAKE), idle = window.requestIdleCallback || (f => setTimeout(f, 30));
@@ -10743,7 +10792,7 @@ function wearWarm(){
     const id = ids.shift();
     if (id){ wearMake(id); idle(next); return; }
     const tmp = new THREE.Group(); tmp.position.set(0, -50, 0);
-    for (const w of Object.values(WEAR.made)){ const h = wearHolder(w); if (!h.parent) tmp.add(h); }
+    for (const w of Object.values(WEAR.made)) if (!w.parent) tmp.add(w);
     scene.add(tmp); try { renderer.compile(scene, camera); } catch(_){}
     scene.remove(tmp); for (const h of [...tmp.children]) tmp.remove(h);
   };
@@ -10797,8 +10846,10 @@ $('wdOff').addEventListener('click', e => {
   const worn = Object.values(S.wear || {}); S.wear = {}; save(); petFit();
   worn.forEach((id, i) => setTimeout(() => { wearPut(id, false); const b = wdRow.querySelector(`[data-w="${id}"]`); if (b) wdFly(b, false, wdPaint); else wdPaint(); }, i * 90));
 });
+if (S.wear && S.wear.face){ delete S.wear.face; save(); }            // (glasses are no longer in the closet)
 for (const id of Object.values(S.wear || {})) wearPut(id, true, true);
 petFit();
+setTimeout(() => { if (!notch.classList.contains('open')) wearWarm(); }, 20000);
 wdPaint();
 
 /* ---------- Agent watch: a coding agent needs you ----------
@@ -10903,7 +10954,7 @@ agSync(true);
 /* ---------- Quick settings: the sliders button in the bar ----------
    A small glass sheet drops out of the button: Wi-Fi, dark mode, mute, quiet; the screen's brightness and the sound;
    and Windows Settings' pages, each growing out toward where Settings comes up as it opens. */
-const qsEl = $('qs'), qsBtn = $('qsBtn');
+var qsEl = $('qs'); const qsBtn = $('qsBtn');
 const QS = {vol:.5, mute:false, dark:true, bright:null, volT:0};
 function openQS(){
   if (winH < 700){ winH = 700; invoke('set_window_height', {h:700}); }
@@ -10911,10 +10962,19 @@ function openQS(){
   const b = qsBtn.getBoundingClientRect(), left = Math.max(8, Math.min(innerWidth - 328, b.left + b.width / 2 - 250));
   qsEl.style.left = left + 'px'; qsEl.style.setProperty('--ox', (b.left + b.width / 2 - left) + 'px');
   qsPaint(); placeGlass(qsEl);
-  qsEl.classList.add('open'); qsBtn.setAttribute('aria-expanded', 'true'); syncHit(); syncBrowser();
+  qsEl.classList.add('open'); syncHit(); syncBrowser();
+  if (prewarming) return;
+  // (ULTRON takes the keyboard while it's open, so Esc puts it away; it's handed back as it goes)
+  qsBtn.setAttribute('aria-expanded', 'true'); invoke('focus_main'); QS.focus = true;
   qsLoad();
 }
-function closeQS(){ if (!qsEl.classList.contains('open')) return; qsEl.classList.remove('open'); qsBtn.setAttribute('aria-expanded', 'false'); setTimeout(syncHit, 420); syncBrowser(150); }
+function closeQS(keep){
+  if (!qsEl.classList.contains('open')) return;
+  qsEl.classList.remove('open'); qsBtn.setAttribute('aria-expanded', 'false'); setTimeout(syncHit, 420); syncBrowser(150);
+  // (not when you've clicked into another app: that one has the keyboard now. Nor as a Settings page opens)
+  if (QS.focus && !keep && document.hasFocus()) invoke('focus_back');
+  QS.focus = false;
+}
 qsBtn.addEventListener('click', e => { e.stopPropagation(); qsEl.classList.contains('open') ? closeQS() : openQS(); });
 qsEl.addEventListener('click', e => e.stopPropagation());
 // (another menu opening closes it)
@@ -10923,9 +10983,13 @@ qsEl.addEventListener('click', e => e.stopPropagation());
 async function qsLoad(){
   const s = TAURI ? await invoke('qs_state') : null;
   if (s){ QS.vol = s.vol; QS.mute = s.mute; QS.dark = s.dark; qsPaint(); }
-  const b = TAURI ? await invoke('qs_bright') : null;
-  QS.bright = b == null ? null : b / 100; qsPaint();
+  // (the screen's brightness takes Windows a moment, a program started for it: asked for well before you open this, and
+  //  again only now and then, once it has finished opening. Asked each time it opened, the Display slider came in late
+  //  and the sheet grew under you, and starting that program as it opened made the opening stutter)
+  if (TAURI && performance.now() - (QS.brightAt || -1e9) > 60000){ QS.brightAt = performance.now(); setTimeout(qsBright, 750); }
 }
+async function qsBright(){ const b = await invoke('qs_bright'); QS.bright = b == null ? null : b / 100; if (qsEl.classList.contains('open')) qsPaint(); }
+setTimeout(() => { if (TAURI){ QS.brightAt = performance.now(); qsBright(); } }, 9000);
 const qsBar = (id, v) => $(id).style.setProperty('--v', Math.max(0, Math.min(1, v)).toFixed(3));
 function qsTile(id, on, say){ const t = $(id); t.classList.toggle('on', !!on); t.setAttribute('aria-pressed', !!on); $(id + 'Say').textContent = say; }
 function qsPaint(){
@@ -10969,7 +11033,7 @@ qsEl.addEventListener('click', e => {
     {transform:`translate(${(innerWidth - W) / 2}px, ${(H - Hh) / 2}px)`, width:W + 'px', height:Hh + 'px', borderRadius:'24px', opacity:0},
   ], {duration:620, easing:'cubic-bezier(.3,.7,.2,1)'}).onfinish = () => g.remove();
   invoke('launch', {target:'ms-settings:' + b.dataset.ms});
-  setTimeout(closeQS, 80);
+  setTimeout(() => closeQS(true), 80);
 });
 
 /* About shows the version the app was built as (tauri.conf.json) */

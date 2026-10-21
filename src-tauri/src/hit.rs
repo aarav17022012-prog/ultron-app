@@ -97,6 +97,9 @@ struct Target {
     ignoring: Option<bool>,
     last: (f64, f64),
     last_emit: Instant,
+    /// a button went down over ULTRON and is still held (a drag): it stays clickable wherever the pointer goes
+    held: bool,
+    was_down: bool,
 }
 
 const MARGIN: f64 = 10.0; // clickable a little before the pointer arrives
@@ -110,7 +113,7 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
             .filter_map(|l| {
                 let win = app.get_webview_window(l)?;
                 let hwnd = hwnd_of(&win)?;
-                Some(Target { label: l.clone(), win, hwnd, ignoring: None, last: (f64::NAN, f64::NAN), last_emit: Instant::now() })
+                Some(Target { label: l.clone(), win, hwnd, ignoring: None, last: (f64::NAN, f64::NAN), last_emit: Instant::now(), held: false, was_down: false })
             })
             .collect();
         for t in &targets {
@@ -125,6 +128,7 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 continue;
             }
             let hits = app.state::<Hits>().0.lock().unwrap().clone();
+            let down = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) < 0 || GetAsyncKeyState(VK_RBUTTON.0 as i32) < 0 };
             near = false;
             for t in targets.iter_mut() {
                 if !unsafe { IsWindowVisible(t.hwnd) }.as_bool() {
@@ -138,8 +142,18 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 let (x, y) = ((p.x - r.left) as f64 / s, (p.y - r.top) as f64 / s);
                 let rects = hits.get(&t.label).map(|v| v.as_slice()).unwrap_or(&[]);
                 let within = |m: f64| rects.iter().any(|h| x >= h.x - m && x <= h.x + h.w + m && y >= h.y - m && y <= h.y + h.h + m);
-                let inside = within(MARGIN);
+                let mut inside = within(MARGIN);
                 near |= within(NEAR);
+                // (pressed on ULTRON and dragged (the floating player, a slider): it stays ULTRON's until the button is let
+                //  go. Its clickable outline came a moment behind a quick drag, and the pointer slipped off onto the app below)
+                if down && !t.was_down {
+                    t.held = inside;
+                } else if !down {
+                    t.held = false;
+                }
+                if t.held {
+                    inside = true;
+                }
                 // (checked against the window itself each time, not a note of what was last set: anything else that touches
                 //  its style is put right at once. And not through the window library, which re-made the window's frame
                 //  each time: a flash)
@@ -148,11 +162,14 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                     t.ignoring = Some(!inside);
                 }
                 let moved = (x - t.last.0).abs() >= 1.0 || (y - t.last.1).abs() >= 1.0 || t.last.0.is_nan();
-                if moved && t.last_emit.elapsed() >= Duration::from_millis(30) {
+                // (told when the pointer moves, and when a button goes down or up anywhere: a click somewhere else closes
+                //  what's waiting for one)
+                let pressed = down != t.was_down;
+                t.was_down = down;
+                if (moved && t.last_emit.elapsed() >= Duration::from_millis(30)) || pressed {
                     t.last = (x, y);
                     t.last_emit = Instant::now();
                     // (and whether a button is held: a drag that reaches the bottom edge mustn't bring the shelf up)
-                    let down = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) < 0 || GetAsyncKeyState(VK_RBUTTON.0 as i32) < 0 };
                     // (and whether what's held is something being dragged: Windows shows its picture in a window of its own
                     //  while it's moved. Only that brings the Drop Shelf up: not a held button at the screen's foot, as when
                     //  you select text down a page or pull a window's edge)

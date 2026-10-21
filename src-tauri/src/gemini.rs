@@ -162,13 +162,22 @@ fn awake(w: &WebviewWindow, on: bool) {
     // (the window itself shown off the screen, where nothing of it is seen: a hidden window's page writes nothing out
     //  until the answer is done, so the first words came no sooner than the last)
     if let Some(h) = crate::hit::hwnd_of(w) {
-        use windows::Win32::UI::WindowsAndMessaging::{GetWindowLongW, SetWindowLongW, ShowWindow, GWL_EXSTYLE, SW_HIDE, SW_SHOWNOACTIVATE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT};
+        use windows::Win32::Foundation::COLORREF;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetWindowLongW, SetLayeredWindowAttributes, SetWindowLongW, SetWindowPos, ShowWindow, GWL_EXSTYLE, HWND_BOTTOM, LWA_ALPHA, SWP_NOACTIVATE, SWP_NOSIZE,
+            SW_HIDE, SW_SHOWNOACTIVATE, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+        };
         unsafe {
             let ex = GetWindowLongW(h, GWL_EXSTYLE) as u32;
-            let want = ex | WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0 | WS_EX_TRANSPARENT.0;
+            let want = ex | WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0 | WS_EX_TRANSPARENT.0 | WS_EX_LAYERED.0;
             if ex != want {
                 SetWindowLongW(h, GWL_EXSTYLE, want as i32);
             }
+            // (and not to be seen even if it's on the screen: Windows had moved it from where it was put, off the screen,
+            //  to the middle of it, and it showed over your apps each time you asked ULTRON something. Put back each
+            //  time, under every other window, and all but fully see-through)
+            let _ = SetLayeredWindowAttributes(h, COLORREF(0), 1, LWA_ALPHA);
+            let _ = SetWindowPos(h, Some(HWND_BOTTOM), -3000, -3000, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
             let _ = ShowWindow(h, if on { SW_SHOWNOACTIVATE } else { SW_HIDE });
         }
     }
@@ -195,7 +204,15 @@ pub fn chat(app: &AppHandle, question: &str, mut on_piece: impl FnMut(&str), sto
     awake(&w, true);
     TURNS.fetch_add(1, SeqCst);
     let t0 = Instant::now();
-    let r = ask(&w, question, &mut on_piece, &stop);
+    let mut r = ask(&w, question, &mut on_piece, &stop);
+    // (the question never left the box: the chat had got stuck. Once more, in a new one)
+    if r.as_ref().is_err_and(|e| e == "not sent") && !stop() {
+        crate::log_line("uplink: the question wasn't taken; asking again in a new chat");
+        FRESH.store(false, SeqCst);
+        let _ = w.navigate(HOME.parse().map_err(|_| "bad address")?);
+        std::thread::sleep(Duration::from_millis(400));
+        r = ask(&w, question, &mut on_piece, &stop);
+    }
     if let Some(t) = run(&w, TIMES).and_then(|v| v.as_array().cloned()) {
         crate::log_line(&format!("uplink: sent on after {} ms, answer began at {} ms, ended at {} ms (all after the click); {} ms in all", t[0], t[1], t[2], t0.elapsed().as_millis()));
     }
@@ -213,13 +230,22 @@ fn ask(w: &WebviewWindow, question: &str, on_piece: &mut impl FnMut(&str), stop:
         if let Some(v) = run(w, STATE).filter(|v| v["ready"] == true) {
             break v["n"].as_u64().unwrap_or(0);
         }
-        if t0.elapsed() > Duration::from_secs(20) {
+        if t0.elapsed() > Duration::from_secs(8) {
+            FRESH.store(true, SeqCst);
             // (what the page shows instead, for the log: a different page, a notice, or nothing at all)
             let seen = run(w, "({url: location.href, title: document.title, text: (document.body ? document.body.innerText : '').slice(0, 240)})");
             return Err(format!("its page didn't open ({})", seen.map(|v| v.to_string()).unwrap_or_else(|| "no reply from the page".into())));
         }
         std::thread::sleep(Duration::from_millis(80));
     };
+    // (an answer still being written in it (one stopped on ULTRON's side): stopped there too, so the box takes the question)
+    if run(w, STATE).is_some_and(|v| v["busy"] == true && v["n"].as_u64().unwrap_or(0) > 0) {
+        run(w, STOP);
+        let t1 = Instant::now();
+        while t1.elapsed() < Duration::from_millis(1200) && run(w, STATE).is_some_and(|v| v["busy"] == true) {
+            std::thread::sleep(Duration::from_millis(60));
+        }
+    }
     let q = serde_json::to_string(question).unwrap_or_default();
     if run(w, &TYPE.replace("QUESTION", &q)).as_ref().and_then(Value::as_str) != Some("ok") {
         return Err("couldn't type the question".into());
@@ -238,8 +264,9 @@ fn ask(w: &WebviewWindow, question: &str, on_piece: &mut impl FnMut(&str), stop:
                 nudged += 1;
                 run(w, SEND);
             }
-            if sent.elapsed() > Duration::from_secs(12) {
-                return Err("no answer came".into());
+            if sent.elapsed() > Duration::from_secs(6) {
+                FRESH.store(true, SeqCst);
+                return Err(if v["typed"] == true { "not sent".into() } else { "no answer came".into() });
             }
             continue;
         }
