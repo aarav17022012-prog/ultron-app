@@ -3638,16 +3638,8 @@ function glassDraw(g, a){
   // so the sheet carries on from the bar and only then shows what's behind it.
   // (the bar's own picture too: it's stretched up from a small picture, so its last rows used to blend in the window below
   //  and come out lighter than the sheet starting under them)
-  if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass, .mbar.glass');
-  if (g._band){
-    // The bar and the notch take the colour of the window in front: what's right under the bar (the open app's top,
-    // its title bar; or the desktop when nothing is there) is carried up into the bar's strip, so the bar and the sheet
-    // hanging from it are one continuous picture, whatever is open. (A few rows down: right at the bar's foot the
-    // picture's blur still mixes in what's above.) When another window comes to the front, its colour melts in with
-    // its picture, at the same pace (a: how much of the new one this frame).
-    const k = c.height / Math.max(1, innerHeight), s = Math.min(c.height - 1, Math.ceil(32 * k) + 3);
-    g._x.globalAlpha = blank || a == null ? 1 : a; g._x.drawImage(glassBmp, 0, s, c.width, 1, 0, 0, c.width, s + 1);
-  }
+  // (each piece of glass shows what's really behind it: the bar the wallpaper above your windows, the open notch the
+  //  app under it. Nothing is carried from one into the other)
 }
 /* A picture that arrives after a pause (the bar's own occasional look, the first live one once something opens) is
    melted in over a quarter of a second. Cut in, it made the glass jump darker or lighter. A steady stream isn't melted. */
@@ -7983,9 +7975,10 @@ function barTint(c){
     a = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(L * 100)}% / .5)`;
     b = `hsl(${Math.round((h + 360) % 360)} ${Math.round(s * 90)}% ${Math.round(L * 72)}% / .52)`;
   }
-  // (the bar, the notch and its corner fillets always the same colour, changing together over the same .9 s. With
-  //  the notch kept on its own colour, the sheet began a shade darker than the bar right under it: a line across)
-  for (const el of [document.documentElement, mbar, notch, earsEl, $('barFil')]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
+  // (the bar keeps one look, its own glass, whatever window is in front; the notch's sheet, as it opens, takes the
+  //  colour of the window in front, fading from one window's to the next)
+  for (const el of [document.documentElement, notch, earsEl]){ el.style.setProperty('--bt', a); el.style.setProperty('--bt2', b); }
+  for (const el of [mbar, $('barFil')]){ el.style.setProperty('--bt', 'rgba(18,18,24,.3)'); el.style.setProperty('--bt2', 'rgba(16,16,22,.46)'); }
 }
 function setAppName(n){
   if (!n) return;
