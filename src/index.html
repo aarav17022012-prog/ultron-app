@@ -1833,7 +1833,7 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
   transition:clip-path .42s cubic-bezier(.55,0,.2,1)}
 .notch.glass.open.shut0 .panel{clip-path:inset(-10px -20px -20px -20px)}
 .notch.glass.open.shut1 .panel{transform:translateY(-36px); clip-path:inset(26px -20px -20px -20px); transition:transform .42s cubic-bezier(.55,0,.2,1), clip-path .42s cubic-bezier(.55,0,.2,1)}   /* (cut at the bar's line as it rises: none of it goes over the bar) */
-.notch.glass.open.shut1 #pet{left:calc(50% - 104px); top:2px; width:28px; height:28px}
+.notch.glass.open.shut1 #pet{left:calc(50% - 105px); top:1px; width:30px; height:30px}
 .notch.glass.open.shut1 .label{left:calc(50% - 72px); right:calc(50% - 64px); opacity:1; filter:none}
 .notch.glass.open.shut1 #mini{right:calc(50% - 100px); opacity:1}
 .notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); transition:transform .14s cubic-bezier(.5,0,.75,0) .3s, --bt .55s ease, --bt2 .55s ease}
@@ -2252,7 +2252,7 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 @keyframes notchOut{to{transform:translateX(-50%) translateY(-100%) scaleX(.3); opacity:0}}
 @keyframes earsOut{to{transform:translateX(-50%) scaleX(.3); opacity:0}}
 
-#pet{position:absolute; left:8px; top:2px; width:28px; height:28px;
+#pet{position:absolute; left:7px; top:1px; width:30px; height:30px;
   transition:left .48s var(--glide), top .48s var(--glide), width .48s var(--glide), height .48s var(--glide), transform .55s cubic-bezier(.2,1.25,.35,1)}
 .notch.hover:not(.open) #pet{transform:translateY(1px) scale(1.1)}
 .notch.open #pet{left:14px; top:38px; width:150px; height:150px}
@@ -4020,7 +4020,9 @@ function frame(now){
   } else if ((w < bufW - .5 || h < bufH - .5) && now - sizeAt > 160){
     bufW = w; bufH = h; renderer.setSize(w, h, false); resized = true;
   }
-  camera.position.z += ((w < 60 ? 1.6 : 1.8) - camera.position.z) * .12;
+  // (in the bar it's framed closer, so it's bigger there: as close as what's on its head allows, petFit)
+  const near = w < 60 && window.petFrame;
+  camera.position.z += ((near ? petFrame.z : 1.8) - camera.position.z) * .12; camera.position.y += ((near ? petFrame.y : .02) - camera.position.y) * .12;
   micLevel += (micTarget - micLevel) * (micTarget > micLevel ? .5 : .12);
   F.sway = call && !reduce ? Math.sin(t * 44) * .11 * Math.max(0, Math.sin(t * 3.6)) ** 2 : 0;   // ringing: short bursts of a quick shake
   if (tintA){ const k = Math.min(1, (performance.now() - tintA.t0) / 520); setTint(tintA.from.clone().lerp(tintA.to, 1 - Math.pow(1 - k, 3))); if (k >= 1) tintA = null; }
@@ -4135,6 +4137,7 @@ function selectTab(name){
   webTab();
   if (name === 'activity') renderActivity();
   if (name === 'today'){ tdPaint(); tdWeather(); }
+  if (name === 'wardrobe') wearWarm();
   if (name === 'lyrics') { lastLine = -9; lyrQuiet = true; }
   mediaFastSync();
   tabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
@@ -10500,86 +10503,217 @@ const WD = [
   ['specs', 'face', 'Specs', '<circle cx="7.5" cy="12.5" r="3.5"/><circle cx="16.5" cy="12.5" r="3.5"/><path d="M11 12.2c.6-.5 1.4-.5 2 0M4 12l-1.5-1.5M20 12l1.5-1.5"/>'],
   ['bow', 'neck', 'Bow tie', '<path d="M12 12L4 7.5v9zM12 12l8-4.5v9z"/><rect x="10.3" y="10.3" width="3.4" height="3.4" rx="1"/>'],
 ];
-var WEAR = {made:{}, anim:[], squint:0};
-const wmat = (c, r = .6, m = 0, x) => new THREE.MeshStandardMaterial({color:c, roughness:r, metalness:m, ...(x || {})});
-const hemi = () => new THREE.SphereGeometry(1, 40, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+var WEAR = {made:{}, anim:[], warm:false};
+// Materials: one kind for every piece (a little sheen and clearcoat on all), so the graphics card prepares one program
+// for the lot (plus one for the patterned ones) rather than one per finish: each is a pause the first time it's drawn.
+const wm = (c, x) => new THREE.MeshPhysicalMaterial({color:c, roughness:.5, sheen:.02, sheenRoughness:.5, clearcoat:.02, clearcoatRoughness:.3, envMapIntensity:1.1, ...(x || {})});
+const wFabric = (c, sh, x) => wm(c, {roughness:.85, sheen:.6, sheenRoughness:.6, sheenColor:new THREE.Color(sh), envMapIntensity:.8, ...(x || {})});
+const wMetal = (c, r = .26, x) => wm(c, {metalness:1, roughness:r, clearcoat:.35, envMapIntensity:1.6, ...(x || {})});
+const wGloss = (c, x) => wm(c, {roughness:.22, clearcoat:1, clearcoatRoughness:.1, ...(x || {})});
+const wGem = c => wm(c, {roughness:.05, metalness:.15, clearcoat:1, clearcoatRoughness:.02, envMapIntensity:2.4});
+// a pattern drawn once onto a small canvas
+function wTex(draw, rep){
+  const c = document.createElement('canvas'); c.width = c.height = 256; draw(c.getContext('2d'), 256);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  if (rep){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); }
+  return t;
+}
+// half an egg (a hat's crown), its surface shaped by fn(angle round, height 0-1)
+function wShell(rx, ry, rz, segs, rows, fn){
+  const g = new THREE.SphereGeometry(1, segs, rows, 0, Math.PI * 2, 0, Math.PI / 2), p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i); const k = fn ? fn(Math.atan2(v.z, v.x), v.y) : 1; p.setXYZ(i, v.x * rx * k, v.y * ry, v.z * rz * k); }
+  g.computeVertexNormals(); return g;
+}
+// something soft and fuzzy (a pompom, a flower's middle)
+function wFuzz(r, amt){
+  const g = new THREE.SphereGeometry(r, 48, 32), p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i); const s = 1 / r, n = Math.sin(v.x * s * 11 + v.y * s * 5) * Math.sin(v.y * s * 9 + v.z * s * 7) * Math.sin(v.z * s * 13 + v.x * s * 3);
+    v.multiplyScalar(1 + amt * n); p.setXYZ(i, v.x, v.y, v.z); }
+  g.computeVertexNormals(); return g;
+}
+const wRect = (w, h, r) => { const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s; };
+const wTube = (pts, r, m, segs = 32) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p))), segs, r, 8), m);
 const WEAR_MAKE = {
   // (each made where it sits on the character; [where it grows from as it pops on, the piece])
-  cap(){ const g = new THREE.Group(), m = wmat(0x2c3a5c, .7, 0, {side:THREE.DoubleSide}), m2 = wmat(0x243049, .7);
-    const dome = new THREE.Mesh(hemi(), m); dome.scale.set(.262, .175, .248); dome.position.y = .155;
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 40), m2); brim.scale.set(.2, .014, .17); brim.position.set(0, .162, .17); brim.rotation.x = .2;
-    const btn = new THREE.Mesh(new THREE.SphereGeometry(.02, 16, 10), m2); btn.position.y = .328;
-    g.add(dome, brim, btn); g.rotation.z = -.07; return [[0, .24, 0], g]; },
-  beanie(){ const g = new THREE.Group(), m = wmat(0x3a3e47, .95, 0, {side:THREE.DoubleSide}), m2 = wmat(0x4a4f59, .95, 0, {side:THREE.DoubleSide}), mp = wmat(0xeee5d6, 1);
-    const dome = new THREE.Mesh(hemi(), m); dome.scale.set(.27, .2, .256); dome.position.y = .13;
-    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(.84, 1, 1, 48, 1, true), m2); cuff.scale.set(.3, .066, .282); cuff.position.y = .14;
-    const pom = new THREE.Mesh(new THREE.SphereGeometry(.052, 20, 14), mp); pom.position.y = .345;
-    g.add(dome, cuff, pom); return [[0, .22, 0], g]; },
-  crown(){ const g = new THREE.Group(), m = wmat(0xe2b65c, .3, .85, {side:THREE.DoubleSide}), mj = wmat(0xd9434e, .25, .1);
-    const band = new THREE.Mesh(new THREE.CylinderGeometry(.11, .118, .06, 40, 1, true), m); band.position.y = .285; g.add(band);
-    for (let i = 0; i < 5; i++){ const a = i / 5 * Math.PI * 2 + Math.PI / 2;           // (one point at the front)
-      const pt = new THREE.Mesh(new THREE.ConeGeometry(.024, .055, 14), m); pt.position.set(Math.cos(a) * .113, .34, Math.sin(a) * .113);
-      const b = new THREE.Mesh(new THREE.SphereGeometry(.0105, 12, 8), m); b.position.set(Math.cos(a) * .113, .37, Math.sin(a) * .113); g.add(pt, b); }
-    const jewel = new THREE.Mesh(new THREE.SphereGeometry(.016, 16, 10), mj); jewel.position.set(0, .287, .118); jewel.scale.z = .6; g.add(jewel);
-    g.rotation.z = .12; return [[0, .3, 0], g]; },
-  party(){ const g = new THREE.Group(), m = wmat(0x8b7cf6, .55), ms = wmat(0xffffff, .6), mp = wmat(0xfff3c4, 1);
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(.095, .22, 40), m); cone.position.y = .11;
-    const r1 = new THREE.Mesh(new THREE.TorusGeometry(.072, .007, 8, 40), ms); r1.rotation.x = Math.PI / 2; r1.position.y = .055;
-    const r2 = new THREE.Mesh(new THREE.TorusGeometry(.043, .006, 8, 32), ms); r2.rotation.x = Math.PI / 2; r2.position.y = .12;
-    const pom = new THREE.Mesh(new THREE.SphereGeometry(.026, 16, 10), mp); pom.position.y = .225;
-    g.add(cone, r1, r2, pom); g.position.set(.06, .235, 0); g.rotation.z = -.32; return [[.07, .3, 0], g]; },
-  halo(){ const g = new THREE.Group(), m = wmat(0xffe2a0, .35, .3, {emissive:0xffd27a, emissiveIntensity:.9});
-    const t = new THREE.Mesh(new THREE.TorusGeometry(.13, .013, 12, 64), m); t.rotation.x = Math.PI / 2 - .32; t.position.y = .37; g.add(t); return [[0, .37, 0], g]; },
-  phones(){ const g = new THREE.Group(), m = wmat(0x2b2e35, .45, .2), mc = wmat(0x17181c, .9), ma = wmat(0xc8ccd4, .3, .8);
-    const pts = []; for (let i = 0; i <= 32; i++){ const a = i / 32 * Math.PI; pts.push(new THREE.Vector3(Math.cos(a) * .325, Math.sin(a) * .3 + .02, 0)); }
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, .017, 10), m));
+  cap(){
+    const g = new THREE.Group(), navy = wFabric(0x0d1630, 0x2a3c6a, {side:THREE.DoubleSide}), seam = wFabric(0x080e20, 0x1c2848), thread = wFabric(0xd8d1c2, 0x8a8478);
+    const RX = .264, RY = .178, RZ = .25, Y0 = .152;
+    const dome = new THREE.Mesh(wShell(RX, RY, RZ, 72, 24), navy); dome.position.y = Y0; g.add(dome);
+    // its six panels' seams, from the rim up to the button
+    for (let k = 0; k < 6; k++){ const f = Math.PI / 2 + Math.PI / 6 + k * Math.PI / 3, pts = [];
+      for (let i = 0; i <= 14; i++){ const th = Math.PI / 2 * (1 - i / 14); pts.push([Math.cos(f) * Math.sin(th) * (RX + .0015), Y0 + Math.cos(th) * (RY + .0015), Math.sin(f) * Math.sin(th) * (RZ + .0015)]); }
+      g.add(wTube(pts, .0024, seam, 28)); }
+    const btn = new THREE.Mesh(new THREE.SphereGeometry(.021, 24, 12), navy); btn.scale.y = .45; btn.position.y = Y0 + RY; g.add(btn);
+    // the bill: a curved crescent, bent down at its sides, with two rows of stitching round its edge
+    const outer = (a, d = 0) => [Math.cos(a) * (.25 - d), .1 + Math.sin(a) * (.3 - d)], A0 = .26, A1 = Math.PI - .26, N = 28, s = new THREE.Shape();
+    for (let i = 0; i <= N; i++){ const [x, z] = outer(A0 + (A1 - A0) * i / N); i ? s.lineTo(x, z) : s.moveTo(x, z); }
+    for (let i = N; i >= 0; i--){ const a = A0 + (A1 - A0) * i / N; s.lineTo(Math.cos(a) * RX * .95, Math.sin(a) * RZ * .95); }
+    const bend = (x, z) => -1.25 * x * x - .1 * Math.max(0, z - .24);
+    const bg = new THREE.ExtrudeGeometry(s, {depth:.007, bevelEnabled:true, bevelThickness:.004, bevelSize:.004, bevelSegments:3, curveSegments:6});
+    bg.rotateX(Math.PI / 2);
+    { const p = bg.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + bend(p.getX(i), p.getZ(i))); bg.computeVertexNormals(); }
+    const bill = new THREE.Group(); bill.add(new THREE.Mesh(bg, navy));
+    for (const d of [.011, .02]){ const pts = []; for (let i = 0; i <= 30; i++){ const [x, z] = outer(A0 + .05 + (A1 - A0 - .1) * i / 30, d); pts.push([x, .0045 + bend(x, z), z]); } bill.add(wTube(pts, .0013, thread, 60)); }
+    bill.position.y = Y0 + .003; bill.rotation.x = .07; g.add(bill);
+    g.rotation.z = -.06; return [[0, .24, 0], g];
+  },
+  beanie(){
+    const g = new THREE.Group(), knit = wFabric(0x1a3324, 0x3d6a4e, {side:THREE.DoubleSide}), cream = wFabric(0xefe6d4, 0xbdb3a0, {roughness:1});
+    // knitted: fine ribs all the way up, deeper ones on the turned-up cuff, its edges rolled
+    const dome = new THREE.Mesh(wShell(.274, .21, .26, 128, 28, (a, y) => 1 + .012 * Math.sin(a * 40) * (1 - y * .7)), knit); dome.position.y = .13; g.add(dome);
+    const cg = new THREE.CylinderGeometry(.84, 1, 1, 192, 1, true), cp = cg.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < cp.count; i++){ v.fromBufferAttribute(cp, i); const k = 1 + .028 * Math.sin(Math.atan2(v.z, v.x) * 48); cp.setXYZ(i, v.x * k, v.y, v.z * k); }
+    cg.computeVertexNormals();
+    const cuff = new THREE.Mesh(cg, knit); cuff.scale.set(.304, .07, .286); cuff.position.y = .14; g.add(cuff);
+    for (const [y, rx, rz] of [[.175, .256, .241], [.105, .305, .287]]){ const r = new THREE.Mesh(new THREE.TorusGeometry(1, .03, 10, 96), knit); r.rotation.x = Math.PI / 2; r.scale.set(rx, rz, .33); r.position.y = y; g.add(r); }
+    const pom = new THREE.Mesh(wFuzz(.058, .14), cream); pom.position.y = .372; g.add(pom);
+    // a small leather tag on the cuff's front
+    const tag = new THREE.Mesh(new THREE.ExtrudeGeometry(wRect(.066, .03, .007), {depth:.003, bevelEnabled:true, bevelThickness:.0018, bevelSize:.0018, bevelSegments:2}), wGloss(0x8b5a3a, {roughness:.55, clearcoat:.35}));
+    tag.position.set(0, .14, .268); tag.rotation.x = .5; g.add(tag);
+    return [[0, .22, 0], g];
+  },
+  crown(){
+    const g = new THREE.Group(), gold = wMetal(0xf2c76e, .2, {side:THREE.DoubleSide}), velvet = wFabric(0x8c1a2d, 0xff8fa3, {side:THREE.DoubleSide}), pearl = wGloss(0xfbf7ef, {sheen:1, sheenColor:new THREE.Color(0xffe6ef), roughness:.25});
+    // the band, rising into five points (one at the front)
+    const Y0 = .258, H = .044, PT = .05, bg = new THREE.CylinderGeometry(1, 1.07, 1, 240, 12, true), bp = bg.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < bp.count; i++){ v.fromBufferAttribute(bp, i); const a = Math.atan2(v.z, v.x) - Math.PI / 2, u = ((a / (Math.PI * 2 / 5)) % 1 + 1) % 1;
+      const tri = Math.pow(1 - Math.min(u, 1 - u) * 2, 1.8), up = v.y + .5; bp.setY(i, -.5 + up * (1 + PT / H * tri)); }
+    bg.computeVertexNormals();
+    const band = new THREE.Mesh(bg, gold); band.scale.set(.122, H, .118); band.position.y = Y0 + H / 2; g.add(band);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1, .055, 10, 96), gold); rim.rotation.x = Math.PI / 2; rim.scale.set(.13, .126, .13); rim.position.y = Y0 + .002; g.add(rim);
+    const cap = new THREE.Mesh(wShell(.116, .07, .112, 48, 16), velvet); cap.position.y = Y0 + .004; g.add(cap);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(.013, 24, 16), gold); orb.position.y = Y0 + .084; g.add(orb);
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(.004, .018, .004), gold); cross.position.y = Y0 + .103; g.add(cross);
+    const cross2 = new THREE.Mesh(new THREE.BoxGeometry(.012, .004, .004), gold); cross2.position.y = Y0 + .105; g.add(cross2);
+    const gems = [0xd81f3c, 0x2355e0, 0x14a36a, 0x2355e0, 0xd81f3c];
+    for (let i = 0; i < 5; i++){ const a = Math.PI / 2 + i * Math.PI * 2 / 5;
+      const p = new THREE.Mesh(new THREE.SphereGeometry(.0085, 16, 10), pearl); p.position.set(Math.cos(a) * .123, Y0 + H + PT + .004, Math.sin(a) * .119); g.add(p);
+      const b = a + Math.PI / 5, gem = new THREE.Mesh(new THREE.OctahedronGeometry(.011), wGem(gems[i])); gem.position.set(Math.cos(b) * .128, Y0 + .022, Math.sin(b) * .124); gem.lookAt(Math.cos(b) * 2, Y0 + .022, Math.sin(b) * 2); gem.scale.z = .55; g.add(gem); }
+    const front = new THREE.Mesh(new THREE.OctahedronGeometry(.014), wGem(0xd81f3c)); front.position.set(0, Y0 + .024, .126); front.scale.z = .55; g.add(front);
+    g.rotation.z = .12; return [[0, .3, 0], g];
+  },
+  party(){
+    const g = new THREE.Group();
+    const tex = wTex((c, n) => { c.fillStyle = '#f6f2ff'; c.fillRect(0, 0, n, n); c.fillStyle = '#7d6af0';
+      for (let i = -10; i < 12; i++){ const x = i * 32; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 15, 0); c.lineTo(x + 15 + n * .6, n); c.lineTo(x + n * .6, n); c.fill(); } });
+    const paper = wm(0xffffff, {map:tex, roughness:.42, clearcoat:.45, clearcoatRoughness:.25});
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(.098, .24, 72), paper); cone.position.y = .12;
+    const trim = new THREE.Mesh(new THREE.TorusGeometry(.098, .008, 12, 72), wMetal(0xeac46c, .3)); trim.rotation.x = Math.PI / 2; trim.position.y = .003;
+    const pom = new THREE.Mesh(wFuzz(.032, .22), wFabric(0xff9cc3, 0xffe2ef)); pom.position.y = .246;
+    g.add(cone, trim, pom); g.position.set(.06, .235, 0); g.rotation.z = -.3; return [[.07, .3, 0], g];
+  },
+  halo(){
+    const g = new THREE.Group(), core = wm(0xfff1cc, {emissive:0xffcf6e, emissiveIntensity:1.15, metalness:.3, roughness:.2, clearcoat:1});
+    const glow = (o, t) => new THREE.Mesh(new THREE.TorusGeometry(.13, t, 16, 96), new THREE.MeshBasicMaterial({color:0xffd98a, transparent:true, opacity:o, blending:THREE.AdditiveBlending, depthWrite:false}));
+    for (const m of [new THREE.Mesh(new THREE.TorusGeometry(.13, .011, 16, 96), core), glow(.2, .024), glow(.07, .045)]){ m.rotation.x = Math.PI / 2 - .32; m.position.y = .37; g.add(m); }
+    return [[0, .37, 0], g];
+  },
+  phones(){
+    const g = new THREE.Group(), alu = wm(0x1e2024, {metalness:.45, roughness:.5, clearcoat:.12, clearcoatRoughness:.3, envMapIntensity:.7}), knit = wFabric(0x141518, 0x383b44), steel = wMetal(0xd9dde4, .16), pad = wFabric(0x0f1013, 0x2e3138);
+    const arc = (r, ry, n = 40) => { const pts = []; for (let i = 0; i <= n; i++){ const a = .1 + (Math.PI - .2) * i / n; pts.push([Math.cos(a) * r, .03 + Math.sin(a) * ry, 0]); } return pts; };
+    // the band: a knit canopy, wide front to back, hung under a thin steel frame
+    const canopy = wTube(arc(.322, .3), .019, knit, 64); canopy.scale.z = 1.7; g.add(canopy);
+    g.add(wTube(arc(.346, .323), .005, steel, 64));
     for (const s of [-1, 1]){
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, .05, 32), m); cup.rotation.z = Math.PI / 2; cup.position.set(s * .33, .02, 0);
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(.062, .062, .02, 32), mc); pad.rotation.z = Math.PI / 2; pad.position.set(s * .3, .02, 0);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(.07, .006, 8, 32), ma); ring.rotation.y = Math.PI / 2; ring.position.set(s * .357, .02, 0);
-      g.add(cup, pad, ring); }
-    return [[0, .16, 0], g]; },
-  flower(){ const g = new THREE.Group(), mp = wmat(0xffc4d3, .7), mc = wmat(0xffcc4d, .6);
-    for (let i = 0; i < 5; i++){ const a = i / 5 * Math.PI * 2, pe = new THREE.Mesh(new THREE.SphereGeometry(.03, 16, 10), mp);
-      pe.scale.set(1, .55, .45); pe.position.set(Math.cos(a) * .034, Math.sin(a) * .034, 0); pe.rotation.z = a; g.add(pe); }
-    const c = new THREE.Mesh(new THREE.SphereGeometry(.02, 16, 10), mc); c.position.z = .01; c.scale.z = .7; g.add(c);
-    g.position.set(.17, .19, .15); g.rotation.set(-.2, .6, -.3); return [[.17, .19, .15], g]; },
-  shades(){ const g = new THREE.Group(), m = wmat(0x101114, .12, .4), mf = wmat(0x1a1b1f, .35, .3);
-    const s = new THREE.Shape(), w = .088, h = .062, r = .022, x = -w / 2, y = -h / 2;
-    s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.absarc(x + w - r, y + r, r, -Math.PI / 2, 0); s.lineTo(x + w, y + h);
-    s.lineTo(x, y + h); s.lineTo(x, y + r); s.absarc(x + r, y + r, r, Math.PI, Math.PI * 1.5);   // (flat on top, round below)
-    const geo = new THREE.ExtrudeGeometry(s, {depth:.008, bevelEnabled:false, curveSegments:10});
-    for (const k of [-1, 1]){ const l = new THREE.Mesh(geo, m); l.position.set(k * .081, .036, .298); l.rotation.y = k * .26; g.add(l); }
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(.05, .009, .008), mf); bridge.position.set(0, .062, .31); g.add(bridge);
-    return [[0, .04, .3], g]; },
-  specs(){ const g = new THREE.Group(), m = wmat(0xd8dbe2, .25, .9);
-    for (const k of [-1, 1]){ const r = new THREE.Mesh(new THREE.TorusGeometry(.046, .0055, 10, 48), m); r.position.set(k * .081, .036, .302); r.rotation.y = k * .26; g.add(r); }
-    const b = new THREE.Mesh(new THREE.TorusGeometry(.017, .004, 8, 20, Math.PI), m); b.position.set(0, .046, .315); g.add(b);
-    return [[0, .04, .3], g]; },
-  bow(){ const g = new THREE.Group(), m = wmat(0xc8414c, .5);
-    for (const k of [-1, 1]){ const w = new THREE.Mesh(new THREE.ConeGeometry(.036, .062, 24), m); w.rotation.z = k * Math.PI / 2; w.position.x = k * .034; w.scale.z = .55; g.add(w); }
-    const kn = new THREE.Mesh(new THREE.SphereGeometry(.019, 16, 10), m); kn.scale.set(1, 1.1, .7); g.add(kn);
-    g.position.set(0, -.1, .238); g.rotation.x = -.45; return [[0, -.1, .24], g]; },
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(.005, .005, .05, 12), steel); arm.position.set(s * .344, .042, 0); g.add(arm);
+      const cup = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), alu); cup.scale.set(.04, .09, .074); cup.position.set(s * .355, -.006, 0); g.add(cup);
+      const cush = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), pad); cush.scale.set(.03, .082, .066); cush.position.set(s * .327, -.006, 0); g.add(cush);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1, .045, 10, 64), alu); ring.rotation.y = Math.PI / 2; ring.scale.set(.084, .068, 1); ring.position.set(s * .338, -.006, 0); g.add(ring);
+    }
+    const crownBtn = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .012, 20), steel); crownBtn.position.set(.362, .08, .024); g.add(crownBtn);   // (the dial on the right cup)
+    return [[0, .16, 0], g];
+  },
+  flower(){
+    const g = new THREE.Group(), outer = wFabric(0xffb8ca, 0xffffff, {side:THREE.DoubleSide, roughness:.6}), inner = wFabric(0xff8fb1, 0xffe0ea, {side:THREE.DoubleSide, roughness:.6});
+    // a petal: a teardrop, cupped, its tip lifting
+    const s = new THREE.Shape(); s.moveTo(0, 0); s.bezierCurveTo(.027, .012, .031, .047, 0, .058); s.bezierCurveTo(-.031, .047, -.027, .012, 0, 0);
+    const pg = new THREE.ShapeGeometry(s, 18), pp = pg.attributes.position;
+    for (let i = 0; i < pp.count; i++){ const x = pp.getX(i), y = pp.getY(i); pp.setZ(i, 7 * x * x + .32 * y); }
+    pg.computeVertexNormals();
+    for (let i = 0; i < 6; i++){ const m = new THREE.Mesh(pg, outer); m.rotation.z = i / 6 * Math.PI * 2; g.add(m); }
+    for (let i = 0; i < 5; i++){ const m = new THREE.Mesh(pg, inner); m.scale.setScalar(.64); m.position.z = .007; m.rotation.z = i / 5 * Math.PI * 2 + .3; g.add(m); }
+    const mid = new THREE.Mesh(wFuzz(.0145, .3), wFabric(0xffc845, 0xfff0b0)); mid.position.z = .013; mid.scale.z = .7; g.add(mid);
+    const leaf = new THREE.Mesh(pg, wFabric(0x5c9f57, 0xc6efb2, {side:THREE.DoubleSide})); leaf.scale.set(1.05, 1.3, 1); leaf.rotation.z = -2.35; leaf.position.z = -.008; g.add(leaf);
+    g.scale.setScalar(1.65); g.position.set(.175, .19, .155); g.rotation.set(-.2, .6, -.3); return [[.175, .19, .155], g];
+  },
+  shades(){
+    const g = new THREE.Group(), acetate = wGloss(0x0b0c10, {roughness:.14}), glass = wm(0x070a10, {roughness:.03, metalness:.3, clearcoat:1, clearcoatRoughness:.02, envMapIntensity:2.6});
+    // a classic shape: wider across the top, its corners rounded
+    const outline = (w, h) => { const sh = new THREE.Shape(), t = w / 2, b = w / 2 * .84, r = h * .22, y = h / 2;
+      sh.moveTo(-t + r, y); sh.lineTo(t - r, y); sh.quadraticCurveTo(t, y, t, y - r); sh.lineTo(b, -y + r * 1.4); sh.quadraticCurveTo(b - .003, -y, b - r * 1.6, -y);
+      sh.lineTo(-b + r * 1.6, -y); sh.quadraticCurveTo(-b + .003, -y, -b, -y + r * 1.4); sh.lineTo(-t, y - r); sh.quadraticCurveTo(-t, y, -t + r, y); return sh; };
+    for (const k of [-1, 1]){
+      const e = new THREE.Group(); e.position.set(k * .081, .04, .297); e.rotation.y = k * .26;
+      const front = outline(.11, .076); front.holes.push(outline(.082, .052));
+      e.add(new THREE.Mesh(new THREE.ExtrudeGeometry(front, {depth:.006, bevelEnabled:true, bevelThickness:.003, bevelSize:.0025, bevelSegments:3, curveSegments:10}), acetate));
+      const lens = new THREE.Mesh(new THREE.ShapeGeometry(outline(.09, .06), 10), glass); lens.position.z = .002; e.add(lens);
+      g.add(e);
+      g.add(wTube([[k * .131, .052, .284], [k * .2, .057, .246], [k * .262, .06, .185], [k * .296, .06, .12]], .0055, acetate, 24));
+    }
+    g.add(wTube([[-.032, .056, .312], [0, .064, .318], [.032, .056, .312]], .0065, acetate, 12));
+    return [[0, .04, .3], g];
+  },
+  specs(){
+    const g = new THREE.Group(), gold = wMetal(0xcfae72, .24), glass = wm(0xffffff, {roughness:.02, clearcoat:1, clearcoatRoughness:.02, transparent:true, opacity:.12, depthWrite:false, envMapIntensity:2.6});
+    for (const k of [-1, 1]){
+      const e = new THREE.Group(); e.position.set(k * .081, .036, .3); e.rotation.y = k * .26;
+      e.add(new THREE.Mesh(new THREE.TorusGeometry(.048, .0056, 16, 80), gold));
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(.2, 40, 6, 0, Math.PI * 2, 0, .24), glass); lens.rotation.x = Math.PI / 2; lens.position.z = -.194; e.add(lens);   // (shallow and curved)
+      const pad = new THREE.Mesh(new THREE.SphereGeometry(.0065, 12, 8), glass); pad.position.set(-k * .035, -.024, -.008); e.add(pad);
+      g.add(e);
+      g.add(wTube([[k * .127, .036, .288], [k * .135, .045, .282], [k * .2, .05, .244], [k * .262, .052, .18], [k * .297, .052, .11]], .0036, gold, 24));
+    }
+    g.add(wTube([[-.0356, .038, .312], [-.016, .05, .318], [.016, .05, .318], [.0356, .038, .312]], .0042, gold, 16));
+    return [[0, .04, .3], g];
+  },
+  bow(){
+    const g = new THREE.Group();
+    const tex = wTex((c, n) => { c.fillStyle = '#8a1528'; c.fillRect(0, 0, n, n); c.fillStyle = 'rgba(250,232,216,.9)';
+      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++){ c.beginPath(); c.arc(x * 32 + (y % 2) * 16 + 8, y * 32 + 16, 3.6, 0, 7); c.fill(); } }, 11);
+    const silk = wm(0xffffff, {map:tex, roughness:.4, sheen:1, sheenRoughness:.35, sheenColor:new THREE.Color(0xd0606e), envMapIntensity:.8, clearcoat:.25});
+    // two puffed wings, pinched at a knot
+    const wing = new THREE.Shape(); wing.moveTo(0, .011); wing.bezierCurveTo(.02, .02, .042, .036, .056, .03); wing.bezierCurveTo(.065, .012, .065, -.012, .056, -.03);
+    wing.bezierCurveTo(.042, -.036, .02, -.02, 0, -.011); wing.lineTo(0, .011);
+    const wg = new THREE.ExtrudeGeometry(wing, {depth:.008, bevelEnabled:true, bevelThickness:.009, bevelSize:.005, bevelSegments:6, curveSegments:18}); wg.translate(0, 0, -.004);
+    const R = new THREE.Mesh(wg, silk), L = new THREE.Mesh(wg, silk); L.scale.x = -1;
+    const knot = new THREE.Mesh(new THREE.ExtrudeGeometry(wRect(.02, .027, .007), {depth:.008, bevelEnabled:true, bevelThickness:.007, bevelSize:.004, bevelSegments:5}), silk); knot.position.z = .001;
+    g.add(R, L, knot); g.scale.setScalar(1.25); g.position.set(0, -.1, .238); g.rotation.x = -.45; return [[0, -.1, .24], g];
+  },
 };
+// specs move with the eyes: held on a pivot at the character's middle that turns as the eyes do
+const WEAR_FOLLOW = {specs:true};
+// how high each hat reaches (the character is framed to fit it in the bar), and how wide headphones are
+const WEAR_TOP = {cap:.36, beanie:.44, crown:.43, party:.56, halo:.43, phones:.37, flower:.3}, WEAR_WIDE = {phones:.4};
 function wearMake(id){
   if (WEAR.made[id]) return WEAR.made[id];
   const [at, g] = WEAR_MAKE[id](), wrap = new THREE.Group();
   // (held at the point it grows from, so it pops on there rather than out of the middle of the character)
   wrap.position.set(...at); g.position.sub(new THREE.Vector3(...at)); wrap.add(g); wrap.userData.y = at[1];
+  if (WEAR_FOLLOW[id]){ const pivot = new THREE.Group(); pivot.add(wrap); wrap.userData.holder = pivot; }
   return WEAR.made[id] = wrap;
 }
+const wearHolder = w => w.userData.holder || w;
 function wearPut(id, on, quiet){
   if (!WEAR_MAKE[id]) return;
-  const w = wearMake(id);
+  const w = wearMake(id), h = wearHolder(w);
   WEAR.anim = WEAR.anim.filter(a => a.w !== w);
-  if (on){ if (!w.parent) mochi.add(w); if (quiet){ w.scale.setScalar(1); w.position.y = w.userData.y; } else { w.scale.setScalar(.001); WEAR.anim.push({w, on:true, t0:performance.now()}); } }
-  else if (w.parent){ if (quiet) mochi.remove(w); else WEAR.anim.push({w, on:false, t0:performance.now()}); }
+  if (on){ if (!h.parent) mochi.add(h); if (quiet){ w.scale.setScalar(1); w.position.y = w.userData.y; } else { w.scale.setScalar(.001); WEAR.anim.push({w, on:true, t0:performance.now()}); } }
+  else if (h.parent){ if (quiet) mochi.remove(h); else WEAR.anim.push({w, on:false, t0:performance.now()}); }
   wake();
 }
-// each frame (the character's own): pieces popping on (dropped in, with a spring) or off (up and away); a happy squint
+// each frame (the character's own): pieces popping on (dropped in, with a spring) or off (up and away); the specs
+// following the eyes (and dipping a touch as they blink), the eyes a little bigger behind their lenses
 function wearStep(){
-  const now = performance.now();
-  F.lid = now < WEAR.squint ? .36 : 1;
+  const now = performance.now(), sp = WEAR.made.specs, sh = sp && sp.userData.holder;
+  const specsOn = !!(sh && sh.parent) && !WEAR.anim.some(a => a.w === sp && !a.on);
+  if (sh && sh.parent){
+    sh.rotation.x = eyePivot.rotation.x; sh.rotation.y = eyePivot.rotation.y;
+    const lid = faceCur ? 1 : Math.min(1, eyeL.scale.y / Math.max(.001, eyeL.scale.x));
+    sh.position.y += (-(1 - lid) * .006 - sh.position.y) * .5;
+  }
+  F.sx = F.sy = F.sx + ((specsOn ? 1.08 : 1) - F.sx) * .15;
   for (const a of [...WEAR.anim]){
     const w = a.w, s = (now - a.t0) / 1000, y0 = w.userData.y;
     if (a.on){
@@ -10589,9 +10723,31 @@ function wearStep(){
     } else {
       const k = Math.min(1, s / .28);
       w.scale.setScalar(Math.max(.001, 1 - k * k)); w.position.y = y0 + .12 * k;
-      if (k >= 1){ mochi.remove(w); w.scale.setScalar(1); w.position.y = y0; WEAR.anim.splice(WEAR.anim.indexOf(a), 1); }
+      if (k >= 1){ mochi.remove(wearHolder(w)); w.scale.setScalar(1); w.position.y = y0; WEAR.anim.splice(WEAR.anim.indexOf(a), 1); }
     }
   }
+}
+// In the bar, the character is framed closer (bigger), as close as what's on its head allows
+var petFrame = {y:.07, z:1.2};
+function petFit(){
+  const w = S.wear || {}, top = Math.max(.34, WEAR_TOP[w.head] || 0), bot = -.2;
+  const half = Math.max(.344, (top - bot) / 2 + .01, WEAR_WIDE[w.head] || 0);
+  petFrame = {y:(top + bot) / 2, z:half / Math.tan(16 * Math.PI / 180)}; wake();
+}
+// Everything in the closet made, and the graphics card readied for it, the first time the Wardrobe is opened (once
+// it has settled in): a piece's first appearance then doesn't stall the frame it pops on in.
+function wearWarm(){
+  if (WEAR.warm) return; WEAR.warm = true;
+  const ids = Object.keys(WEAR_MAKE), idle = window.requestIdleCallback || (f => setTimeout(f, 30));
+  const next = () => {
+    const id = ids.shift();
+    if (id){ wearMake(id); idle(next); return; }
+    const tmp = new THREE.Group(); tmp.position.set(0, -50, 0);
+    for (const w of Object.values(WEAR.made)){ const h = wearHolder(w); if (!h.parent) tmp.add(h); }
+    scene.add(tmp); try { renderer.compile(scene, camera); } catch(_){}
+    scene.remove(tmp); for (const h of [...tmp.children]) tmp.remove(h);
+  };
+  setTimeout(() => idle(next), 900);
 }
 const wdRow = $('wdRow');
 wdRow.innerHTML = WD.map(([id, slot, name, ico], i) => `<button class="wd-it" type="button" style="--i:${i}" data-w="${id}" data-slot="${slot}" aria-pressed="false" aria-label="${name}">`
@@ -10625,23 +10781,24 @@ function wdPick(btn){
   btn.classList.remove('swing'); void btn.offsetWidth; btn.classList.add('swing');
   clearTimeout(btn._sw); btn._sw = setTimeout(() => btn.classList.remove('swing'), 1150);
   if (wear[slot] === id){                                       // (worn: it comes off and flies back to its hanger)
-    delete wear[slot]; S.wear = wear; save();
+    delete wear[slot]; S.wear = wear; save(); petFit();
     wearPut(id, false); wdFly(btn, false, wdPaint);
     return;
   }
   if (wear[slot]){ const was = wear[slot], b = wdRow.querySelector(`[data-w="${was}"]`); wearPut(was, false); if (b) wdFly(b, false); }
   wear[slot] = id; S.wear = wear; save(); wdPaint();
-  if (notch.classList.contains('open')) wdFly(btn, true, () => { wearPut(id, true); hop = Math.max(hop, .9); WEAR.squint = performance.now() + 560; });
-  else { wearPut(id, true); hop = Math.max(hop, .9); }
+  if (notch.classList.contains('open')) wdFly(btn, true, () => wearPut(id, true)); else wearPut(id, true);
+  petFit();
 }
 wdRow.addEventListener('click', e => { const b = e.target.closest('.wd-it'); if (b){ e.stopPropagation(); wdPick(b); } });
 wdRow.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)){ e.preventDefault(); e.stopPropagation(); wdRow.scrollBy({left:e.deltaY, behavior:'smooth'}); } }, {passive:false});
 $('wdOff').addEventListener('click', e => {
   e.stopPropagation();
-  const worn = Object.values(S.wear || {}); S.wear = {}; save();
+  const worn = Object.values(S.wear || {}); S.wear = {}; save(); petFit();
   worn.forEach((id, i) => setTimeout(() => { wearPut(id, false); const b = wdRow.querySelector(`[data-w="${id}"]`); if (b) wdFly(b, false, wdPaint); else wdPaint(); }, i * 90));
 });
 for (const id of Object.values(S.wear || {})) wearPut(id, true, true);
+petFit();
 wdPaint();
 
 /* ---------- Agent watch: a coding agent needs you ----------
