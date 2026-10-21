@@ -1774,9 +1774,9 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
    simply drawn full from the first frame and the growing edge shows it: no fading in, no sideways phase first. The
    curved corners grow down with it. Closing, it draws back up into the bar and the glass goes once it's in. ---------- */
 .notch.glass.open > .gw, html.live .notch.glass.open > .gw, .notch.glass.call > .gw, html.live .notch.glass.call > .gw{opacity:1; transition:none}
-.notch.glass.open::before, .notch.glass.call::before{opacity:1; transition:--bt .4s ease, --bt2 .4s ease}
+.notch.glass.open::before, .notch.glass.call::before{opacity:1; transition:--bt .55s ease, --bt2 .55s ease}
 .notch.glass:not(.open):not(.call) > .gw, html.live .notch.glass:not(.open):not(.call) > .gw{opacity:0; transition:opacity .08s linear .3s}
-.notch.glass:not(.open):not(.call)::before{opacity:0; transition:opacity .1s linear .3s, --bt .4s ease, --bt2 .4s ease}
+.notch.glass:not(.open):not(.call)::before{opacity:0; transition:opacity .1s linear .3s, --bt .55s ease, --bt2 .55s ease}
 .notch.glass.open{transition:width .44s cubic-bezier(.22,1,.36,1), height .52s cubic-bezier(.22,1,.36,1), border-radius .5s var(--glide), box-shadow .5s var(--glide), margin-left .44s cubic-bezier(.22,1,.36,1)}
 .notch.glass.open.flow{transition:width .44s cubic-bezier(.22,1,.36,1), border-radius .5s var(--glide), box-shadow .5s var(--glide), margin-left .44s cubic-bezier(.22,1,.36,1)}
 .notch.glass:not(.open){transition:height .32s cubic-bezier(.3,.25,.2,1), width .3s cubic-bezier(.3,.25,.2,1) .05s, border-radius .4s var(--glide), box-shadow .3s ease, margin-left .3s cubic-bezier(.3,.25,.2,1) .05s, translate .5s var(--glide), opacity .3s}
@@ -1784,7 +1784,7 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
   transition:width .3s cubic-bezier(.3,.25,.2,1) .05s, margin-left .3s cubic-bezier(.3,.25,.2,1) .05s, transform .18s cubic-bezier(.3,.25,.2,1), opacity .1s ease .12s, visibility 0s .24s}
 .notch.glass.open + .ears.glass, .notch.glass.call + .ears.glass{transform:translateX(-50%) scaleY(1); opacity:1;
   transition:width .44s cubic-bezier(.22,1,.36,1), margin-left .44s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1) .03s, opacity .08s, visibility 0s}
-.ears.glass::before{transition:--bt .4s ease, --bt2 .4s ease}
+.ears.glass::before{transition:--bt .55s ease, --bt2 .55s ease}
 /* (the sheet's box only stops covering the bar's row once the character has dropped out of the bar into it: cut
    straight away, the character was sliced at the bar's line on its way down) */
 .notch.glass.open.hung{clip-path:inset(var(--bar) -80px -80px -80px)}
@@ -1836,7 +1836,7 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 .notch.glass.open.shut1 #pet{left:calc(50% - 104px); top:2px; width:28px; height:28px}
 .notch.glass.open.shut1 .label{left:calc(50% - 72px); right:calc(50% - 64px); opacity:1; filter:none}
 .notch.glass.open.shut1 #mini{right:calc(50% - 100px); opacity:1}
-.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); transition:transform .14s cubic-bezier(.5,0,.75,0) .3s, --bt .4s ease, --bt2 .4s ease}
+.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); transition:transform .14s cubic-bezier(.5,0,.75,0) .3s, --bt .55s ease, --bt2 .55s ease}
 .notch.snap, .notch.snap *, .notch.snap::before, .notch.snap::after, .ears.snap, .ears.snap::before{transition:none !important}
 
 /* ---------- Settings, Look & feel, Dynamic windows: beside the switch, the three buttons themselves, grey while it's off;
@@ -1851,7 +1851,7 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 
 /* ---------- closing: the curved corners at the bar go back up with the sheet, shrinking as its foot rises, instead of
    staying to the end and going at once ---------- */
-.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); opacity:0; transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .22s ease .1s, --bt .4s ease, --bt2 .4s ease}   /* (gone a little before the sheet is: never the last thing left) */
+.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%) scaleY(0); opacity:0; transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .22s ease .1s, --bt .55s ease, --bt2 .55s ease}   /* (gone a little before the sheet is: never the last thing left) */
 /* ---------- no shadow round the sheet: it's the bar's own glass, edged like the bar. (Its shadow fell on the bar beside
    it as a dark edge while it opened, then vanished at once: the "separate outline".) ---------- */
 .notch.glass.open, .notch.glass.call:not(.open){box-shadow:none}
@@ -1862,7 +1862,7 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
 .barfil{position:fixed; z-index:6; left:0; top:calc(var(--bar) - 1px); width:100vw; height:13px; pointer-events:none; overflow:hidden;
   -webkit-mask:radial-gradient(circle at 100% 100%, transparent 11.6px, #000 12.4px) 0 0 / 13px 13px no-repeat, radial-gradient(circle at 0 100%, transparent 11.6px, #000 12.4px) 100% 0 / 13px 13px no-repeat;
   transform:scaleY(0); transform-origin:50% 0; opacity:0; transition:transform .3s cubic-bezier(.5,0,.75,0), opacity .2s ease .1s}
-.barfil::before{background:linear-gradient(180deg, rgba(0,0,0,.095), rgba(0,0,0,.1) 1px), linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .4s ease, --bt2 .4s ease}
+.barfil::before{background:linear-gradient(180deg, rgba(0,0,0,.095), rgba(0,0,0,.1) 1px), linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .55s ease, --bt2 .55s ease}
 .barfil::after{display:none}
 body.dynmax .barfil{transform:none; opacity:1; transition:transform .45s cubic-bezier(.22,1,.36,1), opacity .12s}
 body.fullscreen .barfil, body.barhid .barfil{opacity:0; transform:scaleY(0)}
@@ -1966,7 +1966,7 @@ body.fullscreen .barfil, body.barhid .barfil{opacity:0; transform:scaleY(0)}
   transition:width .3s cubic-bezier(.3,.25,.2,1) .05s, margin-left .3s cubic-bezier(.3,.25,.2,1) .05s, --er .2s ease, opacity .1s ease .16s, visibility 0s .26s}
 .notch.glass.open + .ears.glass, .notch.glass.call + .ears.glass{transform:translateX(-50%); --er:12px; opacity:1;
   transition:width .44s cubic-bezier(.22,1,.36,1), margin-left .44s cubic-bezier(.22,1,.36,1), --er .45s cubic-bezier(.22,1,.36,1) .04s, opacity .06s, visibility 0s}
-.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%); --er:0px; opacity:1; transition:--er .42s cubic-bezier(.55,0,.2,1), --bt .4s ease, --bt2 .4s ease}
+.notch.glass.open.shut1 + .ears.glass{transform:translateX(-50%); --er:0px; opacity:1; transition:--er .42s cubic-bezier(.55,0,.2,1), --bt .55s ease, --bt2 .55s ease}
 .barfil{transform:none; opacity:1; visibility:hidden; --fr:0px;
   -webkit-mask:radial-gradient(circle at 100% 100%, transparent calc(var(--fr) - .4px), #000 calc(var(--fr) + .4px)) 0 0 / calc(var(--fr) + 1px) calc(var(--fr) + 1px) no-repeat,
     radial-gradient(circle at 0 100%, transparent calc(var(--fr) - .4px), #000 calc(var(--fr) + .4px)) 100% 0 / calc(var(--fr) + 1px) calc(var(--fr) + 1px) no-repeat;
@@ -1987,9 +1987,9 @@ body.fullscreen .barfil, body.barhid .barfil{--fr:0px; visibility:hidden}
     linear-gradient(180deg, var(--bt) var(--bar), color-mix(in srgb, var(--bt2) 80%, var(--bt)) calc(var(--bar) + 60px), var(--bt2) calc(var(--bar) + 160px))}
 /* (where the sheet meets the bar both are the same: the bar's tint, nothing darker or lighter on either side; what's
     behind them is made the same too, see glassDraw) */
-.ears.glass::before{background:linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .4s ease, --bt2 .4s ease}
+.ears.glass::before{background:linear-gradient(180deg, var(--bt) 1px, color-mix(in srgb, var(--bt), var(--bt2) 15%) 13px); transition:--bt .55s ease, --bt2 .55s ease}
 body.sheet .mbar.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%), var(--tint, rgba(20,20,26,.3))}
-.notch.glass::before{transition:opacity .1s linear .3s, --bt .4s ease, --bt2 .4s ease}
+.notch.glass::before{transition:opacity .1s linear .3s, --bt .55s ease, --bt2 .55s ease}
 
 /* ---------- full screen (a video, a game): the notch stays away entirely, like the bar; it can't be opened there,
    and its place can't be clicked ---------- */
@@ -3081,7 +3081,7 @@ html.vision .label::before{content:""; width:6px; height:6px; margin-right:9px; 
 /* ---------- the Drop Shelf in the notch's own glass: the bar's colour at its top, deepening down, the same light on its
    top edge (as the open notch's tabs sit in) ---------- */
 .ds-tray.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,0) 34%), linear-gradient(180deg, var(--bt), var(--bt2) 80%);
-  transition:--bt .4s ease, --bt2 .4s ease}
+  transition:--bt .55s ease, --bt2 .55s ease}
 html.vision .ds-tray.glass::before{background:linear-gradient(180deg, var(--g2), var(--g1)) !important}
 /* ---------- memories: changed where they are, added at the top ---------- */
 .mem-add{display:block; margin-bottom:2px}
@@ -3638,30 +3638,25 @@ function glassDraw(g, a){
   // so the sheet carries on from the bar and only then shows what's behind it.
   // (the bar's own picture too: it's stretched up from a small picture, so its last rows used to blend in the window below
   //  and come out lighter than the sheet starting under them)
-  if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass');
+  if (g._band === undefined) g._band = !!g.closest('.notch.glass, .ears.glass, .mbar.glass');
   if (g._band){
-    // The bar shows its own glass (what's behind it: the wallpaper). The open sheet hanging from it carries the bar's
-    // last row on down, solid at first and then melting into what's really behind the sheet (an app's title bar,
-    // usually), so where the bar ends nothing changes: the bar's colour and picture go on into the sheet.
-    // (the row the bar's very bottom shows, exactly: the picture's blur darkens the bar's last rows a little with what's
-    //  under it, and a row higher up made the sheet start a shade lighter than the bar above it)
-    const k = c.height / Math.max(1, innerHeight), yb = 32 * k, h = Math.max(2, Math.round(120 * k)), src = Math.min(c.height - 1, Math.floor(31.6 * k));
-    const b = glassBand || (glassBand = document.createElement('canvas')), bx = b.getContext('2d');
-    if (b.width !== c.width || b.height !== h){ b.width = c.width; b.height = h; }
-    bx.globalCompositeOperation = 'copy'; bx.drawImage(glassBmp, 0, src, c.width, 1, 0, 0, c.width, h);
-    const gr = bx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#000'); gr.addColorStop(.3, '#000'); gr.addColorStop(.62, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    bx.globalCompositeOperation = 'destination-in'; bx.fillStyle = gr; bx.fillRect(0, 0, c.width, h);
-    g._x.globalAlpha = 1; g._x.drawImage(b, 0, yb);
+    // The bar and the notch take the colour of the window in front: what's right under the bar (the open app's top,
+    // its title bar; or the desktop when nothing is there) is carried up into the bar's strip, so the bar and the sheet
+    // hanging from it are one continuous picture, whatever is open. (A few rows down: right at the bar's foot the
+    // picture's blur still mixes in what's above.) When another window comes to the front, its colour melts in with
+    // its picture, at the same pace (a: how much of the new one this frame).
+    const k = c.height / Math.max(1, innerHeight), s = Math.min(c.height - 1, Math.ceil(32 * k) + 3);
+    g._x.globalAlpha = blank || a == null ? 1 : a; g._x.drawImage(glassBmp, 0, s, c.width, 1, 0, 0, c.width, s + 1);
   }
 }
-var glassBand = null;
 /* A picture that arrives after a pause (the bar's own occasional look, the first live one once something opens) is
    melted in over a quarter of a second. Cut in, it made the glass jump darker or lighter. A steady stream isn't melted. */
 let glassAt = 0, glassMixT = 0, glassMixRaf = 0, glassMixLast = 0, glassAsked = 0;
+var glassMixTau = 60;          // (how quickly a new picture melts in: slower for another window coming to the front)
 function glassMixStep(t){
   glassMixRaf = 0;
   const left = glassMixT - performance.now(), dt = Math.min(50, t - glassMixLast); glassMixLast = t;
-  for (const g of glassEls) glassDraw(g, left > 0 ? 1 - Math.exp(-dt / 60) : 1);
+  for (const g of glassEls) glassDraw(g, left > 0 ? 1 - Math.exp(-dt / glassMixTau) : 1);
   if (left > 0) glassMixRaf = requestAnimationFrame(glassMixStep);
 }
 // the pointer has come up to the bar, or something is being pressed: if the bar's picture is an old one, look again now
@@ -8170,7 +8165,7 @@ if (TAURI){
   // (another app in front: the bar and the notch show what's under the bar, which has just changed. Only the bar
   //  showing, its picture came every 8 s: the old one stayed a while and then jumped. Now it's looked at again at
   //  once, and once more as the app finishes drawing, each new picture melting in over the last)
-  const glassLook = () => { if (!glassOn()) return; glassMixT = performance.now() + 420; invoke('backdrop_now'); };
+  const glassLook = () => { if (!glassOn()) return; glassMixTau = 150; glassMixT = performance.now() + 750; invoke('backdrop_now'); clearTimeout(glassLook.t); glassLook.t = setTimeout(() => { glassMixTau = 60; }, 1900); };
   listen('front-app', () => { glassLook(); setTimeout(glassLook, 380); setTimeout(glassLook, 1100); });
   listen('front-colour', () => glassLook());
   listen('front-colour', barTint);
