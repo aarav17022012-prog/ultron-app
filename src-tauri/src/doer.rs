@@ -591,8 +591,11 @@ fn run_from(app: &AppHandle, goal: &str, mut log: Vec<(String, String)>, mut act
     let mut last_call = String::new();
     let mut repeats = 0;
     let mut unreadable = 0;
-    // the agent's instructions come off disk in a moment rather than being read again
-    crate::ai::agent_ready(app, &messages(app, "a", &[]), &messages(app, "b", &[]), true);
+    // the agent's instructions come off disk in a moment rather than being read again (this PC's brain: with Uplink
+    // planning, it isn't loaded for this at all)
+    if !crate::ai::uplink(app) {
+        crate::ai::agent_ready(app, &messages(app, "a", &[]), &messages(app, "b", &[]), true);
+    }
     // "...saved in that folder": new files go where the request said, whether or not the brain passes it on
     let save = tools::save_dir_in(goal);
     if let Some(d) = &save {
@@ -602,8 +605,8 @@ fn run_from(app: &AppHandle, goal: &str, mut log: Vec<(String, String)>, mut act
     // (a build is one long piece of writing: more room for it, more time, and a word about the wait)
     let building = goal.contains(BUILD_HOW);
     let _ = app.emit_to("main", "ai-phase", if building { "Writing it… this takes a few minutes" } else { "Planning…" });
-    // (your own key's model can carry a long job: more steps, and more time, than this PC's brain gets)
-    let big = crate::cloud::active(app).is_some();
+    // (your own key's model, or Uplink's, can carry a long job: more steps, and more time, than this PC's brain gets)
+    let big = crate::cloud::active(app).is_some() || crate::ai::uplink(app);
     for i in 0..if big { 45 } else { MAX_STEPS } {
         if crate::ai::cancelled() {
             sess.finish(app, false);

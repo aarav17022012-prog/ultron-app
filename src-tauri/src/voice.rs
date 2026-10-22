@@ -459,9 +459,9 @@ impl Vad {
         self.tick += 1;
         if self.tick % 3 == 0 {
             let lvl = (rms / 0.09).min(1.0).sqrt();
-            // (Told when it has moved, or twice a second. In a quiet room the same small number was sent to the page
-            //  17 times a second, all day, and each one woke it.)
-            if (lvl - self.told.0).abs() >= 0.02 || self.tick.wrapping_sub(self.told.1) >= 25 {
+            // (Told when it has moved, or every few seconds. In a quiet room the same small number was sent to the page
+            //  17 times a second, all day, and each one woke it; then still twice a second, for nothing)
+            if (lvl - self.told.0).abs() >= 0.02 || self.tick.wrapping_sub(self.told.1) >= 250 {
                 self.told = (lvl, self.tick);
                 let _ = app.emit_to("main", "mic-level", lvl);
             }

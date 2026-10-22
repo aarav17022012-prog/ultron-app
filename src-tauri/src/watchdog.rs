@@ -11,6 +11,55 @@ use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{IsWindowVisible, WM_SYSCOMMAND};
 
 static START: OnceLock<Instant> = OnceLock::new();
+
+/// ULTRON started again if it crashes (a Windows update can leave a driver, or the web engine under ULTRON, in a state
+/// that brings it down). A small copy of ULTRON waits for this one to end; if it ended by crashing (not quit by you,
+/// not ended from Task Manager, not Windows shutting down or restarting), it starts ULTRON again, three times in ten
+/// minutes at most.
+pub fn keep() {
+    use std::os::windows::process::CommandExt;
+    if let Ok(me) = std::env::current_exe() {
+        const DETACHED: u32 = 0x0000_0008 | 0x0800_0000; // DETACHED_PROCESS, CREATE_NO_WINDOW
+        let _ = std::process::Command::new(me).arg("--keeper").arg(std::process::id().to_string()).creation_flags(DETACHED).spawn();
+    }
+}
+
+/// Called first thing in `main`: this copy was started as the keeper (true: nothing else to do).
+pub fn keeper_if_asked() -> bool {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Threading::{GetExitCodeProcess, OpenProcess, WaitForSingleObject, INFINITE, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE};
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_SHUTTINGDOWN};
+    let args: Vec<String> = std::env::args().collect();
+    let Some(i) = args.iter().position(|a| a == "--keeper") else { return false };
+    let Some(pid) = args.get(i + 1).and_then(|p| p.parse::<u32>().ok()) else { return true };
+    let code = unsafe {
+        let Ok(h) = OpenProcess(PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return true };
+        WaitForSingleObject(h, INFINITE);
+        let mut code = 0u32;
+        let _ = GetExitCodeProcess(h, &mut code);
+        let _ = CloseHandle(h);
+        code
+    };
+    // (a crash: Windows' own codes for one, or a Rust panic on the main thread. Ended from Task Manager or by a script,
+    //  the code is 1 or -1, and quitting is 0: those are left alone)
+    let crashed = code >= 0xC000_0000 && code != 0xFFFF_FFFF || code == 101 || code == 0x8000_0003;
+    if !crashed || unsafe { GetSystemMetrics(SM_SHUTTINGDOWN) } != 0 {
+        return true;
+    }
+    let file = std::env::var("LOCALAPPDATA").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("ULTRON").join("restarts.txt");
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let recent: Vec<u64> = std::fs::read_to_string(&file).unwrap_or_default().lines().filter_map(|l| l.trim().parse().ok()).filter(|t: &u64| now.saturating_sub(*t) < 600).collect();
+    if recent.len() >= 3 {
+        return true;
+    }
+    let _ = std::fs::create_dir_all(file.parent().unwrap_or(std::path::Path::new(".")));
+    let _ = std::fs::write(&file, recent.iter().chain(std::iter::once(&now)).map(|t| t.to_string()).collect::<Vec<_>>().join("\n"));
+    std::thread::sleep(Duration::from_millis(1500));
+    if let Ok(me) = std::env::current_exe() {
+        let _ = std::process::Command::new(&me).current_dir(me.parent().unwrap_or(std::path::Path::new("."))).spawn();
+    }
+    true
+}
 static PAGE: AtomicU64 = AtomicU64::new(0);
 static MAIN: AtomicU64 = AtomicU64::new(0);
 static HIDDEN: AtomicBool = AtomicBool::new(false);

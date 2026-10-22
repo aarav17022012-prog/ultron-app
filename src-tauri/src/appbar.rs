@@ -118,16 +118,83 @@ pub fn remove() {
     }
 }
 
+/// Windows says an app has gone full screen, and ULTRON's bar, notch and the wheel's arrow stand aside. It says so
+/// for more than a full-screen app, though: for a moment as you switch apps (Alt+Tab's switcher, Task View) and as some
+/// apps open (a splash screen across the screen), and then that it's over. Each time the bar went and came back: the
+/// arrow under it flickered. Now going is put off a moment and done only if what's in front still fills its screen and
+/// is an app's window; coming back is at once.
+static FULL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn full_screen(on: bool) {
+    let n = FULL_SEQ.fetch_add(1, SeqCst) + 1;
+    let Some(app) = APP.get().cloned() else { return };
+    if !on {
+        let _ = app.emit_to("main", "fullscreen", false);
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(260));
+        if FULL_SEQ.load(SeqCst) == n && really_full() {
+            let _ = app.emit_to("main", "fullscreen", true);
+        }
+    });
+}
+
+/// What's in front fills its whole screen, and isn't one of Windows' own passing screens.
+fn really_full() -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, GetWindowRect};
+    unsafe {
+        let h = GetForegroundWindow();
+        if h.is_invalid() {
+            return false;
+        }
+        let mut buf = [0u16; 64];
+        let n = GetClassNameW(h, &mut buf).max(0) as usize;
+        let class = String::from_utf16_lossy(&buf[..n]);
+        const PASSING: [&str; 9] = [
+            "MultitaskingViewFrame", "XamlExplorerHostIslandWindow", "ForegroundStaging", "TaskSwitcherWnd", "Windows.UI.Core.CoreWindow",
+            "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "Progman", "WorkerW",
+        ];
+        if PASSING.contains(&class.as_str()) {
+            return false;
+        }
+        let mut r = RECT::default();
+        if GetWindowRect(h, &mut r).is_err() {
+            return false;
+        }
+        let mut mi = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+        if !GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTOPRIMARY), &mut mi).as_bool() {
+            return true;
+        }
+        let m = mi.rcMonitor;
+        r.left <= m.left && r.top <= m.top && r.right >= m.right && r.bottom >= m.bottom
+    }
+}
+
+/// Windows' shell, started again (after an update, very often, or when Explorer is restarted): everything it knew of
+/// ULTRON is gone. ULTRON's strip of the screen was given back to the windows, and Windows' own taskbar came back. Both
+/// are put right: the strip asked for again, and the page told, so ULTRON's own taskbar puts Windows' away again.
+static SHELL_BACK: OnceLock<u32> = OnceLock::new();
+
 unsafe extern "system" fn subclass(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM, _id: usize, _ref: usize) -> LRESULT {
+    let back = *SHELL_BACK.get_or_init(|| unsafe { windows::Win32::UI::WindowsAndMessaging::RegisterWindowMessageW(windows::core::w!("TaskbarCreated")) });
+    if back != 0 && msg == back {
+        let mut abd = data(hwnd);
+        unsafe { SHAppBarMessage(ABM_NEW, &mut abd) };
+        std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            position();
+            if let Some(app) = APP.get() {
+                let _ = app.emit_to("main", "shell-restarted", ());
+            }
+        });
+        return unsafe { DefSubclassProc(hwnd, msg, wp, lp) };
+    }
     match msg {
         WM_APPBAR => {
             match wp.0 as u32 {
                 ABN_POSCHANGED => position(),
-                ABN_FULLSCREENAPP => {
-                    if let Some(app) = APP.get() {
-                        let _ = app.emit_to("main", "fullscreen", lp.0 != 0);
-                    }
-                }
+                ABN_FULLSCREENAPP => full_screen(lp.0 != 0),
                 _ => {}
             }
             return LRESULT(0);

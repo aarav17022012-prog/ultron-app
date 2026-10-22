@@ -1520,6 +1520,11 @@ const BIG_RULES: &str = "\nBigger jobs:\n\
 /// (Tried and dropped: writing the call in two parts, tool first and then only that tool's rules.
 /// It was a little faster, but the brain likes to end a call with one `"}}` and, held to the inner
 /// part alone, sometimes wrote junk into the last value instead.)
+/// Uplink (Gemini, through its page) is the chosen brain.
+pub fn uplink(app: &AppHandle) -> bool {
+    config(app).gemini
+}
+
 pub fn agent_call(app: &AppHandle, messages: &[(String, String)], schema: &serde_json::Value, max: usize) -> Option<String> {
     // With your own key switched on, that service's model plans the task: the same tools and rules, a far
     // stronger planner, so long jobs inside websites and apps become possible. (What the tools report back,
@@ -1540,6 +1545,57 @@ pub fn agent_call(app: &AppHandle, messages: &[(String, String)], schema: &serde
                 crate::log_line("agent step: your key's service answered without a tool call; this PC's brain takes it");
             }
             Err(e) => crate::log_line(&format!("agent step: your key's service couldn't be reached ({e}); this PC's brain takes it")),
+        }
+        if cancelled() {
+            return None;
+        }
+    }
+    // Uplink chosen: Gemini plans the task, a call at a time, under the same tools and rules (it's told the form each
+    // call must take, and each is checked here and by the tools). This PC's big brain isn't even loaded while Uplink is
+    // on, so tasks used to wait for it to load, or stall. (What the tools report back, the names of files and of what's
+    // on screen included, goes to Gemini while Uplink is on, as the questions do.)
+    if uplink(app) {
+        let mut prompt = String::new();
+        for (role, text) in messages {
+            match role.as_str() {
+                "system" => prompt.push_str(text),
+                "assistant" => prompt.push_str(&format!("\n\nYou called: {text}")),
+                _ => prompt.push_str(&format!("\n\n{text}")),
+            }
+            prompt.push('\n');
+        }
+        prompt.push_str(BIG_RULES);
+        prompt.push_str("\nReply with your next call only: exactly one JSON object {\"step\": ..., \"tool\": ..., \"with\": {...}} using one of the tools above, and nothing else (no code fence, no words around it). When the task is complete, that call is {\"step\": \"Done\", \"tool\": \"done\", \"with\": {\"answer\": what to tell the user}}.");
+        let t0 = Instant::now();
+        match crate::gemini::chat(app, &prompt, |_| {}, cancelled) {
+            Ok(t) => {
+                // (read off the page, a long answer comes with its line breaks in it, which JSON doesn't allow inside a
+                //  string: made spaces first)
+                let flat = t.replace(['\r', '\n', '\t'], " ");
+                if let Some(call) = flat.find('{').zip(flat.rfind('}')).filter(|(a, b)| a < b).map(|(a, b)| flat[a..=b].to_string()).filter(|c| serde_json::from_str::<serde_json::Value>(c).is_ok()) {
+                    crate::log_line(&format!("agent step: planned with Uplink in {} ms", t0.elapsed().as_millis()));
+                    return Some(call);
+                }
+                // (it answered in words: after a step, that's its answer to you, the task done. Handed to this PC's
+                //  brain instead, the task waited the best part of a minute for it to load)
+                let words = t.trim();
+                // (a finished call that still wouldn't read: its answer taken out of it, so you never see the JSON)
+                let words = match words.find("\"answer\"") {
+                    Some(i) => {
+                        let rest = &words[i + 8..];
+                        let s = rest.find('"').map(|q| &rest[q + 1..]).unwrap_or(rest);
+                        s.rfind('"').map(|q| &s[..q]).unwrap_or(s).trim().to_string()
+                    }
+                    None => words.to_string(),
+                };
+                let words = words.as_str();
+                if !words.is_empty() && messages.iter().any(|(r, _)| r == "assistant") {
+                    crate::log_line("agent step: Uplink answered in words; taken as its answer");
+                    return Some(serde_json::json!({"step": "Done", "tool": "done", "with": {"answer": words}}).to_string());
+                }
+                crate::log_line(&format!("agent step: Uplink answered without a tool call ({:?}); this PC's brain takes it", words.chars().take(120).collect::<String>()));
+            }
+            Err(e) => crate::log_line(&format!("agent step: Uplink couldn't plan ({e}); this PC's brain takes it")),
         }
         if cancelled() {
             return None;

@@ -3284,6 +3284,30 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 #flyr .fl-b.lit{opacity:1; transform:scale(1.08)}
 #flyr .fl-hub{transition:transform .25s var(--glide), background .3s, box-shadow .3s}
 #flyr .fl-wheel.hub .fl-hub{background:radial-gradient(circle at 50% 35%, rgba(255,255,255,.44), rgba(255,255,255,.16)); box-shadow:inset 0 1px 1px rgba(255,255,255,.6), 0 3px 10px rgba(0,0,0,.28), 0 0 0 5px rgba(255,255,255,.07)}
+
+/* ---------- the wheel's shadow fades in as it rolls down, and out once it has rolled back up (switched on and off at
+   once, a dark band came and went under the bar) ---------- */
+.wh-disc{transition:box-shadow .35s ease .05s}
+.wheel:not(.open) .wh-disc{box-shadow:0 18px 44px rgba(0,0,0,0), 0 2px 8px rgba(0,0,0,0); transition:box-shadow .3s ease .32s}
+
+/* ---------- the lock screen's passcode box fades in itself, not as part of the whole: faded as part of something
+   else, its blur had nothing behind it to blur until the fade was over, so it came in clear and then all at once
+   turned to glass ---------- */
+.lk-ask{opacity:1; visibility:hidden; transition:visibility 0s .36s, transform .35s var(--glide)}
+.lock.on.ask .lk-ask{opacity:1; visibility:visible; transition:visibility 0s, transform .75s var(--spring) .12s}
+.lock .lk-ask > *{opacity:0; transition:opacity .2s, transform .35s var(--spring), background .3s, box-shadow .3s}
+.lock.on.ask .lk-ask > *{opacity:1; transition:opacity .35s .12s, transform .35s var(--spring), background .3s, box-shadow .3s}
+
+/* ---------- the Start menu unrolls from the bar, its glass still against the screen ----------
+   It used to grow and drop in by a transform, its glass's picture held in place by being moved back the other way each
+   frame: a step behind the panel, so the glass slid about and then settled. Now the panel stays where it is and only
+   how much of it shows grows (and, closing, rolls back up), while what's in it drops in a touch behind. */
+.start{transform:translate(-50%, 0); clip-path:inset(0 0 100% 0 round 28px); opacity:0;
+  transition:clip-path .36s cubic-bezier(.45,0,.6,.3), opacity .2s ease .16s, visibility 0s .44s}
+.start.open{transform:translate(-50%, 0); clip-path:inset(-40px -60px -90px -60px round 28px); opacity:1;
+  transition:clip-path .6s cubic-bezier(.3,.85,.3,1), opacity .16s, visibility 0s}
+.start > :not(.gw){transition:transform .55s var(--glide) .04s}
+.start:not(.open) > :not(.gw){transform:translateY(-18px); transition:transform .32s cubic-bezier(.45,0,.6,.3)}
 </style>
 </head>
 <body>
@@ -3903,8 +3927,12 @@ setInterval(() => {
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
   const ms = off ? 0 : answering ? 60000 : spotOn ? 33 : boxOpen ? 50 : panel ? 100 : S.bar === 'hide' ? (barHid ? 0 : 400) : 8000;
   if (ms !== glassRate){ glassRate = ms; invoke('backdrop_rate', {ms}); if (off) document.documentElement.classList.remove('live'); }
-  glassAim();
+  // (looked at again when what's open has changed, and every two seconds besides: four times a second it measured
+  //  every piece of glass, which made the page work out its whole layout four times a second, all day)
+  const sig = ms + '|' + panel + '|' + boxOpen + '|' + notch.className + '|' + fullscreen, n = performance.now();
+  if (sig !== glassSig || n - glassAimAt > 2000){ glassSig = sig; glassAimAt = n; glassAim(); }
 }, 250);
+var glassSig = '', glassAimAt = 0;
 let typeUntil = 0;
 function faceWant(){
   if (aiStream && aiStream.agent) return petMood === 'type' ? 'type' : 'act';
@@ -9073,7 +9101,11 @@ new MutationObserver(() => {
   if (away) whClose();
   wheel.classList.toggle('away', away); syncHit();
 }).observe(notch, {attributes:true, attributeFilter:['class']});
-if (TAURI) setTimeout(() => { if (S.dock === 'ultron') dockOn(true); else invoke('dock_set', {on:false}); }, 2600);   // (off: Windows' taskbar is made sure of, in case ULTRON was ended while its own was up)
+if (TAURI) setTimeout(() => { if (S.dock === 'ultron') dockOn(true); else invoke('dock_set', {on:false}); }, 2600);
+// (Windows' shell started again, after an update or when Explorer restarts: ULTRON's own taskbar puts Windows' away
+//  again, and starting with Windows is asked for again each time ULTRON starts, in case an update took it away)
+listen('shell-restarted', () => { if (DK.on) invoke('dock_set', {on:true}); syncHit(); });
+if (TAURI && S.autostart) setTimeout(() => invoke('set_autostart', {on:true}), 15000);   // (off: Windows' taskbar is made sure of, in case ULTRON was ended while its own was up)
 
 /* ---------- ULTRON's own Start: search, on the Windows key ----------
    Settings, Taskbar, Start menu: ULTRON. The Windows key on its own (keys.rs) opens this instead of Windows' Start:

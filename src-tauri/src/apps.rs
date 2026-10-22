@@ -102,6 +102,20 @@ fn process_identity(pid: u32) -> Option<(String, Option<String>)> {
     }
 }
 
+/// Window -> (its process, that program, its app id), for the windows open now.
+static IDENTITY: std::sync::LazyLock<std::sync::Mutex<HashMap<isize, (u32, String, Option<String>)>>> = std::sync::LazyLock::new(Default::default);
+/// A program's description, read from its file once.
+static DESCRIBED: std::sync::LazyLock<std::sync::Mutex<HashMap<String, Option<String>>>> = std::sync::LazyLock::new(Default::default);
+
+fn described(exe: &str) -> Option<String> {
+    if let Some(d) = DESCRIBED.lock().unwrap_or_else(|e| e.into_inner()).get(exe) {
+        return d.clone();
+    }
+    let d = file_description(exe);
+    DESCRIBED.lock().unwrap_or_else(|e| e.into_inner()).insert(exe.to_string(), d.clone());
+    d
+}
+
 pub(crate) fn file_description(exe: &str) -> Option<String> {
     unsafe {
         let path = HSTRING::from(exe);
@@ -152,9 +166,28 @@ pub fn shell_open(target: &str) -> bool {
     let before = app_windows();
     let ok = open_target(target);
     if ok {
-        front_when_shown(before);
+        front_when_shown(before, target.to_string());
     }
     ok
+}
+
+/// ULTRON, for finding the app a launch is for in its list of apps.
+static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
+
+/// The windows already open of the app `target` opens (its program, its app id, or the app in ULTRON's list it is).
+fn windows_of(target: &str) -> Vec<HWND> {
+    let t = target.trim_matches('"').to_lowercase();
+    let id = t.strip_prefix("shell:appsfolder\\").map(|s| s.to_string());
+    let key = APP.get().and_then(|a| a.state::<Apps>().index.read().ok().and_then(|ix| ix.iter().find(|e| e.launch.eq_ignore_ascii_case(target)).map(|e| e.key.clone())));
+    app_windows()
+        .into_iter()
+        .filter(|h| {
+            let Some((exe, aumid)) = process_identity(window_pid(*h)) else { return false };
+            exe.to_lowercase() == t
+                || id.as_deref().is_some_and(|i| aumid.as_deref().is_some_and(|a| a.to_lowercase() == i))
+                || key.as_deref().is_some_and(|k| key_for(Some(&exe), aumid.as_deref()) == k)
+        })
+        .collect()
 }
 
 /// Every app window there is now.
@@ -170,11 +203,12 @@ fn app_windows() -> Vec<HWND> {
 /// ULTRON's own windows never take the keyboard, so Windows doesn't count ULTRON as the app you're in, and doesn't
 /// let what it starts come in front of that app: apps opened behind the one you were in. So the first new window to
 /// appear (within a few seconds) is brought to the front, unless something else has come to the front by then.
-fn front_when_shown(before: Vec<HWND>) {
+fn front_when_shown(before: Vec<HWND>, target: String) {
     let before: Vec<isize> = before.iter().map(|h| h.0 as isize).collect();
     std::thread::spawn(move || {
         let fg0 = unsafe { GetForegroundWindow() }.0 as isize;
         let t0 = std::time::Instant::now();
+        let mut looked = false;
         while t0.elapsed() < Duration::from_secs(10) {
             std::thread::sleep(Duration::from_millis(120));
             if unsafe { GetForegroundWindow() }.0 as isize != fg0 {
@@ -184,6 +218,16 @@ fn front_when_shown(before: Vec<HWND>) {
                 std::thread::sleep(Duration::from_millis(60));
                 force_front(h);
                 return;
+            }
+            // An app that was open already (Spotify, Discord, a browser) gets no new window: it's asked to show the one
+            // it has, and Windows won't let it come in front of the app you're in (Claude, say). Nothing seemed to
+            // happen until you got the other app out of the way. After a moment, its own window is brought forward.
+            if !looked && t0.elapsed() > Duration::from_millis(650) {
+                looked = true;
+                if let Some(h) = windows_of(&target).into_iter().find(|h| h.0 as isize != fg0) {
+                    force_front(h);
+                    return;
+                }
             }
         }
     });
@@ -330,18 +374,33 @@ impl Apps {
         }
         let front = unsafe { GetForegroundWindow() };
         let index = self.index.read().unwrap();
+        // (which program each window belongs to is worked out once and remembered while it stays open: the taskbar
+        //  asks for this list twice a second, and each time every window's program was looked up afresh, and an app's
+        //  name read out of its program file on disk)
+        let mut seen = IDENTITY.lock().unwrap_or_else(|e| e.into_inner());
+        seen.retain(|k, _| all.iter().any(|h| h.0 as isize == *k));
         all.into_iter()
             .filter(|h| is_app_window(*h, own))
             .filter_map(|h| {
-                let mut pid = window_pid(h);
-                let (mut exe, mut aumid) = process_identity(pid)?;
-                if exe.to_lowercase().ends_with("applicationframehost.exe") {
-                    pid = real_pid(h, pid);
-                    (exe, aumid) = process_identity(pid)?;
-                }
+                let pid0 = window_pid(h);
+                let (exe, aumid) = match seen.get(&(h.0 as isize)).filter(|c| c.0 == pid0) {
+                    Some(c) => (c.1.clone(), c.2.clone()),
+                    None => {
+                        let (mut exe, mut aumid) = process_identity(pid0)?;
+                        let frame = exe.to_lowercase().ends_with("applicationframehost.exe");
+                        if frame {
+                            (exe, aumid) = process_identity(real_pid(h, pid0))?;
+                        }
+                        // (a Store app's frame isn't remembered until the app inside it has turned up)
+                        if !exe.to_lowercase().ends_with("applicationframehost.exe") {
+                            seen.insert(h.0 as isize, (pid0, exe.clone(), aumid.clone()));
+                        }
+                        (exe, aumid)
+                    }
+                };
                 let key = key_for(Some(&exe), aumid.as_deref());
                 let known = index.iter().find(|e| e.key == key);
-                let name = known.map(|e| e.name.clone()).or_else(|| file_description(&exe)).unwrap_or_else(|| exe_stem(&exe));
+                let name = known.map(|e| e.name.clone()).or_else(|| described(&exe)).unwrap_or_else(|| exe_stem(&exe));
                 let mut buf = [0u16; 300];
                 let n = unsafe { GetWindowTextW(h, &mut buf) }.max(0) as usize;
                 let title = String::from_utf16_lossy(&buf[..n]);
@@ -545,6 +604,7 @@ fn hook_front() {
 }
 
 pub fn start(app: AppHandle) {
+    let _ = APP.set(app.clone());
     std::thread::spawn(move || {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
@@ -619,7 +679,8 @@ pub fn start(app: AppHandle) {
             if ticks % 4000 == 0 {
                 *apps.index.write().unwrap() = build_index();
             }
-            std::thread::park_timeout(Duration::from_millis(if !settled { 30 } else if col_due.is_empty() { 120 } else { 40 }));
+            // (woken at once by Windows when another window comes forward: the timed look is only a fallback)
+            std::thread::park_timeout(Duration::from_millis(if !settled { 30 } else if col_due.is_empty() { 400 } else { 40 }));
         }
     });
 }

@@ -465,7 +465,7 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
             return r;
         }
         // bigger jobs (files, Excel, Word, research): the task agent plans them step by step with tools
-        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && cloud::active(&app).is_some()) {
+        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && (cloud::active(&app).is_some() || ai::uplink(&app))) {
             if let Some(r) = doer::run(&app, &text) {
                 ai::remember_chat(&app, &text, &r.reply);
                 return r;
@@ -1479,6 +1479,9 @@ fn main() {
         return;
     }
     // (started only to bring Windows' taskbar back when the ULTRON that hid it has gone: see dock.rs)
+    if watchdog::keeper_if_asked() {
+        return;
+    }
     if dock::guard_if_asked() {
         return;
     }
@@ -1549,6 +1552,7 @@ fn main() {
             lid::start(handle.clone());
             keepbelow::start();
             watchdog::start(handle.clone());
+            watchdog::keep();
             mail::watch(handle.clone());
             rec::hotkeys(handle.clone());
             spotkey::start(handle.clone());
