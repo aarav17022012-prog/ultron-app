@@ -3624,6 +3624,10 @@ const invoke = (cmd, args) => { if (!TAURI) return Promise.resolve(); const id =
 const listen = (name, fn) => TAURI && TAURI.event.listen(name, e => fn(e.payload));
 // this is an app, not a web page: no browser menu ("Back", "Refresh", "Save as"...) on right-click (text boxes keep theirs, for paste)
 addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, [contenteditable]')) e.preventDefault(); });
+// (nor is anything in it dragged away as a web page's pictures and words are: the shelf's files are handed out by
+//  ULTRON itself. And the middle button doesn't bring up a web page's scrolling compass)
+addEventListener('dragstart', e => { if (!e.target.closest || !e.target.closest('input, textarea, [contenteditable]')) e.preventDefault(); }, true);
+addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); }, true);
 const $ = id => document.getElementById(id);
 
 /* ---------- settings (persisted per viewer) ---------- */

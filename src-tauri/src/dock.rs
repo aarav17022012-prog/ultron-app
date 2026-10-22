@@ -103,6 +103,61 @@ fn trays() -> Vec<HWND> {
     v
 }
 
+/// Windows shows its taskbar again now and then: an app opening, one asking for attention, a notification. It was put
+/// away again at the next look, up to half a second later, and it flashed up across the bottom of the screen (over the
+/// Drop Shelf too). Now Windows tells ULTRON the moment it shows it, and it's put away at once.
+unsafe extern "system" fn tray_shown(_: windows::Win32::UI::Accessibility::HWINEVENTHOOK, _: u32, h: HWND, object: i32, _: i32, _: u32, _: u32) {
+    if object != 0 || !ON.load(SeqCst) || now_ms() < HIDE_FROM.load(SeqCst) {
+        return;
+    }
+    let mut buf = [0u16; 32];
+    let n = unsafe { windows::Win32::UI::WindowsAndMessaging::GetClassNameW(h, &mut buf) }.max(0) as usize;
+    let class = String::from_utf16_lossy(&buf[..n]);
+    if class == "Shell_TrayWnd" || class == "Shell_SecondaryTrayWnd" {
+        unsafe {
+            let _ = ShowWindow(h, SW_HIDE);
+        }
+    }
+}
+
+fn hook_tray() {
+    use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        DispatchMessageW, GetWindowThreadProcessId, MsgWaitForMultipleObjects, PeekMessageW, TranslateMessage, EVENT_OBJECT_SHOW, MSG, PM_REMOVE, QS_ALLINPUT,
+        WINEVENT_OUTOFCONTEXT,
+    };
+    std::thread::spawn(|| unsafe {
+        let (mut hook, mut pid_was): (Option<HWINEVENTHOOK>, u32) = (None, 0);
+        loop {
+            // (Explorer's own: looked for again now and then, as it's a new one when Explorer restarts)
+            let pid = FindWindowW(w!("Shell_TrayWnd"), PCWSTR::null()).map(|h| {
+                let mut p = 0u32;
+                GetWindowThreadProcessId(h, Some(&mut p));
+                p
+            });
+            let pid = pid.unwrap_or(0);
+            if pid != pid_was {
+                if let Some(h) = hook.take() {
+                    let _ = UnhookWinEvent(h);
+                }
+                if pid != 0 {
+                    hook = Some(SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, None, Some(tray_shown), pid, 0, WINEVENT_OUTOFCONTEXT));
+                }
+                pid_was = pid;
+            }
+            let t0 = std::time::Instant::now();
+            let mut m = MSG::default();
+            while t0.elapsed() < Duration::from_secs(3) {
+                while PeekMessageW(&mut m, None, 0, 0, PM_REMOVE).as_bool() {
+                    let _ = TranslateMessage(&m);
+                    DispatchMessageW(&m);
+                }
+                MsgWaitForMultipleObjects(None, false, 250, QS_ALLINPUT);
+            }
+        }
+    });
+}
+
 pub fn taskbar(show: bool) {
     for h in trays() {
         unsafe {
@@ -176,6 +231,7 @@ pub fn set(app: &AppHandle, on: bool) -> i32 {
     }
     guard(was);
     if !WATCHING.swap(true, SeqCst) {
+        hook_tray();
         let app = app.clone();
         std::thread::spawn(move || {
             let mut last: Vec<OpenWin> = Vec::new();

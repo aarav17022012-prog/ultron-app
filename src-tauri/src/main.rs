@@ -1391,7 +1391,7 @@ pub fn keep(path: impl AsRef<std::path::Path>, data: impl AsRef<[u8]>) -> bool {
 /// Every ULTRON window shares one WebView2 browser, so they must all start it the same way: this is what
 /// tauri.conf.json gives the main window, and every window made in code (browser.rs, ghost.rs) must be given
 /// it too. A window started differently is refused outright ("not in the correct state").
-pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --autoplay-policy=no-user-gesture-required --auto-select-desktop-capture-source=creen";
+pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion,MediaRouter,OptimizationHints,AutofillServerCommunication,Translate --disable-background-networking --disable-component-update --disable-domain-reliability --no-pings --autoplay-policy=no-user-gesture-required --auto-select-desktop-capture-source=creen";
 
 /// How often the live glass refreshes (0 = paused), from what's on screen.
 #[tauri::command]
@@ -1435,6 +1435,33 @@ async fn procs_end(paths: Vec<String>) -> u32 {
 #[tauri::command]
 fn memory_forget(app: AppHandle, index: Option<usize>) {
     memory::remove(&app, index);
+}
+
+/// ULTRON's window is drawn by Windows' own web engine, but nothing about it should act like a browser: F5 or Ctrl+R
+/// reloaded the whole of ULTRON, Ctrl+F brought up a find bar, Ctrl+P a print dialog, Ctrl and the wheel or a pinch on
+/// the touchpad zoomed everything, a two-finger swipe went "back", and the engine offered to save passwords. All off.
+/// (Copy, paste, undo and the like in its text boxes stay as they are.)
+fn app_like(w: &tauri::WebviewWindow) {
+    use wcore62::Interface;
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Settings3, ICoreWebView2Settings4, ICoreWebView2Settings5, ICoreWebView2Settings6};
+    let _ = w.with_webview(|pv| unsafe {
+        let Ok(s) = pv.controller().CoreWebView2().and_then(|c| c.Settings()) else { return };
+        let _ = s.SetIsStatusBarEnabled(false);
+        let _ = s.SetIsZoomControlEnabled(false);
+        if let Ok(s) = s.cast::<ICoreWebView2Settings3>() {
+            let _ = s.SetAreBrowserAcceleratorKeysEnabled(false);
+        }
+        if let Ok(s) = s.cast::<ICoreWebView2Settings4>() {
+            let _ = s.SetIsGeneralAutofillEnabled(false);
+            let _ = s.SetIsPasswordAutosaveEnabled(false);
+        }
+        if let Ok(s) = s.cast::<ICoreWebView2Settings5>() {
+            let _ = s.SetIsPinchZoomEnabled(false);
+        }
+        if let Ok(s) = s.cast::<ICoreWebView2Settings6>() {
+            let _ = s.SetIsSwipeNavigationEnabled(false);
+        }
+    });
 }
 
 /// What you've selected in the app you were using (for Read aloud).
@@ -1499,6 +1526,7 @@ fn main() {
                 appbar::register(&handle, h, BAR_HEIGHT, WINDOW_HEIGHT);
             }
             win.show()?;
+            app_like(&win);
 
             hit::watch(handle.clone(), &["main"]);
             apps::start(handle.clone());
