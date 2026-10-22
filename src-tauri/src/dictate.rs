@@ -133,15 +133,26 @@ pub fn type_out(text: &str) {
     }
 }
 
-/// One heard piece: tidied, typed (a space first when it follows other words), and given back as typed.
-pub fn piece(heard: &str, after: Option<char>) -> String {
+/// One heard piece, tidied (a space first when it follows other words), as it would be typed.
+pub fn tidy(heard: &str, after: Option<char>) -> String {
     let text = polish(heard, after);
     if text.is_empty() {
         return text;
     }
     let lead = after.is_some_and(|c| !c.is_whitespace()) && !text.starts_with(['\n', ',', '.', '?', '!', ';', ':', '…']);
-    let typed = if lead { format!(" {text}") } else { text };
-    type_out(&typed);
+    if lead {
+        format!(" {text}")
+    } else {
+        text
+    }
+}
+
+/// One heard piece: tidied, typed, and given back as typed.
+pub fn piece(heard: &str, after: Option<char>) -> String {
+    let typed = tidy(heard, after);
+    if !typed.is_empty() {
+        type_out(&typed);
+    }
     typed
 }
 

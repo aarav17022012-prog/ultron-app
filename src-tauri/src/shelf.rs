@@ -117,7 +117,10 @@ pub fn drag(hwnd: HWND, paths: &[String]) -> u32 {
             let ids: Vec<*const ITEMIDLIST> = pidls.iter().map(|p| *p as *const ITEMIDLIST).collect();
             let arr: IShellItemArray = SHCreateShellItemArrayFromIDLists(&ids).ok()?;
             let data: IDataObject = arr.BindToHandler(None, &BHID_DataObject).ok()?;
-            SHDoDragDrop(Some(hwnd), &data, None, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_LINK).ok()
+            crate::hit::DRAGGING_OUT.store(true, std::sync::atomic::Ordering::SeqCst);
+            let r = SHDoDragDrop(Some(hwnd), &data, None, DROPEFFECT_COPY | DROPEFFECT_MOVE | DROPEFFECT_LINK).ok();
+            crate::hit::DRAGGING_OUT.store(false, std::sync::atomic::Ordering::SeqCst);
+            r
         })();
         for p in pidls {
             CoTaskMemFree(Some(p as *const _));

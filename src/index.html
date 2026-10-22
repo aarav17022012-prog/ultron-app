@@ -2705,8 +2705,8 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 @keyframes dsIn{from{opacity:0; transform:translateY(12px) scale(.8)}}
 .ds-i.new{animation:dsNew .62s cubic-bezier(.22,1,.36,1) backwards}
 @keyframes dsNew{from{opacity:.35; transform:translate(var(--fx, 0px), var(--fy, 0px)) scale(1.2)}}
-.ds-i.out{animation:dsOut .28s cubic-bezier(.5,0,.75,0) forwards; pointer-events:none}
-@keyframes dsOut{to{opacity:0; transform:scale(0)}}
+.ds-i.out{animation:dsOut .3s cubic-bezier(.4,0,.6,1) forwards; pointer-events:none}
+@keyframes dsOut{to{opacity:0; transform:translateY(10px) scale(.5)}}
 .ds-i.gone{width:0; margin-right:-8px; padding:0}
 .ds-i.drag{opacity:.32}
 .ds-drop{position:absolute; z-index:1; left:14px; right:14px; top:44px; bottom:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:18px; height:98px; bottom:auto;
@@ -3328,6 +3328,73 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 .gulp.go{animation:gulp .62s cubic-bezier(.2,.8,.25,1)}
 @keyframes gulp{0%{opacity:0; transform:scale(.3, .5)} 22%{opacity:.85; transform:scale(1, 1)} 100%{opacity:0; transform:scale(1.35, .4)}}
 html.vision .gulp{display:none}
+/* ---------- the Drop Shelf's apps: a pinned one shows a cross under the pointer, and a press takes it off again ---------- */
+.ds-ap.on:hover::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b0b0d' stroke-width='3.4' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E"); transform:rotate(90deg)}
+
+/* ---------- the dictation card: what you say appears on a white card, word by word, to drag where you want it ---------- */
+.wcard{position:fixed; z-index:44; left:50%; bottom:118px; width:min(420px, 92vw); margin-left:calc(min(420px, 92vw) / -2); pointer-events:none; opacity:0; visibility:hidden;
+  transform:translateY(34px) scale(.9); transform-origin:50% 100%; transition:opacity .2s, transform .34s cubic-bezier(.5,0,.75,0), visibility 0s .34s, bottom .5s var(--glide)}
+.wcard.on{opacity:1; visibility:visible; pointer-events:auto; transform:none; transition:opacity .22s, transform .62s cubic-bezier(.2,1.25,.32,1), visibility 0s, bottom .5s var(--glide)}
+.wcard.up{bottom:196px}
+.wc-in{position:relative; padding:14px 16px 12px 18px; border-radius:24px; background:#fff; color:#141418; cursor:grab;
+  box-shadow:0 0 0 .5px rgba(0,0,0,.06), 0 30px 70px -10px rgba(0,0,0,.42), 0 8px 22px rgba(0,0,0,.18); transition:transform .35s var(--spring), box-shadow .35s var(--glide), opacity .25s}
+.wcard:not(.has) .wc-in{cursor:default}
+.wcard.lift .wc-in{transform:scale(1.02) rotate(-.6deg); box-shadow:0 0 0 .5px rgba(0,0,0,.06), 0 40px 90px -10px rgba(0,0,0,.5), 0 12px 30px rgba(0,0,0,.22); cursor:grabbing}
+.wcard.away .wc-in{opacity:.35; transform:scale(.96)}
+.wc-top{display:flex; align-items:center; gap:9px; height:24px; margin-bottom:6px}
+.wc-mic{display:flex; align-items:center; gap:2.5px; height:14px}
+.wc-mic i{width:3px; height:4px; border-radius:2px; background:#141418; opacity:.3; transition:opacity .3s}
+.wcard.live .wc-mic i{opacity:1; animation:wcBar .9s ease-in-out infinite}
+.wcard.live .wc-mic i:nth-child(2){animation-delay:-.3s} .wcard.live .wc-mic i:nth-child(3){animation-delay:-.6s} .wcard.live .wc-mic i:nth-child(4){animation-delay:-.15s}
+@keyframes wcBar{0%, 100%{height:4px} 50%{height:14px}}
+.wc-say{flex:1; min-width:0; font-size:12px; font-weight:600; color:rgba(20,20,24,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .16s}
+.wc-say.swap{opacity:0}
+.wc-x{flex:none; width:24px; height:24px; border:0; padding:0; border-radius:50%; background:rgba(20,20,24,.06); display:grid; place-items:center; cursor:pointer; transition:background .2s, transform .25s var(--spring)}
+.wc-x:hover{background:rgba(20,20,24,.12)} .wc-x:active{transform:scale(.88)}
+.wc-x svg{width:11px; height:11px; fill:none; stroke:#141418; stroke-width:2.4; stroke-linecap:round}
+.wc-text{min-height:50px; max-height:220px; overflow-y:auto; font-size:18px; line-height:1.45; font-weight:550; letter-spacing:-.01em; color:#141418; white-space:pre-wrap; overflow-wrap:anywhere; scrollbar-width:none}
+.wc-text:empty::before{content:"Start speaking"; color:rgba(20,20,24,.3)}
+.wc-text:empty::after{content:""; display:inline-block; width:2px; height:1.05em; margin-left:3px; vertical-align:-.16em; border-radius:1px; background:#141418; animation:wcCaret 1s steps(1) infinite}
+@keyframes wcCaret{50%{opacity:0}}
+.ww{display:inline-block; animation:wwIn .5s cubic-bezier(.2,.8,.25,1) backwards; animation-delay:var(--d, 0s)}
+@keyframes wwIn{from{opacity:0; transform:translateY(.45em) scale(.96); filter:blur(5px)}}
+.wc-foot{display:flex; align-items:center; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid rgba(20,20,24,.07); opacity:.35; transition:opacity .3s}
+.wcard.has .wc-foot{opacity:1}
+.wc-hint{flex:1; min-width:0; display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:550; color:rgba(20,20,24,.45); white-space:nowrap; overflow:hidden}
+.wc-hint svg{flex:none; width:13px; height:13px; fill:rgba(20,20,24,.38)}
+.wc-b{flex:none; height:30px; padding:0 13px; border:0; border-radius:15px; background:rgba(20,20,24,.07); color:#141418; font:inherit; font-size:12.5px; font-weight:650; cursor:pointer; transition:background .2s, transform .25s var(--spring), color .2s}
+.wc-b:hover{background:rgba(20,20,24,.12)} .wc-b:active{transform:scale(.93)}
+.wc-copy{background:#141418; color:#fff} .wc-copy:hover{background:#2c2c32}
+.wc-b.done{background:#1f9d55; color:#fff}
+.wcard:not(.has) .wc-b{pointer-events:none}
+/* dropped, or typed: the card says so, then drifts away */
+.wc-placed{position:absolute; inset:0; border-radius:inherit; display:grid; place-items:center; background:rgba(255,255,255,.94); font-size:15px; font-weight:700; color:#141418; opacity:0; pointer-events:none; transition:opacity .2s}
+.wc-placed::before{content:""; width:9px; height:5px; margin:0 8px 3px 0; display:inline-block; border-left:2.4px solid #1f9d55; border-bottom:2.4px solid #1f9d55; transform:rotate(-45deg)}
+.wc-placed{grid-auto-flow:column}
+.wcard.placed .wc-placed{opacity:1}
+html.vision .wc-in{border-radius:16px}
+/* the words carried off the card: they hang beside the pointer (a caret at their edge over a typing area) */
+.wc-chip{position:fixed; left:0; top:0; z-index:46; pointer-events:none; visibility:hidden; will-change:transform}
+.wc-chip.on{visibility:visible}
+.wc-slip{position:absolute; left:16px; top:0; width:max-content; max-width:260px; padding:9px 13px 10px 17px; border-radius:14px; background:#fff; color:#141418;
+  font-size:13.5px; line-height:1.35; font-weight:600; letter-spacing:-.005em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  --fx:0px; transform:translate(var(--fx), -50%) scale(.92); transform-origin:-16px 50%; opacity:.82; box-shadow:0 0 0 .5px rgba(0,0,0,.06), 0 18px 40px -8px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.18);
+  transition:transform .32s var(--spring), opacity .2s}
+.wc-chip.on .wc-slip{animation:slipIn .4s cubic-bezier(.2,1.3,.35,1) backwards}
+@keyframes slipIn{from{opacity:0; transform:translate(var(--fx), -50%) scale(.5)}}
+.wc-chip.ok .wc-slip{transform:translate(var(--fx), -50%); opacity:1}
+/* (near the screen's right edge they hang on the pointer's other side) */
+.wc-chip.flip .wc-slip{--fx:calc(-100% - 32px); transform-origin:calc(100% + 16px) 50%}
+.wc-slip::before{content:""; position:absolute; left:7px; top:10px; bottom:11px; width:2px; border-radius:1px; background:#141418; opacity:0; transition:opacity .15s}
+.wc-chip.ok .wc-slip::before{opacity:1; animation:wcCaret 1s steps(1) .3s infinite}
+/* the typing area they'd go into, outlined; it flashes as they're taken */
+.wc-aim{position:fixed; z-index:45; left:0; top:0; width:0; height:0; border-radius:9px; pointer-events:none; opacity:0; transform:scale(1.04);
+  box-shadow:0 0 0 2px rgba(255,255,255,.95), 0 0 0 7px rgba(255,255,255,.16), 0 10px 34px rgba(0,0,0,.35);
+  transition:opacity .18s, transform .34s var(--spring), left .22s var(--glide), top .22s var(--glide), width .22s var(--glide), height .22s var(--glide)}
+.wc-aim.on{opacity:1; transform:none}
+.wc-aim.took{animation:aimTook .56s ease-out forwards}
+@keyframes aimTook{35%{box-shadow:0 0 0 2px #fff, 0 0 0 13px rgba(255,255,255,.24), 0 10px 34px rgba(0,0,0,.3)}
+  to{opacity:0; box-shadow:0 0 0 2px rgba(255,255,255,0), 0 0 0 22px rgba(255,255,255,0), 0 10px 34px rgba(0,0,0,0)}}
 </style>
 </head>
 <body>
@@ -3371,7 +3438,12 @@ html.vision .gulp{display:none}
     <div class="wh-grip"></div></div>
   <div class="wh-drag" id="whDrag"><img alt=""></div>
 </div></div>
-<i class="gulp" id="gulp" aria-hidden="true"></i><div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div><p class="ds-none" id="dsNone" aria-live="polite"></p></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
+<i class="gulp" id="gulp" aria-hidden="true"></i><div class="wcard" id="wcard" aria-label="Dictation"><div class="wc-in">
+  <div class="wc-top"><i class="wc-mic" aria-hidden="true"><i></i><i></i><i></i><i></i></i><span class="wc-say" id="wcSay">Listening…</span><button class="wc-x" id="wcX" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></div>
+  <div class="wc-text" id="wcText" aria-live="polite"></div>
+  <div class="wc-foot"><span class="wc-hint"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>Drag the words into any text box</span><button class="wc-b" id="wcType" type="button">Type it</button><button class="wc-b wc-copy" id="wcCopy" type="button">Copy</button></div>
+</div></div>
+<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div><p class="ds-none" id="dsNone" aria-live="polite"></p></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
   <div class="sp-pic"><img id="spPic" alt=""><div class="sp-when"><b id="spTime"></b><span id="spDate"></span></div></div>
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
@@ -3625,6 +3697,7 @@ html.vision .gulp{display:none}
           <div class="row"><span class="t">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="Eye speed"></div>
           <div class="row"><span class="t">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="Show name when minimized"></button></div>
           <div class="row"><span class="t">Voice typing</span><span class="hk-wrap"><button class="hk" id="dicKeyBtn" type="button" title="Press it, speak, and what you say is typed where you are writing. Press it again to stop"></button><button class="hk-x" id="dicKeyX" type="button" aria-label="Remove the shortcut" hidden></button></span></div>
+          <div class="row"><span class="t">Dictation card<small>Your words appear on a card, to drag where you want them or copy</small></span><button class="tg" role="switch" data-set="dictCard" aria-label="Dictation card"></button></div>
           <div class="row"><span class="t">Body</span>
             <span class="sws" role="radiogroup" aria-label="Body color">
               <button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button>
@@ -3676,7 +3749,7 @@ const $ = id => document.getElementById(id);
 
 /* ---------- settings (persisted per viewer) ---------- */
 const DEFAULTS = {setSkin:'ultron', follow:true, blink:true, eye:1, speed:1, sens:1, label:true, tint:'#ffffff', liveGlass:true, wake:true, speak:true, muted:false,
-  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, minFx:'windows', wear:null, agentWatch:false, agentNotes:false, agentAll:false};
+  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, minFx:'windows', wear:null, agentWatch:false, agentNotes:false, agentAll:false};
 let S = {...DEFAULTS};
 const TALL = Math.round(screen.height || 864) - 2;     // (ULTRON's window's height: see winH)
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
@@ -6295,7 +6368,8 @@ function dictOn(){
   invoke('voice_config', {patient:true, wake:false, prompt:'', paused:false}); wakeTold = false;
   $('micSt').classList.add('ptt');
   openedAt = 0; setOpen(false);
-  nbShow('<div class="nb-say">Dictating. Say <b>“stop dictation”</b> when you’re done.</div>', 5000);
+  if (S.dictCard) wcOpen();
+  else nbShow('<div class="nb-say">Dictating. Say <b>“stop dictation”</b> when you’re done.</div>', 5000);
   dictIdle();
 }
 function dictOff(why){
@@ -6303,16 +6377,19 @@ function dictOff(why){
   DICT.on = false; clearTimeout(DICT.idleT);
   invoke('voice_config', {patient:false, paused:micPaused()}); pushPrompt(); wakeTold = null;
   $('micSt').classList.remove('ptt');
-  nbShow(`<div class="nb-say">${esc(why || 'Dictation off.')}</div>`, 3000);
+  if (WC.on) wcDone(why);
+  else nbShow(`<div class="nb-say">${esc(why || 'Dictation off.')}</div>`, 3000);
 }
 async function dictHeard(text){
   if (DICT_STOP.test(text.trim())) return dictOff();
   dictIdle();
-  const typed = await DICT.send(text, DICT.tail.slice(-1));
+  // (onto the card, or typed where you are)
+  const typed = WC.on ? await invoke('dictate_tidy', {text, after:WC.text.slice(-1)}) : await DICT.send(text, DICT.tail.slice(-1));
   if (!typed || !DICT.on) return;
   DICT.tail = (DICT.tail + typed).slice(-240);
   invoke('voice_config', {prompt:DICT.tail.replace(/\s+/g, ' ').trim()});
-  nbShow(`<div class="nb-say">${esc(typed.trim())}</div>`, 2600);
+  if (WC.on) wcAdd(typed);
+  else nbShow(`<div class="nb-say">${esc(typed.trim())}</div>`, 2600);
 }
 async function onHeard(text){
   if (isEcho(text)) return;                             // that was ULTRON's own voice
@@ -8343,6 +8420,7 @@ function syncHit(){
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
+  if (window.WC && WC.on){ const r = $('wcard').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 8), y:Math.floor(r.top - 8), w:Math.ceil(r.width + 16), h:Math.ceil(r.height + 16)}); }
   // (dragging the floating player: the whole screen is ULTRON's until it's let go. Its own outline was a step behind a
   //  quick drag, and the pointer slipped off onto whatever was under it)
   if (flDrag) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
@@ -10328,7 +10406,8 @@ async function dsShow(kind, force){
   if (DS.on){ if (kind === 'drop'){ DS.mode = 'drop'; dsEl.classList.add('dragging'); } return; }
   if (!force && !dsCan()) return;
   DS.on = true; DS.mode = kind; clearTimeout(DS.leftT); dsEl.classList.remove('leaving');
-  DS.sticky = !!force; DS.stay = false; DS.wasDown = false;            // (asked for from ULTRON's menu or the wheel: it stays put)
+  DS.sticky = !!force; DS.stay = false; DS.wasDown = false;
+  $('wcard').classList.add('up');                                    // (the dictation card makes room above it)            // (asked for from ULTRON's menu or the wheel: it stays put)
   clearTimeout(DS.shrinkT);
   // (2 px short of the screen: a screen-sized window in front would be taken by Windows for a full-screen app)
   const tall = Math.round(screen.height || 864) - 2;
@@ -10351,6 +10430,7 @@ function dsShrinkSoon(){
 }
 function dsHide(){
   if (!DS.on || DS.out) return;
+  $('wcard').classList.remove('up');
   DS.on = false; DS.mode = ''; DS.over = false; DS.sticky = DS.stay = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT); clearTimeout(DS.appsT);
   if (DS.apps){ DS.apps = false; dsEl.querySelector('[data-ds="apps"] span').textContent = 'Apps'; invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 700); }
   dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging', 'apps');
@@ -10391,7 +10471,24 @@ function dsPaint(first, fresh, x, y){
     });
   }
 }
-function dsGo(el, then){ el.classList.add('out'); setTimeout(() => { el.classList.add('gone'); setTimeout(() => { el.remove(); then && then(); }, 280); }, 260); }
+// Taking one off: it sinks and fades as it shrinks away, while the ones after it close up behind it (its space closes
+// as it goes, not after a pause), and the tray narrows to fit at the same time: one motion. (It used to vanish, sit as a
+// gap, and then jump shut.) The shelf's list has already lost it.
+function dsGo(el, then){
+  el.style.width = el.offsetWidth + 'px'; void el.offsetWidth;
+  el.classList.add('out');
+  el.style.transition = 'width .36s cubic-bezier(.3,.7,.2,1) .08s, margin .36s cubic-bezier(.3,.7,.2,1) .08s, padding .36s .08s';
+  el.style.width = '0px'; el.style.marginRight = '-8px'; el.style.paddingLeft = el.style.paddingRight = '0px';
+  setTimeout(() => { if (DS.on) dsLay(); }, 80);
+  setTimeout(() => { el.remove(); then && then(); }, 460);
+}
+// (what's left after one is taken off: the count, the empty look, the tray's width; and in the apps below, its tick)
+function dsRemoved(path){
+  dsEl.classList.toggle('empty', !DS.items.length);
+  $('dsCount').textContent = DS.items.length ? `${DS.items.length} item${DS.items.length > 1 ? 's' : ''}` : '';
+  if (DS.appList && path) for (const t of $('dsGrid').querySelectorAll('.ds-ap.on')){ const a = DS.appList[+t.dataset.k]; if (a && a.launch.toLowerCase() === path.toLowerCase()) t.classList.remove('on'); }
+  dsLay(); syncHit();
+}
 const dsInside = pos => { if (!DS.box || !pos) return false; const x = pos.x / devicePixelRatio, y = pos.y / devicePixelRatio, b = DS.box; return x >= b.x - 14 && x <= b.x + b.w + 14 && y >= b.y - 14 && y <= b.y + b.h + 14; };
 function dsOver(on){ if (DS.over === on) return; DS.over = on; dsEl.classList.toggle('over', on); if (on){ clearTimeout(DS.hideT); dsEl.classList.add('dragging'); } }
 if (TAURI){
@@ -10432,7 +10529,7 @@ dsEl.addEventListener('click', e => {
   if (!a && !i && !DS.items.length && e.target.closest('.ds-drop')) return dsPick(e.target.closest('.ds-drop'));
   if (!a && i && i.dataset.app){ invoke('launch', {target:i.dataset.p}); dsHide(); return; }
   if (a === 'show' && i) invoke('shelf_reveal', {path:i.dataset.p});
-  else if (a === 'rm' && i){ const path = i.dataset.p; DS.items = DS.items.filter(x => x.path !== path); invoke('shelf_remove', {path}); dsGo(i, () => { dsEl.classList.toggle('empty', !DS.items.length); $('dsCount').textContent = DS.items.length ? `${DS.items.length} item${DS.items.length > 1 ? 's' : ''}` : ''; dsLay(); }); }
+  else if (a === 'rm' && i){ const path = i.dataset.p; DS.items = DS.items.filter(x => x.path !== path); invoke('shelf_remove', {path}); dsGo(i, () => dsRemoved(path)); }
   else if (a === 'clear'){ const all = [...dsRow.querySelectorAll('.ds-i')]; all.forEach((el, k) => setTimeout(() => el.classList.add('out'), k * 30)); DS.items = []; invoke('shelf_clear'); setTimeout(() => { dsPaint(false); dsLay(); }, 300 + all.length * 30); }
 });
 dsEl.addEventListener('pointerdown', e => e.stopPropagation());
@@ -10507,6 +10604,14 @@ function dsFilter(q){
 // size; the shelf makes room for it as it comes, and it settles there with a small bounce.
 async function dsPin(t){
   const a = DS.appList && DS.appList[+t.dataset.k]; if (!a) return;
+  if (t.classList.contains('on')){
+    t.classList.remove('on', 'pop'); void t.offsetWidth; t.classList.add('pop');
+    const el = [...dsRow.querySelectorAll('.ds-i')].find(e => e.dataset.p.toLowerCase() === a.launch.toLowerCase());
+    const path = el ? el.dataset.p : a.launch;
+    DS.items = DS.items.filter(x => x.path.toLowerCase() !== path.toLowerCase()); invoke('shelf_remove', {path});
+    if (el){ dsRow.scrollTo({left:Math.max(0, el.offsetLeft - 40), behavior:'smooth'}); dsGo(el, () => dsRemoved(path)); } else dsRemoved(path);
+    return;
+  }
   const ic = t.querySelector('.ds-ic'), r0 = ic.getBoundingClientRect(), img = ic.querySelector('img.ok');
   t.classList.add('on'); t.classList.remove('pop'); void t.offsetWidth; t.classList.add('pop');
   const items = await invoke('shelf_add_app', {name:a.name, launch:a.launch});
@@ -11111,6 +11216,131 @@ qsEl.addEventListener('click', e => {
   invoke('launch', {target:'ms-settings:' + b.dataset.ms});
   setTimeout(() => closeQS(true), 80);
 });
+
+/* ---------- the dictation card ----------
+   Dictating with the card on (the notch's settings): what you say appears on a white card, word by word as it's heard.
+   The words can be dragged off it into a typing area in any app (a text box, a chat, a document: only those take them),
+   copied, or typed where you were writing. */
+var WC = {on:false, text:''};
+const wcEl = $('wcard'), wcText = $('wcText');
+wcEl.querySelector('.wc-in').insertAdjacentHTML('beforeend', '<div class="wc-placed" id="wcPlaced">Placed</div>');
+function wcSay(t){ const s = $('wcSay'); if (s.textContent === t) return; s.classList.add('swap'); setTimeout(() => { s.textContent = t; s.classList.remove('swap'); }, 160); }
+function wcOpen(){
+  WC.on = true; WC.text = ''; wcText.textContent = '';
+  wcEl.classList.remove('has', 'placed', 'away', 'lift'); wcEl.classList.add('live');
+  void wcEl.offsetWidth; wcEl.classList.add('on'); wcSay('Listening… say “stop dictation” when you’re done');
+  syncHit(); setTimeout(syncHit, 650);
+}
+// each word of a new piece rises into place, one after another
+function wcAdd(t){
+  WC.text += t;
+  const lead = t.match(/^\s*/)[0], words = t.slice(lead.length).split(/(\s+)/);
+  if (lead) wcText.append(lead);
+  let k = 0;
+  for (const w of words){
+    if (!w) continue;
+    if (/^\s+$/.test(w)){ wcText.append(w); continue; }
+    const s = document.createElement('span'); s.className = 'ww'; s.style.setProperty('--d', (k++ * 55) + 'ms'); s.textContent = w; wcText.appendChild(s);
+  }
+  wcText.scrollTop = wcText.scrollHeight;
+  wcEl.classList.add('has'); syncHit();
+}
+function wcDone(why){
+  wcEl.classList.remove('live');
+  wcSay(WC.text.trim() ? 'Drag the words into a text box, or copy them' : (why || 'Dictation off'));
+  if (!WC.text.trim()) setTimeout(() => { if (!DICT.on) wcClose(); }, 1600);
+}
+function wcClose(){
+  if (!WC.on) return;
+  if (WC.drag) wcLand({ok:false});
+  WC.on = false; wcEl.classList.remove('on', 'live', 'lift', 'away');
+  if (DICT.on) dictOff();
+  setTimeout(syncHit, 380);
+}
+function wcPlaced(word){ $('wcPlaced').textContent = word || 'Placed'; wcEl.classList.add('placed'); setTimeout(wcClose, 850); }
+$('wcX').addEventListener('click', e => { e.stopPropagation(); wcClose(); });
+$('wcCopy').addEventListener('click', async e => {
+  e.stopPropagation();
+  const b = e.currentTarget;
+  if (await invoke('words_copy', {text:WC.text.trim()})){ b.textContent = 'Copied'; b.classList.add('done'); setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('done'); }, 1400); }
+});
+// (typed where you were writing: the keyboard is handed back to that app first)
+$('wcType').addEventListener('click', e => {
+  e.stopPropagation();
+  const t = WC.text.trim(); if (!t) return;
+  if (DICT.on) dictOff();
+  invoke('focus_back'); setTimeout(() => invoke('words_type', {text:t}), 160);
+  wcPlaced('Typed');
+});
+// pressed, it lifts; moved, the words come off it and hang beside the pointer, swinging a little as it goes. ULTRON
+// follows the pointer from there (it lets it through to the app below): a typing area under it is outlined, and let go
+// over one, the words pour into it where they were let go. Anywhere else, they fly back onto the card.
+document.body.insertAdjacentHTML('beforeend', '<div class="wc-aim" id="wcAim"></div><div class="wc-chip" id="wcChip"><div class="wc-slip"></div></div>');
+const wcChip = $('wcChip'), wcSlip = wcChip.firstChild, wcAimEl = $('wcAim');
+wcEl.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.target.closest('button') || !WC.text.trim() || WC.drag) return;
+  e.stopPropagation();
+  const x0 = e.clientX, y0 = e.clientY;
+  wcEl.classList.add('lift');
+  const off = () => { removeEventListener('pointermove', mv, true); removeEventListener('pointerup', off, true); wcEl.classList.remove('lift'); };
+  const mv = ev => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) >= 6){ off(); wcGrab(ev.clientX, ev.clientY); } };
+  addEventListener('pointermove', mv, true); addEventListener('pointerup', off, true);
+});
+function wcGrab(x, y){
+  const t = WC.text.trim();
+  WC.drag = {tx:x, ty:y, cx:x, cy:y, r:0}; WC.aimK = '';
+  wcChip.getAnimations({subtree:true}).forEach(a => a.cancel());
+  wcSlip.textContent = t; wcChip.classList.remove('ok', 'flip'); wcChip.style.transform = `translate(${x}px, ${y}px)`;
+  wcChip.classList.add('on'); wcEl.classList.add('away'); wcSay('Drop them into any text box');
+  invoke('words_drag', {text:t}).catch(() => wcLand({ok:false}));
+  requestAnimationFrame(wcFollow);
+}
+// (carried: it eases after the pointer and leans the way it's going)
+function wcFollow(){
+  const d = WC.drag; if (!d) return;
+  const px = d.cx;
+  d.cx += (d.tx - d.cx) * .55; d.cy += (d.ty - d.cy) * .55;
+  d.r += (Math.max(-8, Math.min(8, (d.cx - px) * .4)) - d.r) * .2;
+  const flip = d.cx > innerWidth - 300; if (flip !== d.flip){ d.flip = flip; wcChip.classList.toggle('flip', flip); }
+  wcChip.style.transform = `translate(${d.cx.toFixed(1)}px, ${d.cy.toFixed(1)}px) rotate(${d.r.toFixed(2)}deg)`;
+  requestAnimationFrame(wcFollow);
+}
+// the typing area under the pointer, outlined (a: where it is in the page, or none)
+function wcAim(a){
+  const k = a ? a.map(Math.round).join() : '';
+  if (k === WC.aimK) return;
+  WC.aimK = k; wcChip.classList.toggle('ok', !!a);
+  if (!a){ wcAimEl.classList.remove('on'); return; }
+  const x = Math.max(a[0], 3), y = Math.max(a[1], 3), w = Math.min(a[0] + a[2], innerWidth - 3) - x, h = Math.min(a[1] + a[3], innerHeight - 3) - y, st = wcAimEl.style;
+  const fresh = !wcAimEl.classList.contains('on');
+  if (fresh) st.transition = 'none';
+  st.left = x + 'px'; st.top = y + 'px'; st.width = Math.max(w, 8) + 'px'; st.height = Math.max(h, 8) + 'px';
+  if (fresh){ void wcAimEl.offsetWidth; st.transition = ''; }
+  wcAimEl.classList.remove('took'); wcAimEl.classList.add('on');
+}
+listen('words-drag', e => { const d = WC.drag; if (!d) return; d.tx = e.x; d.ty = e.y; wcAim(e.aim); });
+listen('words-drop', e => wcLand(e));
+function wcLand(e){
+  const d = WC.drag; if (!d) return;
+  WC.drag = null; wcEl.classList.remove('away');
+  if (e.ok){
+    // they pour in where they were let go, and the box they went into flashes
+    wcChip.style.transform = `translate(${e.x}px, ${e.y}px)`;
+    wcAim(e.aim); wcAimEl.classList.add('took'); setTimeout(() => wcAimEl.classList.remove('on', 'took'), 600);
+    const a = wcSlip.animate([{opacity:1, transform:'translate(var(--fx), -50%) scale(1)'}, {opacity:0, transform:'translate(var(--fx), -50%) scale(.06)'}], {duration:300, easing:'cubic-bezier(.5,0,.75,0)', fill:'forwards'});
+    a.onfinish = () => { wcChip.classList.remove('on', 'ok'); a.cancel(); };
+    if (DICT.on) dictOff();
+    wcPlaced('Dropped');
+    return;
+  }
+  wcAim(null);
+  const b = wcText.getBoundingClientRect(), to = `translate(${b.left + 6}px, ${b.top + Math.min(b.height, 56) / 2}px)`;
+  const a = wcChip.animate([{transform:wcChip.style.transform}, {transform:to}], {duration:440, easing:'cubic-bezier(.3,.7,.2,1)', fill:'forwards'});
+  wcSlip.animate([{opacity:.82, transform:'translate(var(--fx), -50%) scale(.92)'}, {opacity:0, transform:'translate(var(--fx), -50%) scale(.6)'}], {duration:440, easing:'cubic-bezier(.6,0,.8,.4)', fill:'forwards'});
+  a.onfinish = () => { wcChip.classList.remove('on', 'ok'); wcChip.getAnimations({subtree:true}).forEach(x => x.cancel()); };
+  wcEl.querySelector('.wc-in').animate([{transform:'scale(1)'}, {transform:'scale(1.03)'}, {transform:'scale(1)'}], {duration:360, delay:330, easing:'cubic-bezier(.3,.7,.2,1)'});
+  wcSay(e.esc ? 'Drag the words into a text box, or copy them' : 'Only a text box takes them: drop them on one');
+}
 
 /* About shows the version the app was built as (tauri.conf.json) */
 window.__TAURI__?.app?.getVersion?.().then(v => { $('abVer').textContent = `Version ${v} · runs entirely on this PC`; }).catch(() => {});

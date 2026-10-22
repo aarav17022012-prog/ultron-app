@@ -102,6 +102,11 @@ struct Target {
     was_down: bool,
 }
 
+/// Something is being dragged out of ULTRON into another app (a shelf file, dictated words). The press began on ULTRON,
+/// which otherwise keeps the pointer until it's let go: then its window, the screen's whole height, was on top wherever
+/// the pointer went, and whatever was dragged was dropped back onto ULTRON instead of the app under it.
+pub static DRAGGING_OUT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 const MARGIN: f64 = 10.0; // clickable a little before the pointer arrives
 const NEAR: f64 = 120.0; // poll fast when this close to anything clickable
 
@@ -152,7 +157,7 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 } else if !down {
                     t.held = false;
                 }
-                if t.held {
+                if t.held && !DRAGGING_OUT.load(std::sync::atomic::Ordering::SeqCst) {
                     inside = true;
                 }
                 // (checked against the window itself each time, not a note of what was last set: anything else that touches
