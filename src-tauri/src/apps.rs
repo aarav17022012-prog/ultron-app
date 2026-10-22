@@ -331,7 +331,7 @@ unsafe extern "system" fn collect(h: HWND, lp: LPARAM) -> windows::core::BOOL {
     true.into()
 }
 
-fn is_app_window(h: HWND, own_pid: u32) -> bool {
+pub(crate) fn is_app_window(h: HWND, own_pid: u32) -> bool {
     unsafe {
         if !IsWindowVisible(h).as_bool() || GetWindowTextLengthW(h) == 0 {
             return false;

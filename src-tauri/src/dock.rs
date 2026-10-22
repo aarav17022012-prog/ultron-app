@@ -275,7 +275,12 @@ pub fn act(id: &str, what: &str) {
             return;
         }
         match what {
-            "focus" => crate::apps::focus_window(h),
+            // (minimized, with ULTRON's minimize animation on: it flies back out of the notch first)
+            "focus" => {
+                if !(IsIconic(h).as_bool() && crate::minfx::back_out(h)) {
+                    crate::apps::focus_window(h)
+                }
+            }
             "min" => {
                 // (its picture as it goes down, for the wheel to show while it's away)
                 if KEEP.load(SeqCst) {
@@ -589,6 +594,7 @@ pub fn guard_if_asked() -> bool {
         }
     }
     give_back(args.get(i + 2).and_then(|s| s.parse::<isize>().ok()).unwrap_or(-1));
+    crate::minfx::heal(); // (and Windows' own minimize animation, if ULTRON had turned it off)
     crate::notes::restore_left_over(); // (and the banners ULTRON's notifications had turned off)
     true
 }

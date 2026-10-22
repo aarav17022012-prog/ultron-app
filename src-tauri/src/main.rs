@@ -58,6 +58,7 @@ mod tts;
 mod web;
 mod procs;
 mod coders;
+mod minfx;
 mod gemini;
 mod watchdog;
 
@@ -361,6 +362,7 @@ fn intro_due(app: AppHandle) -> bool {
 
 fn quit(app: &AppHandle) {
     let _ = app.emit("app-quit", ());
+    minfx::heal();
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(560));
@@ -1010,6 +1012,20 @@ async fn gemini_warm(app: AppHandle) {
     let _ = tauri::async_runtime::spawn_blocking(move || gemini::warm(&app)).await;
 }
 
+/// Minimize animation (Settings › Look & feel): into the notch, or Windows' own.
+#[tauri::command]
+fn min_fx(app: AppHandle, on: bool) {
+    minfx::set(&app, on);
+}
+
+/// The minimize animation played on a window (by its handle) without minimizing it.
+#[tauri::command]
+fn min_fx_preview(app: AppHandle, id: String, back: bool) {
+    if let Ok(n) = id.parse::<isize>() {
+        minfx::preview(&app, windows::Win32::Foundation::HWND(n as _), back);
+    }
+}
+
 /// Agent watch (the notch's Settings): on or off, and which notifications count.
 #[tauri::command]
 fn agent_watch(on: bool, notes: bool, all: bool) {
@@ -1512,7 +1528,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, min_fx, min_fx_preview, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
@@ -1553,6 +1569,7 @@ fn main() {
             keepbelow::start();
             watchdog::start(handle.clone());
             watchdog::keep();
+            minfx::heal(); // (Windows' own minimize animation back, if a crash left it off: the page asks again if it's wanted)
             mail::watch(handle.clone());
             rec::hotkeys(handle.clone());
             spotkey::start(handle.clone());
