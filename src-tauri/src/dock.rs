@@ -275,12 +275,7 @@ pub fn act(id: &str, what: &str) {
             return;
         }
         match what {
-            // (minimized, with ULTRON's minimize animation on: it flies back out of the notch first)
-            "focus" => {
-                if !(IsIconic(h).as_bool() && crate::minfx::back_out(h)) {
-                    crate::apps::focus_window(h)
-                }
-            }
+            "focus" => crate::apps::focus_window(h),
             "min" => {
                 // (its picture as it goes down, for the wheel to show while it's away)
                 if KEEP.load(SeqCst) {

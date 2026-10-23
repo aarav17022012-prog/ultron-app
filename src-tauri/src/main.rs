@@ -59,6 +59,7 @@ mod web;
 mod procs;
 mod coders;
 mod minfx;
+mod signin;
 mod gemini;
 mod watchdog;
 mod words;
@@ -1050,19 +1051,38 @@ async fn gemini_warm(app: AppHandle) {
     let _ = tauri::async_runtime::spawn_blocking(move || gemini::warm(&app)).await;
 }
 
-/// Minimize animation (Settings › Look & feel): into the notch, or Windows' own.
+/// Windows' sign-in as the PC wakes: `on` given, it's turned on or off (Settings > Look & feel > Lock screen); what it is
+/// now either way (None: couldn't tell).
 #[tauri::command]
-fn min_fx(app: AppHandle, on: bool) {
-    minfx::set(&app, on);
+async fn signin_wake(on: Option<bool>) -> Option<bool> {
+    tauri::async_runtime::spawn_blocking(move || match on {
+        Some(v) => signin::set(v),
+        None => signin::asks(),
+    })
+    .await
+    .ok()
+    .flatten()
 }
 
-/// The minimize animation played on a window (by its handle) without minimizing it.
+/// When Windows last started ULTRON as you signed in (for Settings > System).
 #[tauri::command]
-fn min_fx_preview(app: AppHandle, id: String, back: bool) {
-    if let Ok(n) = id.parse::<isize>() {
-        minfx::preview(&app, windows::Win32::Foundation::HWND(n as _), back);
-    }
+fn login_last() -> Option<String> {
+    std::fs::read_to_string(login_note()).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
 }
+
+fn login_note() -> std::path::PathBuf {
+    std::env::var("LOCALAPPDATA").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("ULTRON").join("last-started-with-windows.txt")
+}
+
+/// Now, as people write it: "Thu 23 Oct, 17:05".
+fn now_said() -> String {
+    use windows::Win32::System::SystemInformation::GetLocalTime;
+    let t = unsafe { GetLocalTime() };
+    const DAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    format!("{} {} {}, {:02}:{:02}", DAYS[(t.wDayOfWeek % 7) as usize], t.wDay, MONTHS[((t.wMonth.max(1) - 1) % 12) as usize], t.wHour, t.wMinute)
+}
+
 
 /// Agent watch (the notch's Settings): on or off, and which notifications count.
 #[tauri::command]
@@ -1539,18 +1559,35 @@ fn main() {
     if dock::guard_if_asked() {
         return;
     }
+    let by_windows = std::env::args().any(|a| a == "--at-login");
     // one ULTRON at a time (two menu bars would each reserve screen space)
     unsafe {
         let _ = CreateMutexW(None, false, &HSTRING::from("Local\\ULTRON-notch-single-instance"));
         if GetLastError() == ERROR_ALREADY_EXISTS {
+            if by_windows {
+                log_line(&format!("started with Windows ({}), but ULTRON was already running", now_said()));
+            }
             return;
         }
+    }
+    // Started by Windows as you sign in: Windows' taskbar and desktop may not be up yet, and ULTRON's bar, its
+    // taskbar and its windows go round them. It waits for them (half a minute at most), then a moment more.
+    if by_windows {
+        use windows::Win32::UI::WindowsAndMessaging::FindWindowW;
+        let t0 = std::time::Instant::now();
+        while unsafe { FindWindowW(windows::core::w!("Shell_TrayWnd"), windows::core::PCWSTR::null()) }.is_err() && t0.elapsed() < Duration::from_secs(30) {
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        std::thread::sleep(Duration::from_millis(1500));
+        let _ = std::fs::create_dir_all(login_note().parent().unwrap());
+        let _ = std::fs::write(login_note(), now_said());
     }
     // the language models' servers must not outlive ULTRON (kids.rs): the ones an earlier ULTRON left
     // running are stopped now, and the ones this ULTRON starts go when it goes
     kids::sweep();
     kids::watch();
     start_log();
+    log_line(&format!("ULTRON {} started {}, {}", env!("CARGO_PKG_VERSION"), if by_windows { "with Windows" } else { "by hand" }, now_said()));
 
     tauri::Builder::default()
         .manage(Hits::default())
@@ -1566,7 +1603,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, min_fx, min_fx_preview, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

@@ -323,6 +323,7 @@ fn questions(text: &str) -> String {
 
 /// A piece of dictation ready to type. `after` is the last character already typed (None at the start):
 /// it decides whether this piece opens a sentence or carries one on.
+#[cfg(test)]
 pub fn polish(heard: &str, after: Option<char>) -> String {
     polish_with(heard, after, true)
 }
