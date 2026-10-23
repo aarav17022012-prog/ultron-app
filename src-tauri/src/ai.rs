@@ -1019,6 +1019,38 @@ fn generate(app: &AppHandle, messages: &[(String, String)], max: usize, temp: f6
     generate_in(app, messages, max, temp, None, crate::quick::port(), 0, on_piece)
 }
 
+/// Dictation tidied by the quick brain: "um"s out, a correction said aloud made ("three, no, four" is "four"),
+/// punctuation and capitals right, and nothing else changed. None when the quick brain isn't up, or when what came back
+/// isn't the same words tidied (an answer instead, say): the rules do it then.
+pub fn dictation_polish(app: &AppHandle, heard: &str) -> Option<String> {
+    let port = crate::quick::port()?;
+    let m = |r: &str, c: &str| (r.to_string(), c.to_string());
+    let messages = [
+        m("system", "You clean up dictated speech. Reply with the cleaned text only. Remove filler words (um, uh, you know) and stutters. When the speaker corrects themselves (no wait, I mean, actually, sorry, scratch that), keep only what they meant. Fix punctuation and capital letters, and end questions with a question mark. Keep every other word as spoken: never rephrase, add, explain or answer anything."),
+        m("user", "um so I think we should uh go tomorrow"),
+        m("assistant", "So I think we should go tomorrow."),
+        m("user", "let's meet at three no wait four pm"),
+        m("assistant", "Let's meet at four PM."),
+        m("user", "can you send me the the file"),
+        m("assistant", "Can you send me the file?"),
+        m("user", "I'll bring the cake sorry actually the cookies"),
+        m("assistant", "I'll bring the cookies."),
+        m("user", "what time is it in tokyo"),
+        m("assistant", "What time is it in Tokyo?"),
+        m("user", heard),
+    ];
+    let n = heard.split_whitespace().count();
+    let out = generate_in(app, &messages, n * 2 + 16, 0.1, None, Some(port), 0, |_| {})?;
+    let out = out.trim().trim_matches(['"', '“', '”']).trim().to_string();
+    let said: std::collections::HashSet<String> = heard.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase()).collect();
+    let words: Vec<String> = out.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase()).filter(|w| !w.is_empty()).collect();
+    let new = words.iter().filter(|w| !said.contains(*w)).count();
+    if words.is_empty() || words.len() > n + 2 || new * 4 > words.len().max(1) || (out.contains('\n') && !heard.contains("line")) {
+        return None;
+    }
+    Some(out)
+}
+
 /// Ready to write: the quick brain is up, or the smart one is loaded.
 fn can_write(app: &AppHandle) -> bool {
     crate::quick::port().is_some() || ready(app)

@@ -843,12 +843,6 @@ async fn today_weather() -> Option<(String, String, String)> {
     tauri::async_runtime::spawn_blocking(web::weather_now).await.ok().flatten()
 }
 
-/// Dictation: one heard piece, tidied and typed where the cursor is. `after` is the last character typed so far.
-#[tauri::command]
-async fn dictate_type(text: String, after: Option<String>) -> String {
-    tauri::async_runtime::spawn_blocking(move || dictate::piece(&text, after.and_then(|a| a.chars().last()))).await.unwrap_or_default()
-}
-
 /// ULTRON's own taskbar on or off (Windows' is hidden while it's on). Gives the height of its strip of the screen.
 #[tauri::command]
 fn dock_set(app: AppHandle, on: bool) -> i32 {
@@ -950,10 +944,28 @@ fn shelf_drag(app: AppHandle, paths: Vec<String>) -> u32 {
     shelf::drag(h, &paths)
 }
 
-/// Dictation's card: a heard piece tidied as it would be typed (marks said aloud made marks, capitals), not typed.
+/// Dictation: a heard piece shaped to go after what's already there (`held`: the mark held back for its last sentence).
+/// Settings > Dictation says how much is tidied.
 #[tauri::command]
-async fn dictate_tidy(text: String, after: Option<String>) -> String {
-    tauri::async_runtime::spawn_blocking(move || dictate::tidy(&text, after.and_then(|a| a.chars().last()))).await.unwrap_or_default()
+async fn dictate_shape(text: String, before: String, held: String, opts: dictate::Opts) -> dictate::Shaped {
+    tauri::async_runtime::spawn_blocking(move || dictate::shape(&text, &before, &held, &opts)).await.unwrap_or_default()
+}
+
+/// Dictation tidied by the quick brain, when it answers within a few seconds (None: it isn't up or was slow, and the
+/// rules do it).
+#[tauri::command]
+async fn dictate_ai(app: AppHandle, text: String) -> Option<String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(ai::dictation_polish(&app, &text));
+    });
+    tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_millis(3500)).ok().flatten()).await.ok().flatten()
+}
+
+/// Dictation: the last piece typed taken back ("scratch that"), as many characters as it was.
+#[tauri::command]
+async fn dictate_erase(n: usize) {
+    let _ = tauri::async_runtime::spawn_blocking(move || dictate::erase(n)).await;
 }
 
 /// Dictation's card: its words dragged off it (the button is down on it), to be dropped into a typing area in any app.
@@ -1554,7 +1566,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dictate_type, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, min_fx, min_fx_preview, dictate_tidy, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, min_fx, min_fx_preview, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

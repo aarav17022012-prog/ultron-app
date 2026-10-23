@@ -2658,20 +2658,25 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
    squashed by a transform, it took its picture along with it.) */
 @property --dsw{syntax:'<length>'; inherits:false; initial-value:140px}
 @property --dsh{syntax:'<length>'; inherits:false; initial-value:12px}
+/* (the tray's full size, from what's on it. Not handed down: as ordinary variables every one of the thousand things on
+    the tray, the hidden apps grid too, was restyled whenever the size changed: 50 ms, at the start of every switch) */
+@property --dsW{syntax:'<length>'; inherits:false; initial-value:360px}
+@property --dsH{syntax:'<length>'; inherits:false; initial-value:152px}
+@property --dsWa{syntax:'<length>'; inherits:false; initial-value:560px}
 .ds-tray{position:absolute; left:50%; bottom:16px; color:#fff; width:var(--dsw); height:var(--dsh); margin-left:calc(var(--dsw) / -2); padding:12px 14px 14px; border-radius:34px;
   pointer-events:auto; --tint:rgba(16,16,22,.42); --dsw:140px; --dsh:12px; opacity:0;
   transition:--dsw .4s cubic-bezier(.55,0,.35,1), --dsh .34s cubic-bezier(.55,0,.35,1), opacity .18s ease .22s, box-shadow .3s}
-.dshelf.on .ds-tray{--dsw:var(--w, 360px); --dsh:var(--h, 152px); opacity:1;
+.dshelf.on .ds-tray{--dsw:var(--dsW); --dsh:var(--dsH); opacity:1;
   transition:--dsw .6s cubic-bezier(.2,1,.3,1), --dsh .62s cubic-bezier(.3,1.08,.4,1), opacity .12s ease, box-shadow .3s}
 .ds-tray > .gw{--dsw:inherit; --dsh:inherit; left:calc(var(--dsw) / 2 - 50vw) !important; top:calc(var(--dsh) + 16px - 100vh) !important}
 /* (what's on the tray is laid out once at the tray's full width and kept centred on it as it grows, by a move the
     graphics card makes: nothing inside is laid out again at each frame, and the two lengths aren't handed down to it) */
-.ds-head, .ds-row, .ds-apps, .ds-drop{--dsw:inherit; width:calc(var(--w, 360px) - 28px); flex:none; translate:calc((var(--dsw) - var(--w, 360px)) / 2) 0}
+.ds-head, .ds-row, .ds-apps, .ds-drop{--dsw:inherit; --dsW:inherit; width:calc(var(--dsW) - 28px); flex:none; translate:calc((var(--dsw) - var(--dsW)) / 2) 0}
 .ds-drop{right:auto}
 .ds-head, .ds-row{opacity:0; transform:translateY(10px); transition:opacity .14s, transform .3s var(--glide)}
 .dshelf.on .ds-head, .dshelf.on .ds-row{opacity:1; transform:none; transition:opacity .3s ease .14s, transform .55s var(--glide) .1s}
 .ds-tray.take{animation:dsTake .5s cubic-bezier(.3,1.2,.4,1)}
-@keyframes dsTake{40%{--dsh:calc(var(--h, 152px) + 7px)}}
+@keyframes dsTake{40%{--dsh:calc(var(--dsH) + 7px)}}
 .ds-head{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; height:22px; margin:0 2px 8px}
 .ds-t{display:flex; align-items:center; gap:7px; font-size:13px; font-weight:650; letter-spacing:-.006em}
 .ds-t svg{width:16px; height:16px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
@@ -2729,9 +2734,10 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .ds-ic img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; transition:opacity .3s; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3))} .ds-ic img.ok{opacity:1}
 .ds-ic .fbk{border-radius:12px; font-size:17px}
 /* Apps: under the shelf's row as the tray rises a little more; a search box and your apps, one clicked flies up onto the shelf */
-.ds-apps{position:relative; z-index:1; height:198px; margin-top:12px; display:flex; flex-direction:column; gap:8px; opacity:0; transform:translateY(18px); pointer-events:none;
+.ds-apps{position:relative; z-index:1; height:198px; margin-top:12px; display:flex; flex-direction:column; gap:8px; opacity:0; transform:translateY(18px);
+  --dsWa:inherit; width:calc(var(--dsWa) - 28px); translate:calc((var(--dsw) - var(--dsWa)) / 2) 0;
   transition:opacity .26s ease .05s, transform .42s var(--glide)}
-.dshelf.on.apps .ds-apps{opacity:1; transform:none; pointer-events:auto; transition:opacity .3s ease .16s, transform .55s var(--glide) .12s}
+.dshelf.on.apps .ds-apps{opacity:1; transform:none; transition:opacity .3s ease .16s, transform .55s var(--glide) .12s}
 .ds-q{flex:none; height:30px; border:0; outline:0; border-radius:10px; padding:0 12px 0 31px; color:#fff; font:inherit; font-size:12.5px;
   background:rgba(255,255,255,.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.6' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4 4'/%3E%3C/svg%3E") 10px 50%/14px no-repeat;
   box-shadow:inset 0 0 0 .8px rgba(255,255,255,.1); transition:background-color .2s, box-shadow .2s}
@@ -2740,6 +2746,8 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .ds-grid{flex:1; min-height:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); grid-auto-rows:78px; gap:2px 4px; overflow-y:auto; scrollbar-width:none; padding:0 0 10px;
   -webkit-mask:linear-gradient(#000 84%, transparent); mask:linear-gradient(#000 84%, transparent)}
 .ds-grid::-webkit-scrollbar{display:none}
+.dshelf.gridoff .ds-grid{content-visibility:hidden}
+.ds-tray.glass::before{will-change:transform} .ds-head, .ds-row, .ds-apps{will-change:transform}
 .ds-ap{position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:7px 2px 0; border:0; border-radius:14px; background:none; color:#fff; font:inherit; cursor:default;
   transition:background .2s, transform .3s var(--glide)}
 .ds-ap:hover{background:rgba(255,255,255,.1)} .ds-ap:active{transform:scale(.95)}
@@ -3343,10 +3351,27 @@ html.vision .gulp{display:none}
 .wcard.away .wc-in{opacity:.35; transform:scale(.96)}
 .wc-top{display:flex; align-items:center; gap:9px; height:24px; margin-bottom:6px}
 .wc-mic{display:flex; align-items:center; gap:2.5px; height:14px}
-.wc-mic i{width:3px; height:4px; border-radius:2px; background:#141418; opacity:.3; transition:opacity .3s}
-.wcard.live .wc-mic i{opacity:1; animation:wcBar .9s ease-in-out infinite}
-.wcard.live .wc-mic i:nth-child(2){animation-delay:-.3s} .wcard.live .wc-mic i:nth-child(3){animation-delay:-.6s} .wcard.live .wc-mic i:nth-child(4){animation-delay:-.15s}
-@keyframes wcBar{0%, 100%{height:4px} 50%{height:14px}}
+/* (the bars follow your voice while it listens: the level comes from the microphone) */
+.wc-mic i{width:3px; height:14px; border-radius:2px; background:#141418; opacity:.3; transform:scaleY(.28); transition:transform .14s ease-out, opacity .3s}
+.wcard.live .wc-mic i, .dt-card.live .wc-mic i{opacity:1; transform:scaleY(calc(.28 + var(--lv, 0) * var(--k, .72)))}
+.wc-mic i:nth-child(2){--k:.72} .wc-mic i:nth-child(3){--k:.52} .wc-mic i:nth-child(4){--k:.62} .wc-mic i:first-child{--k:.42}
+.wcard.paused .wc-mic i{opacity:.3; transform:scaleY(.28)}
+/* the pieces said: the mark held back at a pause shows faint until the next piece sets it or carries the sentence on;
+   a piece taken back blurs away; the brain's tidier version takes a piece's place word for word */
+.wpiece{white-space:pre-wrap}
+.wheld{display:inline-block; opacity:.28; animation:heldPulse 1.3s ease-in-out infinite}
+@keyframes heldPulse{50%{opacity:.55}}
+.wheld.late{animation:heldPulse 1.3s ease-in-out infinite, wwIn .5s cubic-bezier(.2,.8,.25,1) .5s backwards}
+.wheld.set{opacity:1; animation:heldSet .4s cubic-bezier(.2,1.6,.4,1)}
+@keyframes heldSet{from{opacity:.3; transform:translateY(-.2em) scale(1.7)}}
+.wheld.drop{animation:heldDrop .26s cubic-bezier(.4,0,.7,.4) forwards}
+@keyframes heldDrop{to{opacity:0; transform:translateY(.35em) scale(.5)}}
+.ww.still{animation:none}
+.ww.wsw{animation:wwSwap .5s cubic-bezier(.2,.8,.25,1) .2s backwards}
+@keyframes wwSwap{from{opacity:.35; filter:blur(4px)}}
+.wdel{display:inline-block; position:relative; white-space:pre; overflow:hidden; vertical-align:bottom; color:rgba(20,20,24,.38)}
+.wdel::after{content:""; position:absolute; left:0; right:.3em; top:56%; height:1.6px; border-radius:1px; background:currentColor; transform:scaleX(0); transform-origin:0 50%; animation:wdelLine .24s ease-out forwards}
+@keyframes wdelLine{to{transform:none}}
 .wc-say{flex:1; min-width:0; font-size:12px; font-weight:600; color:rgba(20,20,24,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .16s}
 .wc-say.swap{opacity:0}
 .wc-x{flex:none; width:24px; height:24px; border:0; padding:0; border-radius:50%; background:rgba(20,20,24,.06); display:grid; place-items:center; cursor:pointer; transition:background .2s, transform .25s var(--spring)}
@@ -3373,6 +3398,50 @@ html.vision .gulp{display:none}
 .wc-placed{grid-auto-flow:column}
 .wcard.placed .wc-placed{opacity:1}
 html.vision .wc-in{border-radius:16px}
+/* ---------- Settings > Dictation: the try-out card (the white one, smaller), the switches' own before-and-after, your
+   words, and what can be said ---------- */
+.dt-stage{position:relative; margin:2px 0 18px; padding:22px 22px 12px; border-radius:22px; background:radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.075), rgba(255,255,255,.015) 62%); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.07)}
+.sw-sec.on .dt-stage{animation:rowIn .5s var(--glide) backwards}
+.sw-sec.on .dt-card{animation:dtCardIn .7s cubic-bezier(.2,1.2,.32,1) .08s backwards}
+@keyframes dtCardIn{from{opacity:0; transform:translateY(14px) scale(.94)}}
+.dt-card{position:relative; max-width:440px; margin:0 auto; padding:13px 15px 12px 17px; border-radius:22px; background:#fff; color:#141418;
+  box-shadow:0 0 0 .5px rgba(0,0,0,.06), 0 24px 54px -14px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.25); transition:transform .5s var(--spring), box-shadow .5s}
+.dt-card.live{transform:scale(1.015); box-shadow:0 0 0 .5px rgba(0,0,0,.06), 0 30px 70px -14px rgba(0,0,0,.65), 0 8px 22px rgba(0,0,0,.28)}
+.dt-top{display:flex; align-items:center; gap:9px; height:28px; margin-bottom:7px}
+.dt-say{flex:1; min-width:0; font-size:12px; font-weight:600; color:rgba(20,20,24,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .16s}
+.dt-say.swap{opacity:0}
+.dt-go{flex:none; height:28px; padding:0 14px; border:0; border-radius:14px; background:#141418; color:#fff; font:inherit; font-size:12.5px; font-weight:650; cursor:pointer; transition:background .25s, transform .25s var(--spring)}
+.dt-go:hover{background:#2c2c32} .dt-go:active{transform:scale(.93)}
+.dt-card.live .dt-go{background:#e5484d}
+.dt-card.demo .dt-go{opacity:.4; pointer-events:none}
+.dt-text{min-height:52px; max-height:150px; overflow-y:auto; font-size:17px; line-height:1.45; font-weight:550; letter-spacing:-.01em; white-space:pre-wrap; overflow-wrap:anywhere; scrollbar-width:none}
+.dt-text:empty::before{content:"What you say appears here, tidied"; color:rgba(20,20,24,.3)}
+.dt-raw{min-height:16px; margin-top:9px; padding-top:8px; border-top:1px solid rgba(20,20,24,.07); font-size:11.5px; color:rgba(20,20,24,.42); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dt-raw.in{animation:dtRawIn .45s var(--glide)}
+@keyframes dtRawIn{from{opacity:0; transform:translateY(-4px)}}
+.dt-demo{display:block; margin:10px auto 0; padding:4px 10px; border:0; border-radius:99px; background:none; color:rgba(255,255,255,.62); font:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:color .2s, background .2s}
+.dt-demo:hover{color:#fff; background:rgba(255,255,255,.08)}
+.dt-h{margin:22px 0 8px 2px; font-size:13px; font-weight:700; letter-spacing:-.005em; color:rgba(255,255,255,.88)}
+.dt-note{margin:-4px 0 10px 2px; font-size:12px; color:rgba(255,255,255,.55)}
+/* (a switch's example: the words as said, then tidied, in a line under its name) */
+.dt-ex{display:block; min-height:0; max-height:0; overflow:hidden; font-size:12px; font-weight:550; color:rgba(255,255,255,.88); white-space:pre-wrap; transition:max-height .35s var(--glide), margin .35s var(--glide)}
+.dt-ex.on{max-height:3em; margin-top:5px}
+.dt-ex .wdel{color:rgba(255,255,255,.4)}
+.dt-words{display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:9px; border-radius:14px; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.07); cursor:text}
+.dt-w{display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 5px 0 11px; border-radius:14px; background:rgba(255,255,255,.13); font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden}
+.dt-w.new{animation:dtWIn .45s cubic-bezier(.2,1.5,.4,1)}
+@keyframes dtWIn{from{opacity:0; transform:scale(.5)}}
+.dt-w button{width:18px; height:18px; padding:0; border:0; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.14); cursor:pointer; transition:background .15s}
+.dt-w button:hover{background:rgba(255,255,255,.3)}
+.dt-w button svg{width:9px; height:9px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round}
+.dt-words input{flex:1; min-width:150px; height:28px; padding:0 4px; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:12.5px}
+.dt-words input::placeholder{color:rgba(255,255,255,.4)}
+.dt-cmds{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px}
+.dt-cmd{display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:9px 12px; border-radius:12px; background:rgba(255,255,255,.05); font-size:12px}
+.dt-cmd b{font-weight:650; color:#fff; white-space:nowrap}
+.dt-cmd span{min-width:0; color:rgba(255,255,255,.55); text-align:right}
+.sw-sec.on .dt-cmd{animation:rowIn .45s var(--glide) backwards}
+.setw.mac [data-sec="dictation"] > svg, .setw.mac .mh-ic[data-sec="dictation"] svg{background:linear-gradient(#6aa8ff, #3b6dff)}
 /* the words carried off the card: they hang beside the pointer (a caret at their edge over a typing area) */
 .wc-chip{position:fixed; left:0; top:0; z-index:46; pointer-events:none; visibility:hidden; will-change:transform}
 .wc-chip.on{visibility:visible}
@@ -3514,6 +3583,7 @@ html.vision .wc-in{border-radius:16px}
     <div class="mac-tl"><button data-tl="close" aria-label="Close settings"></button><button data-tl="min" aria-label="Close settings"></button><button data-tl="zoom" aria-label="Make the window bigger"></button></div><label class="mac-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="macQ" placeholder="Search" spellcheck="false" autocomplete="off" aria-label="Search settings"></label><div class="sw-brand"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><span class="sb-n">Settings</span><span class="mac-acct"><b>ULTRON</b><small>Runs on this PC</small></span></div>
     <i class="sw-hl" id="swHl"></i>
     <button data-sec="voice"><svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg><span>Voice</span></button>
+    <button data-sec="dictation"><svg viewBox="0 0 24 24"><path d="M4 9.5v5M7.5 6.5v11M11 9.5v5"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h3.5"/></svg><span>Dictation</span></button>
     <button data-sec="listen" class="on"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Listening</span></button>
     <button data-sec="brain"><svg viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3h1V4zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3h-1V4z"/></svg><span>Brain</span></button>
     <button data-sec="tasks"><svg viewBox="0 0 24 24"><path d="M6 3v15l4-3.6 2.6 6 2.6-1.1-2.6-5.9H18z"/></svg><span>Tasks</span></button>
@@ -3530,6 +3600,16 @@ html.vision .wc-in{border-radius:16px}
     <button class="sw-x" id="swClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
     <section class="sw-sec" data-sec="voice"><h2>Voice</h2><p class="sw-sub">How ULTRON sounds when it talks back.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Speak replies<small>Answers out loud as the words appear</small></span><button class="tg" role="switch" data-set="speak" aria-label="speak"></button></div><div class="sw-row"><span class="sw-l">Voice<small>Both run on this PC</small></span><span class="seg" data-set="voiceName" role="radiogroup"><button data-v="lessac" role="radio">Woman</button><button data-v="ryan" role="radio">Man</button></span></div><div class="sw-row"><span class="sw-l">Sound<small>As the voice is, or ULTRON’s own: deeper, with a soft synthetic sheen</small></span><span class="seg" data-set="voiceStyle" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="ultron" role="radio">ULTRON</button><button data-v="windows" role="radio">Windows</button></span></div><div class="sw-row"><span class="sw-l">Speaking speed</span><input class="rng" type="range" min="0.85" max="1.2" step="0.01" data-set="voiceRate" aria-label="voiceRate"></div><div class="sw-row"><span class="sw-l">Volume</span><input class="rng" type="range" min="0.2" max="1" step="0.01" data-set="voiceVol" aria-label="voiceVol"></div><div class="sw-row"><span class="sw-l">Hear it<small>A short sample with these settings</small></span><button class="chipb" data-sx="testvoice">Play sample</button></div></div></section>
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
+    <section class="sw-sec" data-sec="dictation"><h2>Dictation</h2><p class="sw-sub">Speak wherever you can type. Your words are tidied as they come, on this PC.</p>
+      <div class="dt-stage"><div class="dt-card" id="dtCard"><div class="dt-top"><i class="wc-mic" aria-hidden="true"><i></i><i></i><i></i><i></i></i><span class="dt-say" id="dtSay">Press Try it and talk</span><button class="dt-go" id="dtGo" type="button">Try it</button></div><div class="dt-text" id="dtText" aria-live="polite"></div><div class="dt-raw" id="dtRaw"></div></div><button class="dt-demo" id="dtDemo" type="button">See an example</button></div>
+      <div class="sw-rows"><div class="sw-row"><span class="sw-l">Shortcut<small>Press it, speak, press it again. Or say “Ultron, start dictation”</small></span><span class="hk-wrap"><button class="hk dic-key" type="button"></button><button class="hk-x dic-key-x" type="button" aria-label="Remove the shortcut" hidden></button></span></div><div class="sw-row"><span class="sw-l">Dictation card<small>Your words gather on a card, to drag into a text box or copy</small></span><button class="tg" role="switch" data-set="dictCard" aria-label="Dictation card"></button></div></div>
+      <h3 class="dt-h">Tidying</h3>
+      <div class="sw-rows"><div class="sw-row" data-ex="fill"><span class="sw-l">Filler words<small>“Um”, “uh”, “you know”, and words said twice</small><span class="dt-ex"></span></span><button class="tg" role="switch" data-set="dictFill" aria-label="Filler words"></button></div><div class="sw-row" data-ex="fix"><span class="sw-l">Corrections<small>Change your mind mid-sentence, or say “scratch that”</small><span class="dt-ex"></span></span><button class="tg" role="switch" data-set="dictFix" aria-label="Corrections"></button></div><div class="sw-row" data-ex="smart"><span class="sw-l">Smart punctuation<small>Questions get their question mark, and a pause doesn’t end your sentence</small><span class="dt-ex"></span></span><button class="tg" role="switch" data-set="dictSmart" aria-label="Smart punctuation"></button></div><div class="sw-row" data-ex="ai"><span class="sw-l">Polish with the brain<small>Every sentence tidied by the AI on this PC. A second or two slower</small><span class="dt-ex"></span></span><button class="tg" role="switch" data-set="dictAI" aria-label="Polish with the brain"></button></div></div>
+      <h3 class="dt-h">Your words</h3><p class="dt-note">Names and terms, spelled the way you write them.</p>
+      <div class="dt-words" id="dtWords"><input id="dtWordIn" placeholder="Add a name or word" spellcheck="false" autocomplete="off" aria-label="Add a name or word"></div>
+      <h3 class="dt-h">Say it</h3>
+      <div class="dt-cmds"><div class="dt-cmd"><b>new line</b><span>Line break</span></div><div class="dt-cmd"><b>new paragraph</b><span>Blank line</span></div><div class="dt-cmd"><b>comma, period</b><span>, .</span></div><div class="dt-cmd"><b>question mark</b><span>?</span></div><div class="dt-cmd"><b>open quote … close quote</b><span>“ ”</span></div><div class="dt-cmd"><b>bullet point</b><span>•</span></div><div class="dt-cmd"><b>scratch that</b><span>Takes back the last thing said</span></div><div class="dt-cmd"><b>pause dictation</b><span>Then “resume dictation”</span></div><div class="dt-cmd"><b>stop dictation</b><span>Done</span></div></div>
+    </section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="gem" role="radio"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Uplink</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Look things up online<small>Fresh facts for news, people, weather and topics</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
     <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">How ULTRON looks, and the character in the notch.</p><div class="ui-pick" id="uiPick" role="radiogroup" aria-label="Look"><button data-ui="ultron" role="radio"><span class="ui-pv pv-u"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-glint"></i></span><span class="ui-nm"><b>ULTRON</b><small>Liquid glass</small></span></button><button data-ui="vision" role="radio"><span class="ui-pv pv-v"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-fab"></i></span><span class="ui-nm"><b>VISION</b><small>Solid and quick, for lighter PCs</small></span></button></div><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Minimize animation<small>Into the notch: a window you minimize squeezes and flies up under the bar into the notch, and comes back out of it when you pick it on ULTRON’s taskbar</small></span><span class="seg" data-set="minFx" role="radiogroup"><button data-v="notch" role="radio">Into the notch</button><button data-v="windows" role="radio">Windows</button></span></div><div class="sw-row"><span class="sw-l">Pointer motion blur<small>A soft streak trails the pointer when it moves fast</small></span><button class="tg" role="switch" data-set="cursorBlur" aria-label="cursorBlur"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only"><span class="sw-l">Windows asks for its password first?<small>Windows shows its own sign-in when it wakes. Set “If you’ve been away…” to Never there, and only ULTRON’s lock screen comes up.</small></span><button class="chipb" data-sx="winsignin">Open sign-in options</button></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
@@ -3696,7 +3776,7 @@ html.vision .wc-in{border-radius:16px}
           <div class="row"><span class="t">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="Eye size"></div>
           <div class="row"><span class="t">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="Eye speed"></div>
           <div class="row"><span class="t">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="Show name when minimized"></button></div>
-          <div class="row"><span class="t">Voice typing</span><span class="hk-wrap"><button class="hk" id="dicKeyBtn" type="button" title="Press it, speak, and what you say is typed where you are writing. Press it again to stop"></button><button class="hk-x" id="dicKeyX" type="button" aria-label="Remove the shortcut" hidden></button></span></div>
+          <div class="row"><span class="t">Voice typing</span><span class="hk-wrap"><button class="hk dic-key" id="dicKeyBtn" type="button" title="Press it, speak, and what you say is typed where you are writing. Press it again to stop"></button><button class="hk-x dic-key-x" id="dicKeyX" type="button" aria-label="Remove the shortcut" hidden></button></span></div>
           <div class="row"><span class="t">Dictation card<small>Your words appear on a card, to drag where you want them or copy</small></span><button class="tg" role="switch" data-set="dictCard" aria-label="Dictation card"></button></div>
           <div class="row"><span class="t">Body</span>
             <span class="sws" role="radiogroup" aria-label="Body color">
@@ -3749,7 +3829,7 @@ const $ = id => document.getElementById(id);
 
 /* ---------- settings (persisted per viewer) ---------- */
 const DEFAULTS = {setSkin:'ultron', follow:true, blink:true, eye:1, speed:1, sens:1, label:true, tint:'#ffffff', liveGlass:true, wake:true, speak:true, muted:false,
-  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, minFx:'windows', wear:null, agentWatch:false, agentNotes:false, agentAll:false};
+  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, dictFill:true, dictFix:true, dictSmart:true, dictAI:false, dictWords:[], minFx:'windows', wear:null, agentWatch:false, agentNotes:false, agentAll:false};
 let S = {...DEFAULTS};
 const TALL = Math.round(screen.height || 864) - 2;     // (ULTRON's window's height: see winH)
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
@@ -5089,7 +5169,11 @@ function setVoice(st){
 }
 let lastVoice = {state:'loading'};
 listen('voice', st => { lastVoice = st; setVoice(st); wake(); });
-listen('mic-level', l => { micTarget = l; if (l > .08) wake(); });
+listen('mic-level', l => {
+  micTarget = l; if (l > .08) wake();
+  // (dictating: the card's bars follow your voice)
+  if (window.DICT && DICT.on){ const el = DICT.mode === 'card' ? wcEl : DICT.mode === 'try' ? $('dtCard') : null; if (el) el.style.setProperty('--lv', Math.min(1, l * 1.7).toFixed(2)); }
+});
 
 let reveals = 0;
 function reveal(el, text, step){
@@ -6353,44 +6437,203 @@ addEventListener('click', e => {
 }, true);
 
 /* ---------- dictation ----------
-   "Ultron, start dictation": from then on everything heard is typed where the cursor is, tidied on the way (the
-   marks you say aloud become the marks, the "um"s go, sentences get their capitals: dictate.rs), until "stop
-   dictation" or a minute of quiet. While it's on the recognizer waits out longer pauses, and is given the last
-   words typed so that each piece is heard in the light of the one before. */
-var DICT = {on:false, tail:'', idleT:0, send:(text, after) => invoke('dictate_type', {text, after})};
+   "Ultron, start dictation" (or the shortcut): from then on everything heard is typed where the cursor is, or put on
+   the dictation card, until "stop dictation" or a minute of quiet. Each piece heard is shaped to follow what's there
+   (dictate.rs: the marks said aloud, the "um"s and stutters, corrections, question marks, the full stop held back so
+   a pause doesn't end the sentence, your own words); a correction, or every piece with "Polish with the brain" on,
+   goes by the quick brain too. "Pause dictation" and "resume dictation" hold it; "scratch that" takes the last piece
+   back. The recognizer waits out longer pauses meanwhile, and is told your words and the last things said. */
+var DICT = {on:false, paused:false, mode:'', before:'', held:'', pieces:[], idleT:0, heldT:0, chain:Promise.resolve()};
 // (the microphone as it should be: off when you've turned it off, except while dictating)
 function micPaused(){ return !!S.muted && !(window.DICT && DICT.on); }
 const DICT_START = /^(?:please\s+)?(?:start|begin|take)\s+(?:a\s+)?dictat(?:ion|ing)\b|^dictation(?:\s+mode)?[.!]?$|^dictate[.!]?$/i;
 const DICT_STOP = /^(?:(?:hey|ok|okay)\s+)?(?:ultron[\s,.!]*)?(?:stop|end|finish|exit)\s+(?:the\s+)?dictat(?:ion|ing)\b|^(?:ultron[\s,.!]*)?that'?s all[.!]?$/i;
+const DICT_PAUSE = /^(?:ultron[\s,.!]*)?(?:pause|hold)\s+(?:the\s+)?dictat(?:ion|ing)\b/i;
+const DICT_RESUME = /^(?:ultron[\s,.!]*)?(?:resume|continue|unpause|restart)\s+(?:the\s+)?dictat(?:ion|ing)\b/i;
+// (a correction said aloud: the brain, when it's up, makes more of these than the rules can)
+const DICT_CUE = /(?:^|[,.]\s*)no\b|\bno,? wait\b|\bwait,? no\b|\bI mean\b|\bactually\b|\bsorry\b|\bor rather\b|\bmake that\b/i;
+function dictOpts(){ return {fillers:!!S.dictFill, fixes:!!S.dictFix, smart:!!S.dictSmart, words:S.dictWords || []}; }
+// (what the recognizer is told to expect: your words, and the last things said, written as writing is)
+function dictPrompt(){
+  const w = (S.dictWords || []).join(', '), tail = DICT.before.replace(/\s+/g, ' ').trim().slice(-200);
+  return ((w ? w + '. ' : '') + (tail || 'Hi, how are you? I’m fine, thanks. Let’s meet at 4 PM.')).slice(-240);
+}
 function dictIdle(){ clearTimeout(DICT.idleT); DICT.idleT = setTimeout(() => dictOff('Dictation ended after a minute of quiet.'), 60000); }
-function dictOn(){
-  DICT.on = true; DICT.tail = '';
-  invoke('voice_config', {patient:true, wake:false, prompt:'', paused:false}); wakeTold = false;
+function dictBoard(){ return DICT.mode === 'card' ? WC.board : DICT.mode === 'try' ? DT.board : null; }
+function dictOn(mode){
+  if (DICT.on) dictOff();
+  DICT.on = true; DICT.paused = false; DICT.before = ''; DICT.held = ''; DICT.pieces = []; DICT.chain = Promise.resolve();
+  DICT.mode = mode || (S.dictCard ? 'card' : 'type');
+  invoke('voice_config', {patient:true, wake:false, prompt:dictPrompt(), paused:false}); wakeTold = false;
   $('micSt').classList.add('ptt');
-  openedAt = 0; setOpen(false);
-  if (S.dictCard) wcOpen();
-  else nbShow('<div class="nb-say">Dictating. Say <b>“stop dictation”</b> when you’re done.</div>', 5000);
+  if (DICT.mode === 'try') dtLive(true);
+  else { openedAt = 0; setOpen(false); }
+  if (DICT.mode === 'card') wcOpen();
+  else if (DICT.mode === 'type') nbShow('<div class="nb-say">Dictating. Say <b>“stop dictation”</b> when you’re done.</div>', 5000);
   dictIdle();
 }
 function dictOff(why){
   if (!DICT.on) return;
-  DICT.on = false; clearTimeout(DICT.idleT);
+  dictSettle();
+  DICT.on = false; DICT.paused = false; clearTimeout(DICT.idleT);
   invoke('voice_config', {patient:false, paused:micPaused()}); pushPrompt(); wakeTold = null;
   $('micSt').classList.remove('ptt');
-  if (WC.on) wcDone(why);
+  if (DICT.mode === 'try') dtLive(false, why);
+  else if (WC.on) wcDone(why);
   else nbShow(`<div class="nb-say">${esc(why || 'Dictation off.')}</div>`, 3000);
 }
-async function dictHeard(text){
-  if (DICT_STOP.test(text.trim())) return dictOff();
-  dictIdle();
-  // (onto the card, or typed where you are)
-  const typed = WC.on ? await invoke('dictate_tidy', {text, after:WC.text.slice(-1)}) : await DICT.send(text, DICT.tail.slice(-1));
-  if (!typed || !DICT.on) return;
-  DICT.tail = (DICT.tail + typed).slice(-240);
-  invoke('voice_config', {prompt:DICT.tail.replace(/\s+/g, ' ').trim()});
-  if (WC.on) wcAdd(typed);
-  else nbShow(`<div class="nb-say">${esc(typed.trim())}</div>`, 2600);
+// the last sentence's mark, held back in case it went on, put in place
+function dictSettle(){
+  clearTimeout(DICT.heldT);
+  if (!DICT.held) return;
+  const b = dictBoard(), h = DICT.held, last = DICT.pieces[DICT.pieces.length - 1];
+  DICT.before += h; DICT.held = '';
+  if (last) last.tail = (last.tail || '') + h;
+  if (b){ boardSettle(b); if (DICT.mode === 'card') wcSync(); }
+  else if (DICT.mode === 'type') invoke('words_type', {text:h});
 }
+function dictPause(on){
+  if (!DICT.on || DICT.paused === on) return;
+  DICT.paused = on; dictIdle();
+  if (on) dictSettle();
+  const say = on ? 'Paused. Say “resume dictation” to go on' : 'Listening…';
+  if (DICT.mode === 'card'){ wcEl.classList.toggle('live', !on); wcEl.classList.toggle('paused', on); wcSay(say); }
+  else if (DICT.mode === 'try'){ $('dtCard').classList.toggle('live', !on); dtSay(say); }
+  else nbShow(`<div class="nb-say">${on ? 'Dictation paused. Say <b>“resume dictation”</b> to go on.' : 'Dictating again.'}</div>`, 3000);
+}
+// (pieces are dealt with one at a time, in the order they were heard: each is shaped against what came before it)
+function dictHeard(text){ DICT.chain = DICT.chain.then(() => dictPiece(text)).catch(e => invoke('page_log', {msg:'dictation: ' + e})); }
+async function dictPiece(text){
+  const t = text.trim();
+  if (DICT_STOP.test(t)) return dictOff();
+  if (DICT_PAUSE.test(t)) return dictPause(true);
+  if (DICT_RESUME.test(t)) return dictPause(false);
+  if (!DICT.on || DICT.paused) return;
+  dictIdle(); clearTimeout(DICT.heldT);
+  if (DICT.mode === 'try') dtHeard(t);
+  const board = dictBoard(), ai = S.dictAI || (S.dictFix && DICT_CUE.test(t));
+  // (typed into an app, it can't be changed after: the brain's version is waited for. On a card the rules' version
+  //  shows at once, and the brain's takes its place as it comes)
+  const src = ai && !board ? (await invoke('dictate_ai', {text:t})) || t : t;
+  const before = DICT.before, held = DICT.held;
+  const s = await invoke('dictate_shape', {text:src, before, held, opts:dictOpts()});
+  if (!DICT.on) return;
+  if (s.undo) return dictUndo();
+  if (!s.text) return;
+  const p = {lead:s.lead, text:s.text, held:s.held, was:held};
+  DICT.pieces.push(p); DICT.before = before + s.lead + s.text; DICT.held = s.held;
+  invoke('voice_config', {prompt:dictPrompt()});
+  if (!board){
+    nbShow(`<div class="nb-say">${esc((s.text + s.held).trim())}</div>`, 2600);
+    await invoke('words_type', {text:s.lead + s.text});
+    // (typed: the held mark goes in after a quiet spell, rather than being left off if you stop by clicking away; in
+    //  turn with the pieces, so it can't land in the middle of one being typed)
+    DICT.heldT = setTimeout(() => { DICT.chain = DICT.chain.then(dictSettle); }, 5000);
+    return;
+  }
+  boardAdd(board, p); if (DICT.mode === 'card') wcSync();
+  if (!ai) return;
+  const better = await invoke('dictate_ai', {text:t});
+  const last = () => DICT.on && DICT.pieces[DICT.pieces.length - 1] === p;
+  if (!better || !last()) return;
+  const s2 = await invoke('dictate_shape', {text:better, before, held, opts:dictOpts()});
+  if (!s2.text || s2.undo || (s2.text === p.text && s2.held === p.held) || !last()) return;
+  boardMorph(board, p, s2.text, s2.held);
+  p.text = s2.text; p.held = s2.held; DICT.before = before + p.lead + p.text; DICT.held = p.held;
+  if (DICT.mode === 'card') wcSync();
+}
+// "scratch that": the last piece taken back (off the card, or rubbed out where it was typed)
+async function dictUndo(){
+  const p = DICT.pieces.pop(); if (!p) return;
+  clearTimeout(DICT.heldT);
+  const gone = p.lead + p.text + (p.tail || '');
+  DICT.before = DICT.before.slice(0, Math.max(0, DICT.before.length - gone.length)); DICT.held = p.was;
+  const b = dictBoard();
+  if (b){ boardUndo(b, p); if (DICT.mode === 'card') wcSync(); }
+  else await invoke('dictate_erase', {n:[...gone].length});
+  invoke('voice_config', {prompt:dictPrompt()});
+}
+/* Where dictated words are shown as they come: the white card, and Settings' try-out card. Each piece rises in word by
+   word; the mark held back at a pause shows faint until the next piece sets it or carries the sentence on past it; a
+   piece taken back blurs away; the brain's tidier version takes a piece's place word for word (what goes is struck
+   through and folds away, what's new rises in, what only changed its look swaps in place). */
+function boardOf(el){ return {el, pieces:[], heldEl:null}; }
+function boardClear(B){ B.el.textContent = ''; B.pieces = []; B.heldEl = null; }
+function wordsInto(box, text, cls){
+  let k = 0;
+  for (const w of text.split(/(\s+)/)){
+    if (!w) continue;
+    if (/^\s+$/.test(w)){ box.append(w); continue; }
+    const s = document.createElement('span'); s.className = cls || 'ww'; s.style.setProperty('--d', (k++ * 55) + 'ms'); s.textContent = w; box.appendChild(s);
+  }
+}
+function heldMark(box, m){ const h = document.createElement('span'); h.className = 'wheld'; h.textContent = m; box.appendChild(h); return h; }
+function boardAdd(B, p){
+  let lead = p.lead;
+  if (B.heldEl){
+    const h = B.heldEl; B.heldEl = null;
+    if (/^[.?!]/.test(lead)){ h.textContent = lead[0]; h.classList.add('set'); lead = lead.slice(1); p.set = h; }
+    else { h.classList.add('drop'); setTimeout(() => h.remove(), 280); }
+  }
+  const box = document.createElement('span'); box.className = 'wpiece';
+  if (lead) box.append(lead);
+  wordsInto(box, p.text);
+  if (p.held) B.heldEl = heldMark(box, p.held);
+  B.el.appendChild(box); p.box = box; B.pieces.push(p);
+  B.el.scrollTop = B.el.scrollHeight;
+}
+function boardSettle(B){ if (B.heldEl){ B.heldEl.classList.add('set'); B.heldEl = null; } }
+function boardUndo(B, p){
+  const i = B.pieces.lastIndexOf(p); if (i < 0) return;
+  B.pieces.splice(i, 1);
+  const box = p.box;
+  if (B.heldEl && box.contains(B.heldEl)) B.heldEl = null;
+  box.animate([{opacity:1, filter:'blur(0)'}, {opacity:0, filter:'blur(7px)'}], {duration:320, easing:'cubic-bezier(.4,0,.7,.4)', fill:'forwards'}).onfinish = () => box.remove();
+  // (the mark it set, or the one it carried the sentence past, is held back again)
+  if (p.was){
+    if (p.set){ p.set.classList.remove('set'); p.set.textContent = p.was; B.heldEl = p.set; }
+    else { const prev = B.pieces[B.pieces.length - 1]; if (prev) B.heldEl = heldMark(prev.box, p.was); }
+  }
+}
+function boardMorph(B, p, text, held){
+  const box = p.box, key = w => w.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+  const old = [...box.querySelectorAll('.ww')].map(s => s.textContent), nu = text.split(/\s+/).filter(Boolean);
+  // the words both have, in order (the longest run they share)
+  const n = old.length, m = nu.length, L = Array.from({length:n + 1}, () => new Int16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = key(old[i]) === key(nu[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const ops = []; let i = 0, j = 0;
+  while (i < n || j < m){
+    if (i < n && j < m && key(old[i]) === key(nu[j])) ops.push(['keep', nu[j++], old[i++]]);
+    else if (j < m && (i >= n || L[i][j + 1] >= L[i + 1][j])) ops.push(['add', nu[j++]]);
+    else ops.push(['del', old[i++]]);
+  }
+  const lead = box.firstChild && box.firstChild.nodeType === 3 ? box.firstChild.textContent : '';
+  box.textContent = ''; if (lead) box.append(lead);
+  let k = 0;
+  ops.forEach(([op, w, was], x) => {
+    const s = document.createElement('span'), sp = x < ops.length - 1 ? ' ' : '';
+    if (op === 'del'){
+      s.className = 'wdel'; s.textContent = w + sp; box.appendChild(s);
+      setTimeout(() => s.animate([{maxWidth:s.offsetWidth + 'px', opacity:1}, {maxWidth:'0px', opacity:0}], {duration:300, easing:'cubic-bezier(.4,0,.2,1)', fill:'forwards'}), 300);
+      return;
+    }
+    s.className = op === 'add' ? 'ww' : w === was ? 'ww still' : 'ww wsw';
+    if (op === 'add') s.style.setProperty('--d', (260 + k++ * 60) + 'ms');
+    s.textContent = w; box.appendChild(s); if (sp) box.append(sp);
+  });
+  // (the mark held back for it follows what the sentence is now)
+  if (B.heldEl && box.contains(B.heldEl)) B.heldEl = null;
+  if (held){ B.heldEl = heldMark(box, held); B.heldEl.classList.add('late'); }
+  // and once it's all moved, the piece is written out plainly (no folded-away words left in it)
+  clearTimeout(box._t);
+  box._t = setTimeout(() => {
+    if (!box.isConnected) return;
+    const hEl = B.heldEl && box.contains(B.heldEl) ? B.heldEl : null;
+    box.textContent = ''; if (lead) box.append(lead); wordsInto(box, text, 'ww still');
+    if (hEl){ hEl.classList.remove('late'); box.appendChild(hEl); }
+  }, 1100);
+}
+
 async function onHeard(text){
   if (isEcho(text)) return;                             // that was ULTRON's own voice
   if (DICT.on) return dictHeard(text);
@@ -7988,7 +8231,94 @@ function showSec(k){
   if (k === 'cleaner' && !CL.busy && (!CL.at || Date.now() - CL.at > 60000)) clScan();
   if (k === 'cleaner') prScan();
   if (k === 'taskbar') hkPaint();
+  if (k === 'dictation') dtShown();
 }
+/* ---------- Settings > Dictation ----------
+   The try-out card is the white one, smaller: Try it listens, and what you say is shaped there just as it would be
+   anywhere, with what was heard beneath it; "See an example" plays one through (it plays by itself the first time the
+   page is opened). Each tidying switch shows its own small before-and-after when it's turned on or pointed at. */
+var DT = {board:boardOf($('dtText')), demoT:[], seen:false, exAt:{}};
+function dtSay(t){ const s = $('dtSay'); if (s.textContent === t) return; s.classList.add('swap'); setTimeout(() => { s.textContent = t; s.classList.remove('swap'); }, 160); }
+function dtLive(on, why){
+  const c = $('dtCard'); c.classList.toggle('live', on); $('dtGo').textContent = on ? 'Stop' : 'Try it';
+  if (on){ dtDemoStop(); boardClear(DT.board); $('dtRaw').textContent = ''; dtSay('Listening… talk as you would to a person'); }
+  else dtSay(why || (DT.board.pieces.length ? 'That’s how it would be typed' : 'Press Try it and talk'));
+}
+function dtHeard(raw){ const r = $('dtRaw'); r.classList.remove('in'); void r.offsetWidth; r.textContent = `Heard: ${raw}`; r.classList.add('in'); }
+$('dtGo').addEventListener('click', e => {
+  e.stopPropagation();
+  if (DICT.on && DICT.mode === 'try') return dictOff('');
+  if (DICT.on) return dtSay('Stop the dictation that’s on first');
+  dictOn('try');
+});
+function dtDemoStop(){ DT.demoT.forEach(clearTimeout); DT.demoT = []; $('dtCard').classList.remove('demo'); }
+// what was said, as heard, then as it's typed
+const DT_DEMO = [
+  {raw:'um so let’s meet at three no wait four PM', lead:'', text:'So let’s meet at four PM', held:'.'},
+  {raw:'and uh can you can you bring the slides', lead:'. ', text:'Can you bring the slides', held:'?'},
+];
+function dtDemo(){
+  if (DICT.on && DICT.mode === 'try') return;
+  dtDemoStop(); boardClear(DT.board); $('dtRaw').textContent = ''; $('dtCard').classList.add('demo'); dtSay('Listen…');
+  const at = (ms, f) => DT.demoT.push(setTimeout(f, ms));
+  let t = 250;
+  DT_DEMO.forEach(d => {
+    at(t, () => { dtHeard(d.raw); d.p = {lead:d.lead, text:d.raw, held:''}; boardAdd(DT.board, d.p); dtSay('As it’s heard'); });
+    at(t += 1700, () => { boardMorph(DT.board, d.p, d.text, d.held); dtSay('As it’s typed'); });
+    t += 1900;
+  });
+  at(t, () => { boardSettle(DT.board); $('dtCard').classList.remove('demo'); dtSay('Your turn: press Try it'); });
+}
+$('dtDemo').addEventListener('click', e => { e.stopPropagation(); dtDemo(); });
+function dtShown(){
+  dtWordsPaint();
+  if (!DT.seen && !DICT.on){ DT.seen = true; setTimeout(() => { if (setEl.querySelector('.sw-sec.on')?.dataset.sec === 'dictation') dtDemo(); }, 650); }
+}
+// each switch's own small before-and-after
+const DT_EX = {
+  fill:{from:'Um, so I I think, you know, it works', to:'So I think it works', held:'.'},
+  fix:{from:'Let’s meet at three, no wait, four', to:'Let’s meet at four', held:'.'},
+  smart:{from:'can you send it.', to:'Can you send it', held:'?'},
+  ai:{from:'I’ll bring the cake sorry actually the cookies', to:'I’ll bring the cookies', held:'.'},
+};
+function dtExample(row){
+  const k = row.dataset.ex, ex = DT_EX[k], el = row.querySelector('.dt-ex');
+  if (!ex || !el || Date.now() - (DT.exAt[k] || 0) < 3500) return;
+  DT.exAt[k] = Date.now();
+  const B = boardOf(el), p = {lead:'', text:ex.from, held:''};
+  boardClear(B); el.classList.add('on'); boardAdd(B, p);
+  setTimeout(() => boardMorph(B, p, ex.to, ex.held), 900);
+  setTimeout(() => boardSettle(B), 2300);
+}
+setEl.querySelectorAll('.sw-row[data-ex]').forEach(r => {
+  r.addEventListener('mouseenter', () => dtExample(r));
+  r.querySelector('.tg').addEventListener('click', () => { if (S[r.querySelector('.tg').dataset.set]){ DT.exAt[r.dataset.ex] = 0; dtExample(r); } });
+});
+// your words: chips that pop in, and fold away when taken off
+function dtWordsPaint(fresh){
+  const box = $('dtWords'), inp = $('dtWordIn');
+  box.querySelectorAll('.dt-w').forEach(c => c.remove());
+  (S.dictWords || []).forEach(w => {
+    const c = document.createElement('span'); c.className = 'dt-w' + (w === fresh ? ' new' : ''); c.dataset.w = w;
+    c.innerHTML = `${esc(w)}<button type="button" aria-label="Remove ${esc(w)}">${NF_X}</button>`;
+    box.insertBefore(c, inp);
+  });
+}
+$('dtWordIn').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const w = e.target.value.trim().replace(/,$/, ''); if (!w) return;
+  const list = S.dictWords || [];
+  if (!list.some(x => x.toLowerCase() === w.toLowerCase())){ S.dictWords = [...list, w].slice(-60); save(); }
+  e.target.value = ''; dtWordsPaint(w);
+});
+$('dtWords').addEventListener('click', e => {
+  e.stopPropagation();
+  const c = e.target.closest('.dt-w'); if (!c || !e.target.closest('button')) return $('dtWordIn').focus();
+  S.dictWords = (S.dictWords || []).filter(x => x !== c.dataset.w); save();
+  c.animate([{opacity:1, transform:'none', maxWidth:c.offsetWidth + 'px'}, {opacity:0, transform:'scale(.6)', maxWidth:'0px', paddingLeft:'0px', paddingRight:'0px', marginRight:'-6px'}], {duration:260, easing:'cubic-bezier(.4,0,.2,1)', fill:'forwards'}).onfinish = () => c.remove();
+});
 /* Settings' macOS skin: the page's name in the toolbar (it rolls over), back and forward through the pages seen, each
    page's icon at its head (the sidebar's, big), the sidebar's search (pages without the words fade back; Enter goes to
    the first that has them), and the window's own red, yellow and green buttons. */
@@ -8124,6 +8454,7 @@ function openSettings(sec){
 }
 function closeSettings(){
   if (!setEl.classList.contains('open')) return;
+  if (DICT.on && DICT.mode === 'try') dictOff(''); dtDemoStop();
   setEl.classList.remove('open');
   mbar.querySelector('.mt[data-menu="settings"]')?.classList.remove('on');
   setTimeout(syncHit, 380); syncBrowser(150);
@@ -9518,11 +9849,12 @@ hkPaint();
 /* ---------- voice typing on a shortcut (the notch's settings): press it, speak, and it's typed where you're writing ----------
    The same recorder as the wheel's shortcut: click, press the keys. The shortcut then works from anywhere (dictation
    as "start dictation" starts it), and pressing it again stops. */
-var DIK = {rec:false};
+var DIK = {rec:false, btn:null};
+// (the shortcut is shown, and set, in the notch's settings and in Settings > Dictation alike)
 function dikPaint(){
-  const b = $('dicKeyBtn'); if (!b || DIK.rec) return;
-  b.classList.remove('rec'); b.innerHTML = S.dicKey ? hkCaps(S.dicKey.names) : '<span class="hk-say">Set a shortcut</span>';
-  $('dicKeyX').hidden = !S.dicKey;
+  if (DIK.rec) return;
+  document.querySelectorAll('.dic-key').forEach(b => { b.classList.remove('rec'); b.innerHTML = S.dicKey ? hkCaps(S.dicKey.names) : '<span class="hk-say">Set a shortcut</span>'; });
+  document.querySelectorAll('.dic-key-x').forEach(x => x.hidden = !S.dicKey);
 }
 function dikStop(){ if (!DIK.rec) return; DIK.rec = false; dikPaint(); }
 addEventListener('keydown', e => {
@@ -9530,20 +9862,20 @@ addEventListener('keydown', e => {
   e.preventDefault(); e.stopPropagation();
   if (e.key === 'Escape') return dikStop();
   const vk = e.keyCode, names = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
-  const mods = (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0), b = $('dicKeyBtn');
+  const mods = (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0), b = DIK.btn || $('dicKeyBtn');
   if ([16, 17, 18, 91, 92].includes(vk)){ b.innerHTML = hkCaps(names) + '<span class="hk-plus">+ …</span>'; return; }
   if (!mods){ b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); b.innerHTML = '<span class="hk-say">Hold Ctrl, Alt or Shift with it</span>'; setTimeout(() => { b.classList.remove('bad'); if (DIK.rec) b.innerHTML = '<span class="hk-say">Press the keys…</span>'; }, 1300); return; }
   S.dicKey = {mods, vk, names:[...names, hkName(vk)]}; save();
   DIK.rec = false; dikPaint(); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1000);
   invoke('dictate_key', {mods, vk});
 }, true);
-$('dicKeyBtn').addEventListener('click', e => {
+document.querySelectorAll('.dic-key').forEach(k => k.addEventListener('click', e => {
   e.stopPropagation();
   if (DIK.rec) return dikStop();
-  DIK.rec = true; const b = $('dicKeyBtn'); b.classList.add('rec'); b.innerHTML = '<span class="hk-say">Press the keys…</span>'; invoke('focus_main'); b.focus({preventScroll:true});
-});
-$('dicKeyX').addEventListener('click', e => { e.stopPropagation(); delete S.dicKey; save(); invoke('dictate_key', {mods:0, vk:0}); DIK.rec = false; dikPaint(); });
-addEventListener('pointerdown', e => { if (DIK.rec && !e.target.closest('#dicKeyBtn')) dikStop(); }, true);
+  DIK.rec = true; const b = DIK.btn = e.currentTarget; b.classList.add('rec'); b.innerHTML = '<span class="hk-say">Press the keys…</span>'; invoke('focus_main'); b.focus({preventScroll:true});
+}));
+document.querySelectorAll('.dic-key-x').forEach(x => x.addEventListener('click', e => { e.stopPropagation(); delete S.dicKey; save(); invoke('dictate_key', {mods:0, vk:0}); DIK.rec = false; dikPaint(); }));
+addEventListener('pointerdown', e => { if (DIK.rec && !e.target.closest('.dic-key')) dikStop(); }, true);
 listen('hotkey-state', s => { if (s && s.id === 0x5352 && !s.ok){ delete S.dicKey; save(); dikPaint(); nbShow('<div class="nb-say">Another app uses that shortcut. Pick another for voice typing.</div>', 3500); } });
 listen('dictate-key', () => { DICT.on ? dictOff('Voice typing stopped.') : dictOn(); });
 if (TAURI && S.dicKey) invoke('dictate_key', {mods:S.dicKey.mods, vk:S.dicKey.vk});
@@ -10432,7 +10764,7 @@ function dsHide(){
   if (!DS.on || DS.out) return;
   $('wcard').classList.remove('up');
   DS.on = false; DS.mode = ''; DS.over = false; DS.sticky = DS.stay = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT); clearTimeout(DS.appsT);
-  if (DS.apps){ DS.apps = false; dsEl.querySelector('[data-ds="apps"] span').textContent = 'Apps'; invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 700); }
+  if (DS.apps){ DS.apps = false; dsEl.querySelector('[data-ds="apps"] span').textContent = 'Apps'; invoke('focus_back'); setTimeout(() => { if (!DS.apps) dsGridRest(); }, 700); }
   dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging', 'apps');
   clearTimeout(DS.leftT); DS.leftT = setTimeout(() => { if (!DS.on) dsEl.classList.remove('leaving'); }, 480);
   syncHit();
@@ -10441,8 +10773,11 @@ function dsHide(){
 }
 // the tray's width follows what's on it; its glass lines up with the screen behind it
 function dsLay(){
-  const w = Math.max(DS.apps ? 560 : 360, Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * 88)), h = DS.apps ? 366 : 152;
-  dsTray.style.setProperty('--w', w + 'px'); dsTray.style.setProperty('--h', h + 'px');
+  const fit = Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * 88), w = Math.max(DS.apps ? 560 : 360, fit), h = DS.apps ? 366 : 152;
+  dsTray.style.setProperty('--dsW', w + 'px'); dsTray.style.setProperty('--dsH', h + 'px');
+  // (the apps panel keeps its apps-mode width all the time: following the tray's, its 160 apps were laid out afresh at
+  //  each switch, 50 ms, mid-animation)
+  dsTray.style.setProperty('--dsWa', Math.max(560, fit) + 'px');
   // (the glass's picture is placed by the styles, from the tray's own size as it changes)
   const left = Math.round(innerWidth / 2 - w / 2), top = innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
@@ -10566,25 +10901,44 @@ async function dsApps(on){
   [...g.querySelectorAll('.ds-ap:not(.off)')].filter(t => { const r = t.getBoundingClientRect(); return r.bottom > box.top && r.top < box.bottom; })
     .forEach((t, k) => t.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(12px) scale(.84)'}], {duration:240, delay:Math.min(k, 16) * 12, easing:'cubic-bezier(.4,0,.7,.4)', fill:'forwards'}));
   DS.appsT = setTimeout(() => { if (DS.apps) return; dsEl.classList.remove('apps'); dsLay(); syncHit(); }, 200);
-  invoke('focus_back'); setTimeout(() => { if (!DS.apps) $('dsGrid').textContent = ''; }, 900);
+  invoke('focus_back'); setTimeout(() => { if (!DS.apps) dsGridRest(); }, 900);
 }
-function dsGridPaint(){
-  const pinned = new Set(DS.items.filter(i => i.app).map(i => i.path.toLowerCase()));
+// The apps grid is built once, all of it, and kept: built on each opening and emptied after each closing, it stalled the
+// opening (a fifth of a second, cold) and the closing (a quarter). Hidden between uses, it costs nothing to draw.
+if (TAURI) setTimeout(() => (window.requestIdleCallback || setTimeout)(async () => {
+  if (!startApps) startApps = (await invoke('start_apps')) || [];
+  if (!$('dsGrid').firstChild && startApps.length && !DS.apps){ dsGridBuild(); dsEl.classList.add('gridoff'); }
+}, {timeout:15000}), 30000);
+function dsGridBuild(){
   const list = DS.appList = startApps.slice(0, 160), g = $('dsGrid');
-  const tile = (a, k, cls) => `<button class="ds-ap${cls}${pinned.has(a.launch.toLowerCase()) ? ' on' : ''}" data-k="${k}" style="--k:${k}" title="${esc(a.name)}">${iconHtml(a, 'ds-ic')}<b>${esc(a.name)}</b></button>`;
-  // (the first rows now, rising in; the rest, out of sight below them, once the tray has finished rising: all of them at
-  //  once stalled the opening for a sixth of a second)
-  g.innerHTML = list.slice(0, 28).map((a, k) => tile(a, k, ' in')).join('');
-  DS.gridRest = list.slice(28).map((a, k) => tile(a, k + 28, '')).join('');
-  $('dsNone').textContent = ''; g.scrollTop = 0; loadIcons(g);
-  clearTimeout(DS.gridT); DS.gridT = setTimeout(dsGridRest, 760);
+  DS.gridKey = list.map(a => a.launch).join('|');
+  g.innerHTML = list.map((a, k) => `<button class="ds-ap" data-k="${k}" style="--k:${k}" title="${esc(a.name)}">${iconHtml(a, 'ds-ic')}<b>${esc(a.name)}</b></button>`).join('');
+  loadIcons(g);
 }
-function dsGridRest(){ clearTimeout(DS.gridT); if (!DS.gridRest) return; const g = $('dsGrid'); g.insertAdjacentHTML('beforeend', DS.gridRest); DS.gridRest = ''; loadIcons(g); }
+// (opened: what's pinned is ticked, any search is undone, and the first rows rise in again)
+function dsGridPaint(){
+  const g = $('dsGrid');
+  if (!g.firstChild || DS.gridKey !== startApps.slice(0, 160).map(a => a.launch).join('|')) dsGridBuild();
+  const pinned = new Set(DS.items.filter(i => i.app).map(i => i.path.toLowerCase()));
+  const tiles = g.children;
+  for (let k = 0; k < tiles.length; k++){
+    const t = tiles[k], a = DS.appList[k];
+    t.classList.toggle('on', pinned.has(a.launch.toLowerCase())); t.classList.remove('off', 'pop'); t.classList.toggle('in', k < 28);
+  }
+  dsEl.classList.remove('gridoff'); g.classList.remove('q');
+  $('dsNone').textContent = ''; g.scrollTop = 0;
+}
+// (put away: whatever was still moving stops, and it's hidden until next time)
+function dsGridRest(){
+  const g = $('dsGrid');
+  g.getAnimations({subtree:true}).forEach(a => a.cancel());
+  for (const t of g.querySelectorAll('.ds-ap.in')) t.classList.remove('in');
+  dsEl.classList.add('gridoff');
+}
 // Searching: the apps that don't match step out, and those that do glide over into their new places (each from where
 // it was, measured before and after); any coming into sight fade up. Nothing is drawn afresh as you type.
 function dsFilter(q){
   const g = $('dsGrid'), s = q.trim().toLowerCase(), box = g.getBoundingClientRect();
-  dsGridRest();
   const tiles = [...g.querySelectorAll('.ds-ap')], was = new Map();
   for (const t of tiles) if (!t.classList.contains('off')){ const r = t.getBoundingClientRect(); if (r.bottom > box.top && r.top < box.bottom) was.set(t, r); }
   let shown = 0;
@@ -11218,42 +11572,31 @@ qsEl.addEventListener('click', e => {
 });
 
 /* ---------- the dictation card ----------
-   Dictating with the card on (the notch's settings): what you say appears on a white card, word by word as it's heard.
+   Dictating with the card on (Settings > Dictation): what you say appears on a white card, word by word as it's heard.
    The words can be dragged off it into a typing area in any app (a text box, a chat, a document: only those take them),
    copied, or typed where you were writing. */
 var WC = {on:false, text:''};
 const wcEl = $('wcard'), wcText = $('wcText');
+WC.board = boardOf(wcText);
 wcEl.querySelector('.wc-in').insertAdjacentHTML('beforeend', '<div class="wc-placed" id="wcPlaced">Placed</div>');
 function wcSay(t){ const s = $('wcSay'); if (s.textContent === t) return; s.classList.add('swap'); setTimeout(() => { s.textContent = t; s.classList.remove('swap'); }, 160); }
 function wcOpen(){
-  WC.on = true; WC.text = ''; wcText.textContent = '';
-  wcEl.classList.remove('has', 'placed', 'away', 'lift'); wcEl.classList.add('live');
+  WC.on = true; WC.text = ''; boardClear(WC.board);
+  wcEl.classList.remove('has', 'placed', 'away', 'lift', 'paused'); wcEl.classList.add('live');
   void wcEl.offsetWidth; wcEl.classList.add('on'); wcSay('Listening… say “stop dictation” when you’re done');
   syncHit(); setTimeout(syncHit, 650);
 }
-// each word of a new piece rises into place, one after another
-function wcAdd(t){
-  WC.text += t;
-  const lead = t.match(/^\s*/)[0], words = t.slice(lead.length).split(/(\s+)/);
-  if (lead) wcText.append(lead);
-  let k = 0;
-  for (const w of words){
-    if (!w) continue;
-    if (/^\s+$/.test(w)){ wcText.append(w); continue; }
-    const s = document.createElement('span'); s.className = 'ww'; s.style.setProperty('--d', (k++ * 55) + 'ms'); s.textContent = w; wcText.appendChild(s);
-  }
-  wcText.scrollTop = wcText.scrollHeight;
-  wcEl.classList.add('has'); syncHit();
-}
+// (what the card holds, to copy, type or drag: all that's been said, the last sentence with its mark)
+function wcSync(){ WC.text = DICT.before + DICT.held; wcEl.classList.toggle('has', !!WC.text.trim()); syncHit(); }
 function wcDone(why){
-  wcEl.classList.remove('live');
+  wcEl.classList.remove('live', 'paused');
   wcSay(WC.text.trim() ? 'Drag the words into a text box, or copy them' : (why || 'Dictation off'));
   if (!WC.text.trim()) setTimeout(() => { if (!DICT.on) wcClose(); }, 1600);
 }
 function wcClose(){
   if (!WC.on) return;
   if (WC.drag) wcLand({ok:false});
-  WC.on = false; wcEl.classList.remove('on', 'live', 'lift', 'away');
+  WC.on = false; wcEl.classList.remove('on', 'live', 'lift', 'away', 'paused');
   if (DICT.on) dictOff();
   setTimeout(syncHit, 380);
 }
