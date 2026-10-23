@@ -909,6 +909,13 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
   box-shadow:0 18px 44px rgba(0,0,0,.36), 0 2px 8px rgba(0,0,0,.2); pointer-events:auto}
 .wh-hubbg{position:absolute; inset:calc(70px * var(--k)); border-radius:50%; background:rgba(8,8,12,.34); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.08)}
 .wheel.smoked .wh-disc, .wheel.smoked .wh-tray{--tint:rgba(10,10,14,.66)}
+#wheel .wh-disc > .gw > .gwc, #wheel .wh-tray > .gw > .gwc{filter:blur(9px) saturate(1.35) brightness(1.04)}
+.wh-disc.glass::before{background:
+  radial-gradient(closest-side, transparent 86%, rgba(255,255,255,.05) 93%, rgba(255,255,255,.13) 99%, rgba(255,255,255,.18)),
+  radial-gradient(120% 60% at 50% 100%, rgba(255,255,255,.1), transparent 55%),
+  linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 40%, rgba(0,0,0,.08)), var(--tint)}
+.wh-disc.glass::after{padding:1px; background:conic-gradient(from 200deg, rgba(255,255,255,.62), rgba(255,255,255,.16) 22%, rgba(255,255,255,.1) 45%, rgba(255,255,255,.34) 62%, rgba(255,255,255,.14) 80%, rgba(255,255,255,.62))}
+.wh-tray.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.03) 45%, rgba(255,255,255,.07)), var(--tint)}
 /* (the hub is laid out for the middle size and scaled as one for the others) */
 .wh-hub{position:absolute; left:0; top:0; transform-origin:0 var(--cy); transform:scale(var(--k))}
 /* the rim turns as the wheel rolls: up, it is turned most of a quarter away, and it comes round as the wheel comes down */
@@ -1568,6 +1575,9 @@ html.live .nf-card > .gw{transition:top .55s var(--glide)}
 .ml-fig.in img{opacity:1; transform:none}
 .ml-fig.link img{cursor:pointer}
 .ml-body.rich{animation:aiIn .35s var(--glide)}
+.ml-pics{display:block; width:max-content; margin-top:10px; font-size:11.5px; font-weight:600; white-space:nowrap;
+  background:linear-gradient(90deg, rgba(255,255,255,.35) 30%, #fff 50%, rgba(255,255,255,.35) 70%) 0 0 / 300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:mlPics 1.6s linear infinite}
+@keyframes mlPics{from{background-position:100% 0} to{background-position:0 0}}
 
 /* ---------- the notch's answers, formatted: steps get number badges, bold words stand out, blocks ease in ---------- */
 .reply .md{white-space:normal; color:rgba(255,255,255,.8)}
@@ -2988,12 +2998,12 @@ input, textarea, select, button{font-family:inherit}
     linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.04) 42%, rgba(255,255,255,.03)), var(--tint, rgba(20,20,26,.3))}
 
 /* ---------- where answers come from: three places ---------- */
-.kw{grid-template-columns:repeat(3, 1fr)}
-.kw-pill{width:calc((100% - 8px) / 3)}
+.kw:not(.ml-kw){grid-template-columns:repeat(3, 1fr)}
+.kw:not(.ml-kw) .kw-pill{width:calc((100% - 8px) / 3)}
 .kw[data-v="gem"] .kw-pill{transform:translateX(100%)}
-.kw[data-v="key"] .kw-pill{transform:translateX(200%)}
-.kw.sm{width:252px}
-.kw.sm .kw-pill{width:calc((100% - 6px) / 3)}
+.kw:not(.ml-kw)[data-v="key"] .kw-pill{transform:translateX(200%)}
+.kw.sm:not(.ml-kw){width:252px}
+.kw.sm:not(.ml-kw) .kw-pill{width:calc((100% - 6px) / 3)}
 .kw button.soon{opacity:.5; cursor:default}
 .kw button.soon > span{display:inline-flex; flex-direction:column; align-items:flex-start; line-height:1.05}
 .kw button.soon small{display:block; font-size:8.5px; font-weight:600; letter-spacing:.01em; opacity:.8}
@@ -5937,6 +5947,7 @@ function paintMailList(){
         <span class="tx"><span class="l1"><b>${esc(m.from)}</b><em>${esc(m.when)}</em></span><span class="sj">${esc(m.subject)}</span><small>${esc(m.snippet)}</small></span></button>
       <div class="ai-extra ml-x${String(m.uid) === open ? ' open' : ''}"><div><div class="ml-s"></div></div></div></div>`).join('');
   const again = open && list.querySelector('.ml-row.open'); if (again) mailFill(again, 'orig');
+  ML.list.slice(0, 3).reduce((c, m) => c.then(() => mlAhead(m.uid)), Promise.resolve());
   if (ML.on) setMailDot(un);
   setTimeout(syncHit, 60); setTimeout(syncHit, 460);
 }
@@ -9351,6 +9362,10 @@ function whGL(){
   return WH.gl = {r, sc, cam};
 }
 function whMascot(){ const g = whGL(); g.sc.add(mochi); g.r.render(g.sc, g.cam); scene.add(mochi); }
+if (TAURI) setTimeout(() => (window.requestIdleCallback || setTimeout)(() => {
+  if (WH.gl || !DK.on || WH.open || typeof mochi === 'undefined') return;
+  const g = whGL(); g.sc.add(mochi); g.r.compile(g.sc, g.cam); g.r.render(g.sc, g.cam); scene.add(mochi);
+}, {timeout:20000}), 12000);
 setTimeout(() => (window.requestIdleCallback || setTimeout)(() => { try { if (!WH.gl) whMascot(); } catch(_){} }), 7000);
 function whOpen(focus){
   clearTimeout(WH.openT); clearTimeout(WH.closeT);
@@ -9380,7 +9395,9 @@ function whAct(i){
   const it = WH.items[i]; if (!it) return;
   WH.actAt = performance.now();                              // (see dockWins: the windows changing now mustn't turn it)
   WH.dir = Math.sign(i - WH.sel); WH.sel = i; whName(); whPlace();
-  const done = () => setTimeout(whClose, 240);
+  // (it stays down: picked, the app comes up behind it, and the wheel goes when the pointer leaves it, or a click lands
+  //  somewhere else. It used to roll up at once, under the pointer still on it)
+  const done = () => {};
   if (it.kind === 'launch'){ invoke('launch', {target:it.launch}); done(); }
   else if (it.kind === 'win'){ invoke('dock_act', {id:it.w.id, what:'focus'}); done(); }
   else if (!it.g.wins.length){ invoke('launch', {target:it.launch}); done(); }
@@ -9802,10 +9819,31 @@ reply.addEventListener('click', e => {
 /* ---------- email: the message as it looks, its pictures where they were ----------
    The words show at once (from the inbox); the whole message is fetched alongside, and if it has pictures it's
    redrawn with them, each fading in as it loads. Tiny tracking dots are left out (mail.rs). */
+// (a message's pictures and words as laid out, fetched ahead of its opening: the whole message takes a few seconds to
+//  come, and its pictures a second or two more. Fetched only on opening, they seemed never to come)
+function mlAhead(uid){
+  ML.rich = ML.rich || new Map(); ML.ahead = ML.ahead || new Map();
+  if (ML.rich.has(uid)) return Promise.resolve();
+  if (ML.ahead.has(uid)) return ML.ahead.get(uid);
+  const p = invoke('mail_rich', {uid}).then(b => {
+    ML.rich.set(uid, b || []);
+    (b || []).filter(x => x.kind === 'img').slice(0, 16).forEach(x => { const i = new Image(); i.referrerPolicy = 'no-referrer'; i.src = x.src; });
+  }).catch(() => {}).finally(() => ML.ahead.delete(uid));
+  ML.ahead.set(uid, p); return p;
+}
+mlIn.addEventListener('pointerover', e => {
+  const r = e.target.closest && e.target.closest('.ml-row'); if (!r || r === ML.hoverRow) return;
+  ML.hoverRow = r; clearTimeout(ML.hoverT); ML.hoverT = setTimeout(() => mlAhead(+r.dataset.uid), 160);
+});
 async function mlRich(uid){
   ML.rich = ML.rich || new Map();
   let blocks = ML.rich.get(uid);
-  if (!blocks){ try { blocks = await invokeLoud('mail_rich', {uid}); } catch(_){ return; } ML.rich.set(uid, blocks || []); }
+  if (!blocks){
+    const row0 = mlIn.querySelector(`.ml-row.open[data-uid="${uid}"]`), out0 = row0 && row0.querySelector('.ml-body');
+    if (out0 && !out0.querySelector('.ml-pics')) out0.insertAdjacentHTML('beforeend', '<span class="ml-pics">Getting pictures…</span>');
+    await mlAhead(uid); blocks = ML.rich.get(uid);
+    const w = out0 && out0.querySelector('.ml-pics'); if (w) w.remove();
+  }
   if (!blocks || !blocks.some(b => b.kind === 'img')) return;              // (no pictures: the words already shown stay)
   const row = mlIn.querySelector(`.ml-row.open[data-uid="${uid}"]`); if (!row || row.dataset.view !== 'orig') return;
   const out = row.querySelector('.ml-body'); if (!out) return;
