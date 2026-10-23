@@ -175,6 +175,11 @@ fn factual(q: &str) -> bool {
     starts.iter().any(|s| l.starts_with(s)) && l.split_whitespace().count() >= 3 && !mine.iter().any(|p| padded.contains(p))
 }
 
+/// A question about the world (a person, an event, "what is", "how many"), worth looking up.
+pub fn wants_facts(q: &str) -> bool {
+    factual(q) || subject(q).is_some()
+}
+
 /// The top results of a web search for it (titles and what they say), to answer from.
 fn snippets(q: &str) -> Option<String> {
     let r = crate::tools::web_search(&serde_json::json!({ "query": q })).ok()?;

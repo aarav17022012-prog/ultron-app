@@ -60,7 +60,7 @@ mod procs;
 mod coders;
 mod minfx;
 mod signin;
-mod gemini;
+mod uplink;
 mod watchdog;
 mod words;
 
@@ -469,7 +469,7 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
             return r;
         }
         // bigger jobs (files, Excel, Word, research): the task agent plans them step by step with tools
-        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && (cloud::active(&app).is_some() || ai::uplink(&app))) {
+        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && cloud::active(&app).is_some()) {
             if let Some(r) = doer::run(&app, &text) {
                 ai::remember_chat(&app, &text, &r.reply);
                 return r;
@@ -478,6 +478,7 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
         // several steps, or keyboard and mouse work: ULTRON's own cursor does the job
         if let Some(steps) = agent::plan(&text) {
             let r = agent::execute(&app, steps);
+            let r = if !r.ok && r.action.is_empty() && cloud::active(&app).is_some() { doer::run(&app, &text).unwrap_or(r) } else { r };
             ai::remember_chat(&app, &text, &r.reply);
             return r;
         }
@@ -499,11 +500,12 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
             let first = low.split_whitespace().next().unwrap_or("").trim_matches(|c: char| !c.is_alphanumeric());
             let about_pc = [" my ", " this pc", " this computer", " this laptop", " the pc", " the computer", " screen", " window", " file", " folder", " app", " disk", " drive", " battery", " wifi", " wi-fi",
                 " volume", " brightness", " ram ", " memory", " cpu", " gpu", " running", " installed", " download", " clipboard", " desktop", " settings"].iter().any(|w| low.contains(w));
-            let question = ["who", "whom", "whose", "when", "why", "what", "whats", "what's", "which", "where", "how"].contains(&first) && !about_pc;
+            let question = ["who", "whom", "whose", "when", "why", "what", "whats", "what's", "which", "where", "how", "is", "are", "was", "were", "can", "could", "does", "do", "did", "will", "would", "should"].contains(&first) && !about_pc;
             if kind != "chat" && conf >= 0.55 && !answer_me && !question {
                 // files and the system are jobs for the task agent; one clear thing to do (message someone,
                 // open, play, type...) is turned straight into a command, which takes half a second
-                let big = matches!(kind, "files" | "system");
+                // (and with your own key on, its planner takes any job: far better at them than the rules)
+                let big = matches!(kind, "files" | "system") || cloud::active(&app).is_some();
                 if big {
                     if let Some(r) = doer::run(&app, &text) {
                         ai::remember_chat(&app, &text, &r.reply);
@@ -513,6 +515,7 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
                 if let Some(lines) = ai::plan_actions(&app, &text) {
                     let steps: Vec<agent::Step> = lines.iter().map(|l| agent::parse_step(l)).collect();
                     let r = agent::execute(&app, steps);
+                    let r = if !r.ok && r.action.is_empty() && cloud::active(&app).is_some() { doer::run(&app, &text).unwrap_or(r) } else { r };
                     ai::remember_chat(&app, &text, &r.reply);
                     return r;
                 }
@@ -581,7 +584,6 @@ fn ai_config(app: AppHandle, cfg: ai::Config) {
 #[tauri::command]
 fn ai_forget(app: AppHandle, ai: State<ai::Ai>) {
     ai.forget();
-    gemini::forget();
     chats::clear(&app);
 }
 
@@ -1045,12 +1047,6 @@ async fn cts_lens() -> String {
     how.to_string()
 }
 
-/// Gemini on the web was chosen (or ULTRON started with it): its hidden window is opened ahead of the first question.
-#[tauri::command]
-async fn gemini_warm(app: AppHandle) {
-    let _ = tauri::async_runtime::spawn_blocking(move || gemini::warm(&app)).await;
-}
-
 /// Windows' sign-in as the PC wakes: `on` given, it's turned on or off (Settings > Look & feel > Lock screen); what it is
 /// now either way (None: couldn't tell).
 #[tauri::command]
@@ -1135,12 +1131,6 @@ async fn qs_set(what: String, v: f64) -> bool {
     })
     .await
     .unwrap_or(false)
-}
-
-/// You've opened the notch or started typing to ULTRON: Uplink's page is woken, ready for the question.
-#[tauri::command]
-fn gemini_wake(app: AppHandle) {
-    gemini::wake(&app);
 }
 
 /// The page is alive (every few seconds; and whether it's hidden, when its timers slow down on purpose).
@@ -1603,7 +1593,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, gemini_warm, gemini_wake, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

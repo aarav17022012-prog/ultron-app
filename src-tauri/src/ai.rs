@@ -49,7 +49,7 @@ pub fn free_commit_gb() -> f64 {
 /// squeezing the PC: with a quick brain answering everyday questions, a 16 GB PC that's nearly full is
 /// better off getting those gigabytes back (it reloads in a few seconds when a thinking question comes).
 fn keep_loaded(app: &AppHandle) -> bool {
-    config(app).keep && !config(app).gemini && (crate::quick::port().is_none() || (free_ram_gb() > 3.0 && free_commit_gb() > 4.0))
+    config(app).keep && crate::cloud::active(app).is_none() && (crate::quick::port().is_none() || (free_ram_gb() > 3.0 && free_commit_gb() > 4.0))
 }
 
 /// The red stop button: stop talking, thinking and doing. Each press ends the requests that are running
@@ -576,7 +576,7 @@ pub fn start(app: AppHandle) {
             std::thread::sleep(Duration::from_millis(250));
         }
         // (with a graphics card the quick brain covers everyday questions: the big one waits until it's needed, or there's room)
-        if config(&app).keep && !config(&app).gemini && (crate::router::specs().vram_gb < 3.5 || (free_ram_gb() > 6.0 && free_commit_gb() > 6.0)) {
+        if config(&app).keep && crate::cloud::active(&app).is_none() && (crate::router::specs().vram_gb < 3.5 || (free_ram_gb() > 6.0 && free_commit_gb() > 6.0)) {
             ensure_loaded(&app);
         }
         loop {
@@ -686,8 +686,9 @@ fn finish_load(app: &AppHandle, brain: &str, device: &str) {
 
 /// Called when you open the notch, start typing or start talking: have the brain ready by the time you ask.
 pub fn warm(app: &AppHandle) {
-    // (Cloud AI answers: the big brain isn't loaded ahead of time; a task loads it when it needs it)
-    if config(app).gemini {
+    // (your own key answers and plans: the big brain, 2.7 GB of memory, isn't loaded ahead of time; something that
+    //  needs it loads it then)
+    if crate::cloud::active(app).is_some() {
         return;
     }
     let app = app.clone();
@@ -1336,10 +1337,9 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // without one, or if it can't be reached, it's the brains on this PC as always
     let cloud = crate::cloud::active(app);
     // (Uplink chosen: everything goes to it except small talk, answered at once here when the quick brain is up)
-    let gem = config(app).gemini && !(small_talk(user) && crate::quick::port().is_some());
     // everything else waits a moment for the quick brain if it's still warming up (just after ULTRON starts)
-    let quick = if thinking { None } else if cloud.is_some() || gem { crate::quick::port() } else { crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30))) };
-    if cloud.is_none() && !gem && quick.is_none() && !ready(app) {
+    let quick = if thinking { None } else if cloud.is_some() { crate::quick::port() } else { crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30))) };
+    if cloud.is_none() && quick.is_none() && !ready(app) {
         return None;
     }
     if quick.is_some() {
@@ -1349,18 +1349,26 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // (thinking questions are reasoning, not facts: no lookup, so the smart brain has less to read)
     // (for a recipe it's what the dish really is, so the brain doesn't reinvent it; other many-part answers need no lookup)
     let look_up = if many { dish_of(user) } else { Some(user.to_string()) };
-    let web = if let (true, Some(q)) = (config(app).web && !gem && (!thinking || many || cloud.is_some()), look_up) {
+    let web = if let (true, Some(q)) = (config(app).web && (!thinking || many || cloud.is_some()), look_up) {
+        // Uplink: a question about the world is looked up on Google too, its results boiled down to the lines that
+        // bear on it (uplink.rs); the other sources (Wikipedia, news, DuckDuckGo) look at the same time
+        let google = (!many && crate::web::wants_facts(&q)).then(|| {
+            let (a, q2) = (app.clone(), q.clone());
+            std::thread::spawn(move || crate::uplink::facts(&a, &q2))
+        });
         let looking = std::thread::spawn(move || if many { crate::web::wiki(&q) } else { crate::web::lookup(&q) });
         std::thread::sleep(Duration::from_millis(200));
-        if !looking.is_finished() {
+        if !looking.is_finished() || google.as_ref().is_some_and(|g| !g.is_finished()) {
             let _ = app.emit_to("main", "ai-phase", "Looking it up…");
         }
-        // don't keep you waiting on a slow site: answer without it after ~1.8 s
+        // don't keep you waiting on a slow site: answer without it after ~1.8 s (4.5 s for Google's page, which takes ~3.5)
         let t0 = Instant::now();
-        while !looking.is_finished() && t0.elapsed() < Duration::from_millis(1800) && !cancelled() {
+        let most = Duration::from_millis(if google.is_some() { 4500 } else { 1800 });
+        while !(looking.is_finished() && google.as_ref().map_or(true, |g| g.is_finished())) && t0.elapsed() < most && !cancelled() {
             std::thread::sleep(Duration::from_millis(40));
         }
-        if looking.is_finished() { looking.join().ok().flatten() } else { None }
+        let from_google = google.filter(|g| g.is_finished()).and_then(|g| g.join().ok().flatten());
+        from_google.or_else(|| if looking.is_finished() { looking.join().ok().flatten() } else { None })
     } else {
         None
     };
@@ -1380,27 +1388,6 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     let t_gen = Instant::now();
     let mut via = "";
     let mut text = None;
-    if gem {
-        // (Gemini on the web looks things up itself; told how long an answer ULTRON shows)
-        let how = match config(app).length.as_str() {
-            "short" => "Reply in one short sentence. Plain text, no preamble.",
-            "detailed" => "Reply concisely in plain text, no preamble.",
-            _ => "Reply in one or two short sentences. Plain text, no preamble, no follow-up questions.",
-        };
-        let _ = app.emit_to("main", "ai-phase", "Thinking…");
-        match crate::gemini::chat(app, &format!("{user}\n\n({how})"), |f| emit(f), cancelled) {
-            Ok(t) => {
-                text = Some(t);
-                via = "gemini";
-            }
-            Err(e) => {
-                crate::log_line(&format!("gemini: {e}; answering without it"));
-                if !cancelled() {
-                    let _ = app.emit_to("main", "ai-phase", "One moment…");
-                }
-            }
-        }
-    }
     if let (true, Some(c)) = (text.is_none(), &cloud) {
         // (a service gets the ordinary conversation prompt: it needs no lean one to be quick)
         let msgs = if many { steps_messages(app, user, web.as_deref()) } else { build_messages(app, user, web.as_deref()) };
@@ -1421,14 +1408,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             if cancelled() {
                 return Some(Reply { reply: "Stopped.".into(), action: String::new(), icon: "chat", ok: true });
             }
-            // (Uplink didn't answer and the quick brain isn't up: say so at once, rather than load the big brain for a minute)
-            if gem && quick.is_none() {
-                return Some(Reply { reply: "I couldn't answer just now. Try again in a moment.".into(), action: String::new(), icon: "chat", ok: false });
-            }
             if quick.is_none() && !ready(app) {
-                if gem {
-                    return Some(Reply { reply: "I couldn't answer just now. Try again in a moment.".into(), action: String::new(), icon: "chat", ok: false });
-                }
                 return None;
             }
             if many && quick.is_none() {
@@ -1457,7 +1437,13 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     crate::log_line(&format!("answered by {} in {} ms{}{}", if via == "cloud" { "your own key".to_string() } else { format!("the {via} brain") }, t_gen.elapsed().as_millis(), if web.is_some() { " (with web facts)" } else { "" }, if many { " (a many-part answer)" } else if thinking { " (a thinking question)" } else { "" }));
     let wants_typing = ["type", "write", "dictate", "compose", "draft", "note", "essay", "words"].iter().any(|w| user.to_lowercase().contains(w));
     // the quick brain is for talking: its commands only count when the action model agrees it's a task
-    let trusted = !many && (via != "quick" || crate::uam::classify(user).map(|(k, c)| k != "chat" && c >= 0.4).unwrap_or(false));
+    // (a question asked is answered, never acted on: "Who won the final?" once came back as ">> India won the final",
+    //  which ran as a look at the screen)
+    let mut ws = user.trim().split_whitespace().map(|w| w.to_lowercase());
+    let (first, second) = (ws.next().unwrap_or_default(), ws.next().unwrap_or_default());
+    let request = ["can", "could", "will", "would"].contains(&first.as_str()) && second.starts_with("you");   // ("can you open Spotify?" asks for something to be done)
+    let asked = ["who", "whom", "whose", "when", "why", "what", "what's", "which", "where", "how", "is", "are", "was", "were", "did", "does", "do", "can", "could", "will", "would", "should"].contains(&first.trim_matches(|c: char| !c.is_alphanumeric() && c != '\''));
+    let trusted = !many && (!asked || request) && (via != "quick" || crate::uam::classify(user).map(|(k, c)| k != "chat" && c >= 0.4).unwrap_or(false));
     let actions: Vec<String> = text
         .find(">>")
         .filter(|_| trusted)
@@ -1552,11 +1538,6 @@ const BIG_RULES: &str = "\nBigger jobs:\n\
 /// (Tried and dropped: writing the call in two parts, tool first and then only that tool's rules.
 /// It was a little faster, but the brain likes to end a call with one `"}}` and, held to the inner
 /// part alone, sometimes wrote junk into the last value instead.)
-/// Uplink (Gemini, through its page) is the chosen brain.
-pub fn uplink(app: &AppHandle) -> bool {
-    config(app).gemini
-}
-
 pub fn agent_call(app: &AppHandle, messages: &[(String, String)], schema: &serde_json::Value, max: usize) -> Option<String> {
     // With your own key switched on, that service's model plans the task: the same tools and rules, a far
     // stronger planner, so long jobs inside websites and apps become possible. (What the tools report back,
@@ -1574,60 +1555,23 @@ pub fn agent_call(app: &AppHandle, messages: &[(String, String)], schema: &serde
                     crate::log_line(&format!("agent step: planned with your own key in {} ms", t0.elapsed().as_millis()));
                     return Some(call);
                 }
+                let words = t.trim();
+                if !words.is_empty() && messages.iter().any(|(r, _)| r == "assistant") {
+                    // (a piece of writing, when the job was to write something and nothing's been typed yet: it's what
+                    //  was to be typed. It used to go to this PC's brain, which wasn't loaded, and the task stalled)
+                    let asked = messages.iter().filter(|(r, _)| r == "user").map(|(_, c)| c.to_lowercase()).collect::<String>();
+                    let write = [" write", " type", " draft", " compose", "essay", " letter", " poem", " story", " email", " note"].iter().any(|w| asked.contains(w));
+                    let typed = messages.iter().any(|(r, c)| r == "assistant" && c.contains("type_text"));
+                    if write && !typed && words.split_whitespace().count() > 20 {
+                        crate::log_line("agent step: your key's service wrote it out; it's typed");
+                        return Some(serde_json::json!({"step": "Writing it", "tool": "type_text", "with": {"text": words}}).to_string());
+                    }
+                    crate::log_line("agent step: your key's service answered in words; taken as its answer");
+                    return Some(serde_json::json!({"step": "Done", "tool": "done", "with": {"answer": words}}).to_string());
+                }
                 crate::log_line("agent step: your key's service answered without a tool call; this PC's brain takes it");
             }
             Err(e) => crate::log_line(&format!("agent step: your key's service couldn't be reached ({e}); this PC's brain takes it")),
-        }
-        if cancelled() {
-            return None;
-        }
-    }
-    // Uplink chosen: Gemini plans the task, a call at a time, under the same tools and rules (it's told the form each
-    // call must take, and each is checked here and by the tools). This PC's big brain isn't even loaded while Uplink is
-    // on, so tasks used to wait for it to load, or stall. (What the tools report back, the names of files and of what's
-    // on screen included, goes to Gemini while Uplink is on, as the questions do.)
-    if uplink(app) {
-        let mut prompt = String::new();
-        for (role, text) in messages {
-            match role.as_str() {
-                "system" => prompt.push_str(text),
-                "assistant" => prompt.push_str(&format!("\n\nYou called: {text}")),
-                _ => prompt.push_str(&format!("\n\n{text}")),
-            }
-            prompt.push('\n');
-        }
-        prompt.push_str(BIG_RULES);
-        prompt.push_str("\nReply with your next call only: exactly one JSON object {\"step\": ..., \"tool\": ..., \"with\": {...}} using one of the tools above, and nothing else (no code fence, no words around it). When the task is complete, that call is {\"step\": \"Done\", \"tool\": \"done\", \"with\": {\"answer\": what to tell the user}}.");
-        let t0 = Instant::now();
-        match crate::gemini::chat(app, &prompt, |_| {}, cancelled) {
-            Ok(t) => {
-                // (read off the page, a long answer comes with its line breaks in it, which JSON doesn't allow inside a
-                //  string: made spaces first)
-                let flat = t.replace(['\r', '\n', '\t'], " ");
-                if let Some(call) = flat.find('{').zip(flat.rfind('}')).filter(|(a, b)| a < b).map(|(a, b)| flat[a..=b].to_string()).filter(|c| serde_json::from_str::<serde_json::Value>(c).is_ok()) {
-                    crate::log_line(&format!("agent step: planned with Uplink in {} ms", t0.elapsed().as_millis()));
-                    return Some(call);
-                }
-                // (it answered in words: after a step, that's its answer to you, the task done. Handed to this PC's
-                //  brain instead, the task waited the best part of a minute for it to load)
-                let words = t.trim();
-                // (a finished call that still wouldn't read: its answer taken out of it, so you never see the JSON)
-                let words = match words.find("\"answer\"") {
-                    Some(i) => {
-                        let rest = &words[i + 8..];
-                        let s = rest.find('"').map(|q| &rest[q + 1..]).unwrap_or(rest);
-                        s.rfind('"').map(|q| &s[..q]).unwrap_or(s).trim().to_string()
-                    }
-                    None => words.to_string(),
-                };
-                let words = words.as_str();
-                if !words.is_empty() && messages.iter().any(|(r, _)| r == "assistant") {
-                    crate::log_line("agent step: Uplink answered in words; taken as its answer");
-                    return Some(serde_json::json!({"step": "Done", "tool": "done", "with": {"answer": words}}).to_string());
-                }
-                crate::log_line(&format!("agent step: Uplink answered without a tool call ({:?}); this PC's brain takes it", words.chars().take(120).collect::<String>()));
-            }
-            Err(e) => crate::log_line(&format!("agent step: Uplink couldn't plan ({e}); this PC's brain takes it")),
         }
         if cancelled() {
             return None;
@@ -1972,7 +1916,7 @@ pub fn translate(app: &AppHandle, text: &str, from: &str, to: &str, id: u64) -> 
 pub fn wake(app: &AppHandle) {
     // (not with Cloud AI answering: ULTRON's menus are opened unseen at start to be quick, and the Language menu's
     //  wake loaded the big brain every time; a task loads it when it needs it)
-    if config(app).gemini {
+    if crate::cloud::active(app).is_some() {
         return;
     }
     let app = app.clone();
