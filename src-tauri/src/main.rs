@@ -61,6 +61,7 @@ mod coders;
 mod minfx;
 mod signin;
 mod uplink;
+mod link;
 mod watchdog;
 mod words;
 
@@ -947,6 +948,46 @@ fn shelf_drag(app: AppHandle, paths: Vec<String>) -> u32 {
     shelf::drag(h, &paths)
 }
 
+/// The phone link (link.rs): phones running ULTRON on this network.
+#[tauri::command]
+async fn link_find() -> Result<Vec<link::Phone>, String> {
+    tauri::async_runtime::spawn_blocking(|| link::find(Duration::from_millis(3000))).await.map_err(|e| e.to_string())?
+}
+
+/// Connect to one (hello both ways, the version agreed).
+#[tauri::command]
+async fn link_connect(app: AppHandle, name: String, host: String, port: u16) -> Result<link::State, String> {
+    tauri::async_runtime::spawn_blocking(move || link::connect(&app, &link::Phone { name, host, port })).await.map_err(|e| e.to_string())?
+}
+
+/// Pair with the 6-digit code the phone shows.
+#[tauri::command]
+async fn link_pair(code: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || link::pair(&code)).await.map_err(|e| e.to_string())?
+}
+
+/// "On my phone, open WhatsApp": sent to the phone as a command; its result (ok, text).
+#[tauri::command]
+async fn link_command(text: String) -> Result<(bool, String), String> {
+    tauri::async_runtime::spawn_blocking(move || link::command(&text)).await.map_err(|e| e.to_string())?
+}
+
+/// The laptop's answer to a command the phone sent.
+#[tauri::command]
+fn link_answer(id: String, ok: bool, text: String) {
+    link::answer(&id, ok, &text);
+}
+
+#[tauri::command]
+fn link_state() -> link::State {
+    link::state()
+}
+
+#[tauri::command]
+fn link_close() {
+    link::close();
+}
+
 /// A picture in an email its server refused to the page, fetched here instead (a data address).
 #[tauri::command]
 async fn mail_image(url: String) -> Option<String> {
@@ -1605,7 +1646,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray

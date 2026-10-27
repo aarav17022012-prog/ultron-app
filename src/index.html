@@ -3372,6 +3372,17 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 /* the pieces said: the mark held back at a pause shows faint until the next piece sets it or carries the sentence on;
    a piece taken back blurs away; the brain's tidier version takes a piece's place word for word */
 .wpiece{white-space:pre-wrap}
+/* the phone link's row: phones found, then the code */
+.ph-pick{display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:2px 12px 10px}
+.ph-o{border:0; border-radius:99px; padding:6px 12px; background:rgba(255,255,255,.12); color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer; animation:rowIn .4s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 50ms); transition:background .2s}
+.ph-o:hover{background:rgba(255,255,255,.22)}
+.ph-code{width:110px; height:30px; padding:0 10px; border:0; outline:0; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; font:inherit; font-size:15px; font-weight:650; letter-spacing:.18em; text-align:center; animation:rowIn .4s var(--glide) backwards}
+.ph-code.bad{animation:phShake .4s}
+@keyframes phShake{20%, 60%{transform:translateX(-5px)} 40%, 80%{transform:translateX(5px)}}
+.ph-dots{display:inline-flex; gap:4px; padding:6px 2px}
+.ph-dots i{width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.7); animation:phDot 1s ease-in-out infinite}
+.ph-dots i:nth-child(2){animation-delay:.15s} .ph-dots i:nth-child(3){animation-delay:.3s}
+@keyframes phDot{50%{transform:translateY(-4px); opacity:.4}}
 .wlive{white-space:pre-wrap; opacity:.5}
 .wheld{display:inline-block; opacity:.28; animation:heldPulse 1.3s ease-in-out infinite}
 @keyframes heldPulse{50%{opacity:.55}}
@@ -3775,6 +3786,7 @@ html.vision .wc-in{border-radius:16px}
       <section class="pane" data-pane="settings" role="tabpanel">
         <div class="rows">
           <div class="row"><span class="t">Answers from<small id="kwnSay">This PC</small></span><span class="kw sm" id="kwNotch" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio">This PC</button><button data-kw="gem" role="radio" class="soon" disabled aria-disabled="true" title="Cloud is under development"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Cloud<small>Under development</small></span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg>My key</button></span></div>
+          <div class="row"><span class="t">Phone<small id="phSay">Link a phone running ULTRON on this Wi-Fi</small></span><button class="chipb" id="phGo" type="button">Find phone</button></div><div class="ph-pick" id="phPick" hidden></div>
           <div class="row"><span class="t">Agent watch<small>Tells you when a coding agent needs you</small></span><button class="tg" role="switch" data-set="agentWatch" aria-label="Agent watch"></button></div>
           <div class="ag-card" id="agCard"><div class="ag-in">
             <div class="ag-hi"><i class="ag-me" id="agMe"><i></i><i></i></i><p id="agHi"></p></div>
@@ -6616,6 +6628,60 @@ function boardLive(B, text){
   now.slice(same).forEach((w, i) => { B.liveEl.append(same + i || lead ? ' ' : ''); const s = document.createElement('span'); s.className = 'ww'; s.style.setProperty('--d', (i * 45) + 'ms'); s.textContent = w; B.liveEl.appendChild(s); });
   B.el.scrollTop = B.el.scrollHeight;
 }
+/* ---------- the phone link (link.rs; protocol in the phone project's docs/LINK_PROTOCOL.md) ----------
+   Find phone looks on this network; pick yours, type the 6-digit code it shows, and it's paired. Then "on my phone,
+   open WhatsApp" goes to it as a command and its answer shows here. A command from the phone runs here as if said. */
+var PH = {state:'off', phone:''};
+function phSay(t){ $('phSay').textContent = t; }
+function phPaint(){
+  const b = $('phGo'), st = PH.state;
+  b.textContent = st === 'paired' ? 'Disconnect' : st === 'connected' ? 'Disconnect' : st === 'connecting' ? 'Connecting…' : 'Find phone';
+  if (st === 'paired') phSay(`Linked to ${PH.phone}. Say “on my phone, …”`);
+}
+listen('link-state', s => { PH.state = s.state; PH.phone = s.phone || PH.phone; phPaint(); if (s.state === 'off') $('phPick').hidden = true; });
+$('phGo').addEventListener('click', async e => {
+  e.stopPropagation();
+  const pick = $('phPick');
+  if (PH.state === 'paired' || PH.state === 'connected'){ invoke('link_close'); pick.hidden = true; phSay('Link a phone running ULTRON on this Wi-Fi'); return; }
+  phSay('Looking for your phone…'); pick.hidden = false; pick.innerHTML = '<span class="ph-dots"><i></i><i></i><i></i></span>';
+  let list = [];
+  try { list = await invokeLoud('link_find'); } catch(x){ phSay(String(x)); pick.hidden = true; return; }
+  if (!list.length){ phSay('No phone found. Open ULTRON on your phone, on the same Wi-Fi.'); pick.hidden = true; return; }
+  phSay('Pick your phone');
+  pick.innerHTML = list.map((p, i) => `<button class="ph-o" data-i="${i}" style="--i:${i}">${esc(p.name)}</button>`).join('');
+  pick.onclick = async ev => {
+    const o = ev.target.closest('.ph-o'); if (!o) return;
+    ev.stopPropagation();
+    const p = list[+o.dataset.i];
+    phSay(`Connecting to ${p.name}…`);
+    try { await invokeLoud('link_connect', {name:p.name, host:p.host, port:p.port}); } catch(x){ phSay(String(x)); return; }
+    phSay('Type the code your phone shows');
+    pick.innerHTML = '<input class="ph-code" id="phCode" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off"><button class="chipb" id="phPair" type="button">Pair</button>';
+    const go = async () => {
+      try { await invokeLoud('link_pair', {code:$('phCode').value}); pick.hidden = true; phPaint(); }
+      catch(x){ phSay(String(x)); const c = $('phCode'); c.classList.remove('bad'); void c.offsetWidth; c.classList.add('bad'); c.select(); }
+    };
+    $('phPair').onclick = ev2 => { ev2.stopPropagation(); go(); };
+    $('phCode').onkeydown = ev2 => { ev2.stopPropagation(); if (ev2.key === 'Enter') go(); };
+    invoke('focus_main'); setTimeout(() => $('phCode').focus(), 80);
+  };
+});
+async function phoneDo(text){
+  reply.classList.remove('bad', 'long', 'steps');
+  if (PH.state !== 'paired'){ const m = 'Your phone isn’t linked yet. Open the notch’s settings and press Find phone.'; reveal(reply, m, 40); fit(); return {reply:m, ok:false, action:'', icon:'chat'}; }
+  reveal(reply, 'On your phone…', 40); fit();
+  try {
+    const [ok, said] = await invokeLoud('link_command', {text});
+    const m = said || (ok ? 'Done on your phone.' : 'Your phone couldn’t do that.');
+    if (!ok) reply.classList.add('bad');
+    reveal(reply, m, 40); fit(); speak(m);
+    return {reply:m, ok, action:'phone', icon:'chat'};
+  } catch(x){ const m = String(x); reply.classList.add('bad'); reveal(reply, m, 40); fit(); return {reply:m, ok:false, action:'', icon:'chat'}; }
+}
+listen('link-command', async c => {
+  let r; try { r = await invoke('assist', {text:c.text}); } catch(x){ r = {ok:false, reply:String(x)}; }
+  invoke('link_answer', {id:c.id, ok:!!(r && r.ok), text:(r && r.reply) || ''});
+});
 // "scratch that": the last piece taken back (off the card, or rubbed out where it was typed)
 async function dictUndo(){
   const p = DICT.pieces.pop(); if (!p) return;
@@ -6831,6 +6897,8 @@ async function runAssist(cmd){
     return {reply:m, ok:true, action:'', icon:'chat'};
   }
   hideConfirm();
+  const ph = cmd.match(/^(?:on|in|using|with)\s+my\s+phone[,:]?\s+(.+)$/i) || cmd.match(/^(.+?)\s+on\s+my\s+phone[.!?]?$/i);
+  if (ph) return phoneDo(ph[1].trim());
   const exact = mathAnswer(cmd);
   if (exact !== null){                                  // instant and always right
     reply.classList.remove('bad', 'long', 'streaming', 'steps'); reveal(reply, `That's ${exact}.`, 45); fit(); speak(`That's ${exact}.`); setMood('happy');
