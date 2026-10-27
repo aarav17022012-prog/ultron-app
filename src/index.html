@@ -3213,7 +3213,10 @@ html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--ha
 .ag-hi p{margin:0; font-size:12px; line-height:1.42; color:rgba(255,255,255,.8)}
 /* ULTRON, small, asking: it looks about, blinks, and hops when you say yes */
 .ag-me{flex:none; position:relative; width:30px; height:25px; border-radius:50% 50% 45% 45%; background:var(--agb, #f2efe9); box-shadow:inset 0 -3px 6px rgba(0,0,0,.2); transition:background .4s}
-.ag-me i{position:absolute; top:9px; width:3.6px; height:6px; border-radius:3px; background:#111; animation:agLook 5.5s ease-in-out infinite, agBlink 4.3s infinite}
+.ag-me i{position:absolute; top:9px; width:3.6px; height:6px; border-radius:3px; background:#111}
+/* (its eyes move only while the notch is open: running all the time, unseen, they kept the page drawing 145 times a
+   second, a third of a processor core and the graphics card with it, for nothing) */
+.notch.open .ag-me i{animation:agLook 5.5s ease-in-out infinite, agBlink 4.3s infinite}
 .ag-me i:first-child{left:9px} .ag-me i:last-child{right:9px}
 .ag-me.yay{animation:agYay .6s var(--spring)}
 .ag-me.yay i{height:2.4px; top:11px; border-radius:3px 3px 0 0; animation:none}
@@ -6656,6 +6659,8 @@ function boardMorph(B, p, text, held){
 async function onHeard(text){
   if (isEcho(text)) return;                             // that was ULTRON's own voice
   if (DICT.on) return dictHeard(text);
+  // ("start dictation" needs no "Ultron" first: the name is often heard as something else, and the phrase is its own)
+  if (DICT_START.test(text.replace(WAKE, '').trim().replace(/^[^a-z]+/i, ''))){ dictOn(); return; }
   if (tourOn && tour.heard){ tour.heard(text); return; }
   if (confirmWords(text.replace(WAKE, ''))) return;
   if (pttUntil) endTalk();
@@ -9502,7 +9507,9 @@ async function dockOff(){
     await invoke('dock_set', {on:false});                    // (Windows' taskbar is back, as it was)
   } finally { DK.busy = false; }
 }
-listen('dock-wins', l => { glassLookSoon(); if (DK.on) dockWins(l || []); });
+// (the glass looks again only when a window has come or gone: the list also changes with every title, a browser
+//  tab's or a video's, and looking again each time made the glass flicker)
+listen('dock-wins', l => { const ids = (l || []).map(w => w.id).sort().join(); if (ids !== DK.ids){ DK.ids = ids; glassLookSoon(); } if (DK.on) dockWins(l || []); });
 
 
 
@@ -9855,7 +9862,9 @@ async function mlRich(uid){
     const f = img.parentElement, show = () => setTimeout(() => f.classList.add('in'), Math.min(i * 60, 400));
     // (a picture that turns out to be a dot or two is a tracking pixel: it goes)
     const ok = () => (img.naturalWidth <= 3 || img.naturalHeight <= 3) ? f.remove() : show();
-    if (img.complete && img.naturalWidth) ok(); else { img.onload = ok; img.onerror = () => f.remove(); }
+    // (refused to the page, a picture is fetched by ULTRON itself, once; only then is it given up)
+    const fail = () => { if (img.dataset.tried) return f.remove(); img.dataset.tried = 1; invoke('mail_image', {url:img.src}).then(u => { if (u) img.src = u; else f.remove(); }).catch(() => f.remove()); };
+    if (img.complete && img.naturalWidth) ok(); else { img.onload = ok; img.onerror = fail; }
   });
   setTimeout(syncHit, 420);
 }

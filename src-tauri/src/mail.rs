@@ -446,6 +446,24 @@ static RICH: Mutex<Vec<(u32, Vec<Block>)>> = Mutex::new(Vec::new());
 /// One message as it was written, pictures and all. The inbox only keeps the first 48 KB of each message (enough
 /// for its words); the whole of this one is fetched now, and its pictures put back where they were: the ones sent
 /// inside it (cid:) as pictures, the ones on the web by their address. Tracking dots (a pixel or two) are left out.
+/// A picture in an email that its server wouldn't hand to the page (it checks who's asking): fetched here, as a
+/// browser would, and given back as a data address. At most 6 MB.
+pub fn image(url: &str) -> Option<String> {
+    use base64::Engine;
+    use std::io::Read;
+    if !url.starts_with("http") {
+        return None;
+    }
+    let r = crate::net::agent(std::time::Duration::from_secs(8)).get(url).set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8").call().ok()?;
+    let kind = r.header("Content-Type").unwrap_or("image/png").split(';').next().unwrap_or("image/png").trim().to_string();
+    if !kind.starts_with("image/") {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    r.into_reader().take(6_000_000).read_to_end(&mut bytes).ok()?;
+    (!bytes.is_empty()).then(|| format!("data:{kind};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes)))
+}
+
 pub fn rich(app: &AppHandle, uid: u32) -> Result<Vec<Block>, String> {
     if let Some(b) = RICH.lock().unwrap().iter().find(|x| x.0 == uid) {
         return Ok(b.1.clone());
@@ -651,7 +669,20 @@ fn html_blocks(html: &str, cids: &std::collections::HashMap<String, String>) -> 
             let name: String = tag[1..].trim_start().chars().take_while(|c| c.is_alphanumeric() || *c == '/').collect::<String>().to_lowercase();
             match name.as_str() {
                 "img" => {
-                    let src = attr(tag, "src");
+                    // (a picture loaded only as it scrolls into view keeps its address in data-src, or only in srcset)
+                    let mut src = attr(tag, "src");
+                    for alt in ["data-src", "data-original", "data-lazy-src"] {
+                        let v = attr(tag, alt);
+                        if !v.is_empty() && (src.is_empty() || src.starts_with("data:image/gif") || src.contains("blank") || src.contains("spacer")) {
+                            src = v;
+                        }
+                    }
+                    if src.is_empty() {
+                        src = attr(tag, "srcset").split(',').next().unwrap_or("").split_whitespace().next().unwrap_or("").to_string();
+                    }
+                    if src.starts_with("//") {
+                        src = format!("https:{src}");
+                    }
                     let (w, h) = (attr(tag, "width").trim_end_matches("px").parse::<u32>().unwrap_or(0), attr(tag, "height").trim_end_matches("px").parse::<u32>().unwrap_or(0));
                     let tiny = (w > 0 && w <= 3) || (h > 0 && h <= 3);
                     let src = if let Some(id) = src.strip_prefix("cid:") { cids.get(&id.to_lowercase()).cloned().unwrap_or_default() } else if src.starts_with("http://") || src.starts_with("https://") || src.starts_with("data:image/") { entities(&src) } else { String::new() };
@@ -661,6 +692,29 @@ fn html_blocks(html: &str, cids: &std::collections::HashMap<String, String>) -> 
                     }
                 }
                 "a" => href = entities(&attr(tag, "href")),
+                // a picture laid behind a cell or a box (the big banner at the top of many emails is one)
+                "td" | "table" | "div" if { let b = attr(tag, "background"); b.starts_with("http") || tag.to_ascii_lowercase().contains("background-image") } => {
+                    let mut src = attr(tag, "background");
+                    if src.is_empty() {
+                        let low = tag.to_ascii_lowercase();
+                        if let Some(i) = low.find("url(") {
+                            src = tag[i + 4..].split(')').next().unwrap_or("").trim().trim_matches(['\'', '"', ' ']).to_string();
+                            src = src.replace("&quot;", "");
+                        }
+                    }
+                    if src.starts_with("//") {
+                        src = format!("https:{src}");
+                    }
+                    if src.starts_with("http") {
+                        flush(&mut text, &mut out);
+                        out.push(Block { kind: "img", text: String::new(), src: entities(&src), href: href.clone(), w: 0, h: 0 });
+                    }
+                    if name == "td" {
+                        text.push(' ');
+                    } else {
+                        text.push('\n');
+                    }
+                }
                 "/a" => href.clear(),
                 "br" | "br/" => text.push('\n'),
                 "li" => text.push_str("\n• "),

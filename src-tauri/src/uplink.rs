@@ -5,7 +5,7 @@
 //!
 //! Nothing is clicked, typed or solved on Google's side: a page asking whether this is a person (its "unusual
 //! traffic" check) or for cookie consent stands Uplink down for half an hour, and Wikipedia, the news and DuckDuckGo
-//! answer meanwhile. The window closes after a few quiet minutes, and its memory goes with it.
+//! answer meanwhile. The window closes after 45 quiet seconds, and its memory goes with it.
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
@@ -79,15 +79,15 @@ fn run(w: &WebviewWindow, js: &str) -> Option<Value> {
     serde_json::from_str(&rx.recv_timeout(Duration::from_secs(3)).ok()?).ok()
 }
 
-/// (closed after three quiet minutes)
+/// (closed after 45 quiet seconds: its memory, a page's worth, goes back at once)
 fn keep_tidy(app: &AppHandle) {
     if TIDY.swap(true, SeqCst) {
         return;
     }
     let app = app.clone();
     std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_secs(30));
-        let quiet = LAST.lock().unwrap().map_or(true, |t| t.elapsed() > Duration::from_secs(180));
+        std::thread::sleep(Duration::from_secs(15));
+        let quiet = LAST.lock().unwrap().map_or(true, |t| t.elapsed() > Duration::from_secs(45));
         if quiet {
             if let Some(w) = app.get_webview_window(LABEL) {
                 let _ = w.destroy();
