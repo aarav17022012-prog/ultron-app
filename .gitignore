@@ -11,3 +11,11 @@ src-tauri/resources/piper/
 src-tauri/resources/voices/
 src-tauri/resources/screen/
 *.pdb
+
+# secrets: never committed
+.env
+.env.*
+*.pem
+*.pfx
+*.key
+secrets.json
