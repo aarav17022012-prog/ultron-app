@@ -3372,6 +3372,7 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 /* the pieces said: the mark held back at a pause shows faint until the next piece sets it or carries the sentence on;
    a piece taken back blurs away; the brain's tidier version takes a piece's place word for word */
 .wpiece{white-space:pre-wrap}
+.wlive{white-space:pre-wrap; opacity:.5}
 .wheld{display:inline-block; opacity:.28; animation:heldPulse 1.3s ease-in-out infinite}
 @keyframes heldPulse{50%{opacity:.55}}
 .wheld.late{animation:heldPulse 1.3s ease-in-out infinite, wwIn .5s cubic-bezier(.2,.8,.25,1) .5s backwards}
@@ -6465,7 +6466,7 @@ addEventListener('click', e => {
    a pause doesn't end the sentence, your own words); a correction, or every piece with "Polish with the brain" on,
    goes by the quick brain too. "Pause dictation" and "resume dictation" hold it; "scratch that" takes the last piece
    back. The recognizer waits out longer pauses meanwhile, and is told your words and the last things said. */
-var DICT = {on:false, paused:false, mode:'', before:'', held:'', pieces:[], idleT:0, heldT:0, chain:Promise.resolve()};
+var DICT = {on:false, paused:false, mode:'', before:'', held:'', pieces:[], idleT:0, heldT:0, chain:Promise.resolve(), cur:'', prevWords:[], part:'', partBusy:false, final:false};
 // (the microphone as it should be: off when you've turned it off, except while dictating)
 function micPaused(){ return !!S.muted && !(window.DICT && DICT.on); }
 const DICT_START = /^(?:please\s+)?(?:start|begin|take)\s+(?:a\s+)?dictat(?:ion|ing)\b|^dictation(?:\s+mode)?[.!]?$|^dictate[.!]?$/i;
@@ -6485,6 +6486,7 @@ function dictBoard(){ return DICT.mode === 'card' ? WC.board : DICT.mode === 'tr
 function dictOn(mode){
   if (DICT.on) dictOff();
   DICT.on = true; DICT.paused = false; DICT.before = ''; DICT.held = ''; DICT.pieces = []; DICT.chain = Promise.resolve();
+  DICT.cur = ''; DICT.prevWords = []; DICT.part = '';
   DICT.mode = mode || (S.dictCard ? 'card' : 'type');
   invoke('voice_config', {patient:true, wake:false, prompt:dictPrompt(), paused:false}); wakeTold = false;
   $('micSt').classList.add('ptt');
@@ -6512,7 +6514,7 @@ function dictSettle(){
   DICT.before += h; DICT.held = '';
   if (last) last.tail = (last.tail || '') + h;
   if (b){ boardSettle(b); if (DICT.mode === 'card') wcSync(); }
-  else if (DICT.mode === 'type') invoke('words_type', {text:h});
+  else if (DICT.mode === 'type' && !DICT.cur) invoke('words_type', {text:h});
 }
 function dictPause(on){
   if (!DICT.on || DICT.paused === on) return;
@@ -6526,6 +6528,11 @@ function dictPause(on){
 // (pieces are dealt with one at a time, in the order they were heard: each is shaped against what came before it)
 function dictHeard(text){ DICT.chain = DICT.chain.then(() => dictPiece(text)).catch(e => invoke('page_log', {msg:'dictation: ' + e})); }
 async function dictPiece(text){
+  DICT.final = true; DICT.part = '';
+  try { while (DICT.partBusy) await new Promise(r => setTimeout(r, 15)); return await dictFinal(text); }
+  finally { DICT.final = false; DICT.cur = ''; DICT.prevWords = []; if (DICT.part) dictPartNext(); }
+}
+async function dictFinal(text){
   const t = text.trim();
   if (DICT_STOP.test(t)) return dictOff();
   if (DICT_PAUSE.test(t)) return dictPause(true);
@@ -6547,7 +6554,7 @@ async function dictPiece(text){
   invoke('voice_config', {prompt:dictPrompt()});
   if (!board){
     nbShow(`<div class="nb-say">${esc((s.text + s.held).trim())}</div>`, 2600);
-    await invoke('words_type', {text:s.lead + s.text});
+    await dictTypeTo(s.lead + s.text);
     // (typed: the held mark goes in after a quiet spell, rather than being left off if you stop by clicking away; in
     //  turn with the pieces, so it can't land in the middle of one being typed)
     DICT.heldT = setTimeout(() => { DICT.chain = DICT.chain.then(dictSettle); }, 5000);
@@ -6563,6 +6570,51 @@ async function dictPiece(text){
   boardMorph(board, p, s2.text, s2.held);
   p.text = s2.text; p.held = s2.held; DICT.before = before + p.lead + p.text; DICT.held = p.held;
   if (DICT.mode === 'card') wcSync();
+}
+/* Hearing you as you speak: while you're still talking, what's been said so far comes every 0.6 s ("heard-partial").
+   On a card the words show at once, faint, and settle when the piece is finished. Typed into an app, a word goes in
+   as soon as two of these agree on it (the last word, perhaps half heard, waits for the next), shaped as the finished
+   piece will be, so what's typed only grows; the finished piece then sets the last of it right. */
+listen('heard-partial', t => {
+  if (!DICT.on || DICT.paused || DICT_STOP.test(t) || DICT_PAUSE.test(t)) return;
+  DICT.part = t; if (!DICT.partBusy && !DICT.final) dictPartNext();
+});
+async function dictPartNext(){
+  DICT.partBusy = true;
+  try {
+    while (DICT.part && !DICT.final && DICT.on){
+      const t = DICT.part; DICT.part = '';
+      const b = dictBoard();
+      if (b){ boardLive(b, t); continue; }
+      const w = t.split(/\s+/).filter(Boolean), key = x => x.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+      let k = 0; while (k < w.length - 1 && k < DICT.prevWords.length && key(w[k]) === key(DICT.prevWords[k])) k++;
+      DICT.prevWords = w;
+      if (!k) continue;
+      const s = await invoke('dictate_shape', {text:w.slice(0, k).join(' '), before:DICT.before, held:DICT.held, opts:{...dictOpts(), fixes:false}});
+      if (!DICT.on || DICT.final || s.undo || !s.text) continue;
+      clearTimeout(DICT.heldT);
+      await dictTypeTo(s.lead + s.text);
+    }
+  } finally { DICT.partBusy = false; }
+}
+// (what's typed of the piece being said made to read `target`: only what differs at its end is rubbed out and retyped)
+async function dictTypeTo(target){
+  const cur = DICT.cur; let c = 0;
+  while (c < cur.length && c < target.length && cur[c] === target[c]) c++;
+  const back = [...cur.slice(c)].length;
+  if (back) await invoke('dictate_erase', {n:back});
+  if (target.length > c) await invoke('words_type', {text:target.slice(c)});
+  DICT.cur = target;
+}
+// (on a card: the words being said, faint, the new ones rising in; the finished piece takes their place)
+function boardLive(B, text){
+  if (!B.liveEl){ B.liveEl = document.createElement('span'); B.liveEl.className = 'wlive'; B.el.appendChild(B.liveEl); }
+  const had = [...B.liveEl.querySelectorAll('.ww')].map(s => s.textContent), now = text.split(/\s+/).filter(Boolean);
+  let same = 0; while (same < had.length && same < now.length && had[same] === now[same]) same++;
+  [...B.liveEl.querySelectorAll('.ww')].slice(same).forEach(s => { if (s.previousSibling && s.previousSibling.nodeType === 3) s.previousSibling.remove(); s.remove(); });
+  const lead = B.pieces.length || B.liveEl.previousSibling ? ' ' : '';
+  now.slice(same).forEach((w, i) => { B.liveEl.append(same + i || lead ? ' ' : ''); const s = document.createElement('span'); s.className = 'ww'; s.style.setProperty('--d', (i * 45) + 'ms'); s.textContent = w; B.liveEl.appendChild(s); });
+  B.el.scrollTop = B.el.scrollHeight;
 }
 // "scratch that": the last piece taken back (off the card, or rubbed out where it was typed)
 async function dictUndo(){
@@ -6580,7 +6632,7 @@ async function dictUndo(){
    piece taken back blurs away; the brain's tidier version takes a piece's place word for word (what goes is struck
    through and folds away, what's new rises in, what only changed its look swaps in place). */
 function boardOf(el){ return {el, pieces:[], heldEl:null}; }
-function boardClear(B){ B.el.textContent = ''; B.pieces = []; B.heldEl = null; }
+function boardClear(B){ B.el.textContent = ''; B.pieces = []; B.heldEl = null; B.liveEl = null; }
 function wordsInto(box, text, cls){
   let k = 0;
   for (const w of text.split(/(\s+)/)){
@@ -6591,6 +6643,7 @@ function wordsInto(box, text, cls){
 }
 function heldMark(box, m){ const h = document.createElement('span'); h.className = 'wheld'; h.textContent = m; box.appendChild(h); return h; }
 function boardAdd(B, p){
+  if (B.liveEl){ B.liveEl.remove(); B.liveEl = null; }
   let lead = p.lead;
   if (B.heldEl){
     const h = B.heldEl; B.heldEl = null;

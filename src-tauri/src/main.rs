@@ -1583,6 +1583,12 @@ fn main() {
     kids::sweep();
     kids::watch();
     start_log();
+    // (ULTRON hears you on this process's threads: above other apps, so a busy PC doesn't leave a short clip waiting
+    //  ten seconds to be heard. The brains run apart from it, below normal)
+    unsafe {
+        use windows::Win32::System::Threading::{GetCurrentProcess, SetPriorityClass, ABOVE_NORMAL_PRIORITY_CLASS};
+        let _ = SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
+    }
     log_line(&format!("ULTRON {} started {}, {}", env!("CARGO_PKG_VERSION"), if by_windows { "with Windows" } else { "by hand" }, now_said()));
 
     tauri::Builder::default()

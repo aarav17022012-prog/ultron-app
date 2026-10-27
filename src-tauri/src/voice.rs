@@ -39,6 +39,8 @@ pub struct Voice {
     prompt: Mutex<String>,
     status: Mutex<VoiceStatus>,
     seg_tx: Mutex<Option<SyncSender<Vec<f32>>>>,
+    /// Dictating: what's been said so far of what's still being said, to be heard quickly ("heard-partial")
+    part_tx: Mutex<Option<SyncSender<Vec<f32>>>>,
 }
 
 impl Default for Voice {
@@ -52,6 +54,7 @@ impl Default for Voice {
             prompt: Mutex::new(String::new()),
             status: Mutex::new(VoiceStatus { state: "loading".into(), ..Default::default() }),
             seg_tx: Mutex::new(None),
+            part_tx: Mutex::new(None),
         }
     }
 }
@@ -266,7 +269,15 @@ pub fn prepare(seg: &[f32]) -> Vec<f32> {
 /// Decoding settings: a small beam search (more careful than greedy) and an
 /// encoder window sized to the clip (far faster than always reading 30 s).
 pub fn params<'a>(prompt: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
-    let mut p = FullParams::new(SamplingStrategy::BeamSearch { beam_size: 4, patience: -1.0 });
+    shaped(FullParams::new(SamplingStrategy::BeamSearch { beam_size: 4, patience: -1.0 }), prompt, threads, samples)
+}
+
+/// The same, decoded in one pass (dictation's finished pieces).
+fn quick_params<'a>(prompt: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
+    shaped(FullParams::new(SamplingStrategy::Greedy { best_of: 1 }), prompt, threads, samples)
+}
+
+fn shaped<'a>(mut p: FullParams<'a, 'a>, prompt: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
     p.set_language(Some("en"));
     p.set_n_threads(threads);
     p.set_translate(false);
@@ -292,10 +303,45 @@ pub fn params<'a>(prompt: &'a str, threads: i32, samples: usize) -> FullParams<'
 fn has_wake(text: &str) -> bool {
     let l = text.to_lowercase();
     let squashed: String = l.chars().filter(|c| c.is_alphanumeric()).collect();
-    squashed.contains("ultron") || l.split(|c: char| !c.is_alphanumeric()).any(|w| ["ultra", "altron", "ultran", "ultrum", "ultrom", "alltron"].contains(&w))
+    // (and the ways it's misheard: "Aertron", "A-Chron", "Altron": a short word starting with a vowel, ending in "tron" or "chron")
+    let tronish = |w: &str| w.len() <= 7 && w.starts_with(['a', 'e', 'o', 'u']) && (w.ends_with("tron") || w.ends_with("chron"));
+    squashed.contains("ultron")
+        || l.split(|c: char| !c.is_alphanumeric()).any(|w| ["ultra", "altron", "ultran", "ultrum", "ultrom", "alltron"].contains(&w) || tronish(w))
+        || l.split_whitespace().map(|w| w.chars().filter(|c| c.is_alphanumeric()).collect::<String>()).any(|w| tronish(&w))
 }
 
-fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
+/// What's been said so far, heard quickly (one pass, no second guesses) while you're still saying it.
+fn partial(state: &mut whisper_rs::WhisperState, audio: &[f32], prompt: &str, threads: i32) -> String {
+    let audio = prepare(audio);
+    let mut p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+    p.set_language(Some("en"));
+    p.set_n_threads(threads);
+    p.set_no_context(true);
+    p.set_single_segment(true);
+    p.set_no_timestamps(true);
+    p.set_print_special(false);
+    p.set_print_progress(false);
+    p.set_print_realtime(false);
+    p.set_print_timestamps(false);
+    p.set_suppress_blank(true);
+    p.set_suppress_nst(true);
+    let secs = audio.len() as f64 / RATE as f64;
+    p.set_audio_ctx((((secs * 50.0 + 128.0) / 64.0).ceil() * 64.0).min(1500.0) as i32);
+    if !prompt.is_empty() {
+        p.set_initial_prompt(prompt);
+    }
+    let mut text = String::new();
+    if state.full(p, &audio).is_ok() {
+        for s in state.as_iter() {
+            if let Ok(t) = s.to_str_lossy() {
+                text.push_str(&t);
+            }
+        }
+    }
+    unrepeat(text.trim())
+}
+
+fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>) {
     let path = match model_path(&app) {
         Ok(p) => p,
         Err(e) => {
@@ -332,7 +378,30 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
     let mut held = Some(state);
     let mut last = std::time::Instant::now();
     loop {
-        let seg = match rx.recv_timeout(std::time::Duration::from_secs(20)) {
+        // (what's finished comes first; meanwhile, while dictating, what's still being said is heard as it grows)
+        let got = match rx.try_recv() {
+            Ok(s) => Ok(s),
+            Err(_) => match parts.try_recv() {
+                Ok(so_far) => {
+                    if voice.patient.load(Ordering::SeqCst) {
+                        if held.is_none() {
+                            held = WhisperContext::new_with_params(path.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
+                        }
+                        if let Some(state) = held.as_mut() {
+                            let prompt = voice.prompt.lock().unwrap().clone();
+                            let text = partial(state, &so_far, &prompt, threads);
+                            if !text.is_empty() && !is_noise(&text) {
+                                let _ = app.emit_to("main", "heard-partial", &text);
+                            }
+                        }
+                        last = std::time::Instant::now();
+                    }
+                    continue;
+                }
+                Err(_) => rx.recv_timeout(std::time::Duration::from_millis(60)),
+            },
+        };
+        let seg = match got {
             Ok(s) => s,
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
                 if held.is_some() && last.elapsed() > QUIET {
@@ -396,6 +465,10 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>) {
         set_status(&app, "transcribing", "", 0.0);
         let audio = prepare(&seg);
         let mut p = params(&prompt, threads, audio.len());
+        // (dictating: one quick pass, two or three times faster; what you said already showed as you said it)
+        if voice.patient.load(Ordering::SeqCst) {
+            p = quick_params(&prompt, threads, audio.len());
+        }
         if wake_only {
             p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
             p.set_language(Some("en"));
@@ -574,6 +647,7 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
     let mut probs: std::collections::VecDeque<f32> = Default::default();
     let mut last_p = 0f32;
     let mut was_paused = false;
+    let mut sent = 0usize; // (how much of the stretch being said was last handed over to be heard so far)
     for (chunk, rate) in raw_rx {
         if voice.paused.load(Ordering::SeqCst) {
             if !was_paused {
@@ -613,6 +687,16 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
                 if let Some(tx) = voice.seg_tx.lock().unwrap().as_ref() {
                     let _ = tx.try_send(seg);
                 }
+                sent = 0;
+            } else if vad.speaking && voice.patient.load(Ordering::SeqCst) && vad.seg.len() >= RATE / 2 && vad.seg.len() >= sent + RATE * 3 / 5 {
+                // (dictating: what's been said so far, every 0.6 s; dropped if the last one is still being heard)
+                if let Some(tx) = voice.part_tx.lock().unwrap().as_ref() {
+                    if tx.try_send(vad.seg.clone()).is_ok() {
+                        sent = vad.seg.len();
+                    }
+                }
+            } else if !vad.speaking {
+                sent = 0;
             }
             used += FRAME;
         }
@@ -626,9 +710,11 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
 pub fn start(app: AppHandle) {
     let (seg_tx, seg_rx) = sync_channel::<Vec<f32>>(2);
     *app.state::<Voice>().seg_tx.lock().unwrap() = Some(seg_tx);
+    let (part_tx, part_rx) = sync_channel::<Vec<f32>>(1);
+    *app.state::<Voice>().part_tx.lock().unwrap() = Some(part_tx);
     let (raw_tx, raw_rx) = sync_channel::<(Vec<f32>, u32)>(64);
     let a = app.clone();
-    std::thread::spawn(move || transcriber(a, seg_rx));
+    std::thread::spawn(move || transcriber(a, seg_rx, part_rx));
     let a = app.clone();
     std::thread::spawn(move || microphone(a, raw_tx));
     std::thread::spawn(move || processor(app, raw_rx));
