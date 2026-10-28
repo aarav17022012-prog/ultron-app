@@ -145,7 +145,7 @@ fn full_screen(on: bool) {
 }
 
 /// What's in front fills its whole screen, and isn't one of Windows' own passing screens.
-fn really_full() -> bool {
+pub(crate) fn really_full() -> bool {
     use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, GetWindowRect};
     unsafe {
         let h = GetForegroundWindow();

@@ -42,6 +42,40 @@ unsafe fn typable(e: &IUIAutomationElement) -> bool {
     }
 }
 
+/// Whether the app you were in has its cursor in somewhere you can type (it's given the keyboard back first, if ULTRON
+/// had it): dictation then types straight into it, rather than onto its card.
+pub fn typing_ready(app: &AppHandle) -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    unsafe {
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut pid));
+        if pid == std::process::id() {
+            app.state::<crate::apps::Apps>().refocus();
+            std::thread::sleep(Duration::from_millis(220));
+        }
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let Ok(uia) = CoCreateInstance::<_, IUIAutomation>(&CUIAutomation, None, CLSCTX_INPROC_SERVER) else { return false };
+        if let Ok(e) = uia.GetFocusedElement() {
+            if e.CurrentProcessId().unwrap_or(0) as u32 != std::process::id() && typable(&e) {
+                return true;
+            }
+        }
+        // (given the keyboard back, an app doesn't always put its cursor back in its box at once: its own note of where
+        //  its text cursor was, and of the box that had the keyboard, says so too)
+        use windows::Win32::UI::WindowsAndMessaging::{GetGUIThreadInfo, GUITHREADINFO};
+        let Some(h) = app.state::<crate::apps::Apps>().last_window() else { return false };
+        let tid = GetWindowThreadProcessId(h, None);
+        let mut gi = GUITHREADINFO { cbSize: std::mem::size_of::<GUITHREADINFO>() as u32, ..Default::default() };
+        if GetGUIThreadInfo(tid, &mut gi).is_err() {
+            return false;
+        }
+        if !gi.hwndCaret.is_invalid() {
+            return true;
+        }
+        !gi.hwndFocus.is_invalid() && uia.ElementFromHandle(gi.hwndFocus).is_ok_and(|e| typable(&e))
+    }
+}
+
 /// The typing area at this point of the screen, if there's one there (where it is).
 unsafe fn typing_area(uia: &IUIAutomation, walker: &IUIAutomationTreeWalker, p: POINT, own: u32) -> Option<RECT> {
     unsafe {

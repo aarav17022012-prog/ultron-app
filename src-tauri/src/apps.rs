@@ -302,14 +302,18 @@ pub fn send_keys(keys: &[VIRTUAL_KEY]) {
     unsafe { SendInput(&v, std::mem::size_of::<INPUT>() as i32) };
 }
 
+// (Alt alone, pressed and let go, puts the app that then has the keyboard into its menu-letter mode: the next letter
+//  typed went to that, and was lost: "hello" came out "ello". A key no program uses, pressed while Alt is down, keeps
+//  it from counting as Alt on its own)
 fn tap_alt() {
-    let key = |up: bool| INPUT {
+    let key = |vk: VIRTUAL_KEY, up: bool| INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
-            ki: KEYBDINPUT { wVk: VK_MENU, dwFlags: if up { KEYEVENTF_KEYUP } else { Default::default() }, ..Default::default() },
+            ki: KEYBDINPUT { wVk: vk, dwFlags: if up { KEYEVENTF_KEYUP } else { Default::default() }, ..Default::default() },
         },
     };
-    unsafe { SendInput(&[key(false), key(true)], std::mem::size_of::<INPUT>() as i32) };
+    let none = VIRTUAL_KEY(0xE8);
+    unsafe { SendInput(&[key(VK_MENU, false), key(none, false), key(none, true), key(VK_MENU, true)], std::mem::size_of::<INPUT>() as i32) };
 }
 
 pub fn focus_window(h: HWND) {

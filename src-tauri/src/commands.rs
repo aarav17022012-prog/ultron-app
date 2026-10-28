@@ -147,6 +147,18 @@ fn key(vk: VIRTUAL_KEY, up: bool) -> INPUT {
     }
 }
 
+/// ULTRON has the keyboard (you tapped it): the app you were in gets it back, its cursor where it was.
+pub(crate) fn give_back(app: &AppHandle) {
+    use tauri::Manager;
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    let mut pid = 0u32;
+    unsafe { GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut pid)) };
+    if pid == std::process::id() {
+        app.state::<crate::apps::Apps>().refocus();
+        std::thread::sleep(std::time::Duration::from_millis(450));
+    }
+}
+
 pub(crate) fn type_text(text: &str) {
     let mut inputs = Vec::new();
     for u in text.encode_utf16() {
@@ -430,6 +442,9 @@ pub fn run(app: &AppHandle, raw: &str) -> Reply {
     if let Some(r) = strip_any(raw.trim(), &["Type", "type", "Write", "write", "Dictate", "dictate"]) {
         let text = &crate::dictate::marks(r.trim_start_matches([',', ':']).trim()); // ("comma", "question mark" said aloud)
         if !text.is_empty() {
+            // (said with the notch's mic tapped, ULTRON has the keyboard: it goes back to the app you were in first, or
+            //  the words were typed into ULTRON itself and went nowhere)
+            give_back(app);
             type_text(text);
             return done("Typed it.", format!("Typed “{text}”"), "type");
         }

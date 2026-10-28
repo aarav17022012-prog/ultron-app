@@ -1060,7 +1060,9 @@ fn ensure_target(app: &AppHandle, cx: &mut Ctx) -> Option<HWND> {
         return Some(fg);
     }
     app.state::<crate::apps::Apps>().refocus();
-    std::thread::sleep(Duration::from_millis(250));
+    // (given the keyboard back, an app puts its cursor back in its box a moment later: typed sooner, the first letter
+    //  went nowhere)
+    std::thread::sleep(Duration::from_millis(450));
     let fg = fg_root();
     usable(fg, cx.own).then(|| {
         cx.target = Some(fg);

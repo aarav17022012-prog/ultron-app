@@ -285,7 +285,13 @@ pub fn params<'a>(prompt: &'a str, lang: &'a str, threads: i32, samples: usize) 
     shaped(FullParams::new(SamplingStrategy::BeamSearch { beam_size: 4, patience: -1.0 }), prompt, lang, threads, samples)
 }
 
-/// The same, decoded in one pass (dictation's finished pieces).
+/// Two guesses kept as it goes (dictation's finished pieces): a little slower than one pass, and names and odd words
+/// come out right far more often.
+fn steady_params<'a>(prompt: &'a str, lang: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
+    shaped(FullParams::new(SamplingStrategy::BeamSearch { beam_size: 2, patience: -1.0 }), prompt, lang, threads, samples)
+}
+
+/// The same, decoded in one pass (the notch's mic, and long stretches of dictation).
 fn quick_params<'a>(prompt: &'a str, lang: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
     shaped(FullParams::new(SamplingStrategy::Greedy { best_of: 1 }), prompt, lang, threads, samples)
 }
@@ -505,8 +511,10 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let audio = prepare(&seg);
         let mut p = params(&prompt, &lang, threads, audio.len());
         // (dictating: one quick pass, two or three times faster; what you said already showed as you said it)
-        if voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst) {
+        if voice.live.load(Ordering::SeqCst) || (voice.patient.load(Ordering::SeqCst) && audio.len() > RATE * 10) {
             p = quick_params(&prompt, &lang, threads, audio.len());
+        } else if voice.patient.load(Ordering::SeqCst) {
+            p = steady_params(&prompt, &lang, threads, audio.len());
         }
         if wake_only {
             p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });

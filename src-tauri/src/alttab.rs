@@ -27,6 +27,8 @@ static TELL: OnceLock<Mutex<Sender<&'static str>>> = OnceLock::new();
 /// (developer mode: keys a test sends count as pressed; ULTRON's own never do)
 static TRYING: AtomicBool = AtomicBool::new(false);
 const OURS: usize = 0x0A17_7AB;
+/// Alt held, as this hook has seen it (Windows' own note of it can lag a key behind)
+static ALT: AtomicBool = AtomicBool::new(false);
 /// a touchpad's scrolling comes in small steps: they're added up to a whole notch before the choice moves
 static WHEEL: AtomicI32 = AtomicI32::new(0);
 
@@ -44,7 +46,8 @@ fn held(vk: i32) -> bool {
 /// switcher is left to it. (Measuring the window in front took some maximized apps with no title bar for full screen
 /// when ULTRON's bar was set to hide away, and Windows' Alt+Tab came up over them.)
 fn full() -> bool {
-    crate::appbar::FULL.load(SeqCst)
+    // (and still so now: a notice that it ended can go astray, and Windows' switcher then came up from then on)
+    crate::appbar::FULL.load(SeqCst) && crate::appbar::really_full()
 }
 
 /// A key no program uses, pressed while Alt is held: Alt coming up after it doesn't open the app's menu bar.
@@ -62,10 +65,22 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
     unsafe {
         if code >= 0 && ON.load(SeqCst) {
             let k = &*(lp.0 as *const KBDLLHOOKSTRUCT);
-            if k.dwExtraInfo != OURS && (k.flags.0 & LLKHF_INJECTED.0 == 0 || TRYING.load(SeqCst)) {
+            // (keys sent by a program count too: a four-finger swipe set, in Windows' touchpad settings, to a shortcut
+            //  arrives as keys Windows sends; only ULTRON's own are let by)
+            if k.dwExtraInfo != OURS {
                 let m = wp.0 as u32;
                 let down = m == WM_KEYDOWN || m == WM_SYSKEYDOWN;
                 let alt_key = matches!(k.vkCode, 0x12 | 0xA4 | 0xA5);
+                if alt_key {
+                    ALT.store(down, SeqCst);
+                }
+                let alt = ALT.load(SeqCst) || held(0x12);
+                // (Alt was let go and that was missed: the cards go, and nothing is held back any longer)
+                if UP.load(SeqCst) && !alt && !alt_key {
+                    UP.store(false, SeqCst);
+                    tell("pick");
+                    return CallNextHookEx(None, code, wp, lp);
+                }
                 if UP.load(SeqCst) {
                     match k.vkCode {
                         0x09 if down => tell(if held(0x10) { "prev" } else { "next" }),
@@ -90,12 +105,12 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
                     return LRESULT(1);
                 }
                 // Ctrl+Alt+Left/Right: straight to the next window, or back to the last
-                if (k.vkCode == 0x25 || k.vkCode == 0x27) && down && held(0x12) && held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
+                if (k.vkCode == 0x25 || k.vkCode == 0x27) && down && alt && held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
                     mask();
                     tell(if k.vkCode == 0x27 { "hop-next" } else { "hop-prev" });
                     return LRESULT(1);
                 }
-                if k.vkCode == 0x09 && down && held(0x12) && !held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
+                if k.vkCode == 0x09 && down && alt && !held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
                     UP.store(true, SeqCst);
                     mask();
                     tell(if held(0x10) { "open-back" } else { "open" });
@@ -142,7 +157,7 @@ pub fn set(app: &AppHandle, on: bool) {
     if STARTED.swap(true, SeqCst) {
         return;
     }
-    TRYING.store(std::env::var("ULTRON_DEV_INBOX").is_ok_and(|v| v == "1"), SeqCst);
+    TRYING.store(std::env::var("ULTRON_DEV_INBOX").is_ok_and(|v| v == "1") || TRYING.load(SeqCst), SeqCst);
     let (tx, rx) = channel::<&'static str>();
     let _ = TELL.set(Mutex::new(tx));
     let app = app.clone();
