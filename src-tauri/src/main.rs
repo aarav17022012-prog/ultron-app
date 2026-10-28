@@ -72,6 +72,7 @@ mod uplink;
 mod link;
 mod sounds;
 mod watchdog;
+mod winsr;
 mod words;
 
 use std::time::Duration;
@@ -392,7 +393,10 @@ fn voice_status(voice: State<Voice>) -> voice::VoiceStatus {
 }
 
 #[tauri::command]
-fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>, lang: Option<String>, live: Option<bool>) {
+fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>, lang: Option<String>, live: Option<bool>, names: Option<Vec<String>>) {
+    if let Some(n) = names {
+        *voice.names.lock().unwrap() = n;
+    }
     if let Some(l) = live {
         voice.live.store(l, std::sync::atomic::Ordering::SeqCst);
     }
@@ -406,6 +410,10 @@ fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, pr
     }
     if let Some(p) = patient {
         voice.patient.store(p, std::sync::atomic::Ordering::SeqCst);
+        // (Windows' recognizer started as dictation begins, so it hears the first thing said too)
+        if p && *voice.lang.lock().unwrap() == "en" {
+            winsr::warm();
+        }
     }
     if let Some(w) = wake {
         voice.wake.store(w, std::sync::atomic::Ordering::SeqCst);

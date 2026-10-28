@@ -1479,15 +1479,20 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     } else {
         None
     };
+    // (Web mode, and Brave had no sentence that answers it as it is: the one in whatever else was found, if one does)
+    if web_mode && !many && google_said.is_none() {
+        google_said = web.as_deref().and_then(|w| crate::uplink::answer_in(user, w));
+    }
     // (a fact looked up is said in one sentence: a second one was where the small brain went wrong)
     // (Web mode with no internet: said so, not guessed at)
-    if web_mode && web.is_none() && crate::uplink::OFFLINE.load(std::sync::atomic::Ordering::SeqCst) {
+    if web_mode && web.is_none() && crate::uplink::OFFLINE.load(std::sync::atomic::Ordering::SeqCst) && !crate::uplink::online() {
         return Some(Reply { reply: "No internet right now. Try again later, or switch to Local in Settings › Brain.".into(), action: String::new(), icon: "chat", ok: false });
     }
     let cap = if many { 0 } else if web.is_some() && !thinking { 1 } else { sentence_cap(app) };
     let max = if many { 400 } else { match (cap, thinking) { (0, _) => 320, (1, false) => 50, (1, true) => 80, (_, false) => 90, (_, true) => 140 } };
     // (a service or the graphics card reads it all in a blink; the processor gets the first few sentences)
-    let brief_web = web.as_deref().map(|w| if crate::quick::device() == Some(false) && !many { clip(w, 340) } else { w.to_string() });
+    // (and in Web mode always: fewer words for it to read is most of how fast the answer comes)
+    let brief_web = web.as_deref().map(|w| if (crate::quick::device() == Some(false) || web_mode) && !many { clip(w, if web_mode { 420 } else { 340 }) } else { w.to_string() });
     let mut shown = 0usize;
     let mut emit = |full: &str| {
         let v = visible(full);

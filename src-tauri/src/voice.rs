@@ -43,6 +43,8 @@ pub struct Voice {
     pub live: AtomicBool,
     sens: AtomicU32, // f32 bits
     prompt: Mutex<String>,
+    /// Your names and words (learned and listed), for Windows' recognizer listening under dictation (winsr.rs)
+    pub names: Mutex<Vec<String>>,
     /// The language you talk in ("en", "hi", ..., or "auto"), and that it has just changed (the model is swapped)
     pub lang: Mutex<String>,
     pub reload: AtomicBool,
@@ -59,6 +61,7 @@ impl Default for Voice {
             ready: AtomicBool::new(false),
             wake: AtomicBool::new(false),
             patient: AtomicBool::new(false),
+            names: Mutex::new(Vec::new()),
             live: AtomicBool::new(false),
             sens: AtomicU32::new(1.0f32.to_bits()),
             prompt: Mutex::new(String::new()),
@@ -525,6 +528,11 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
             p.set_no_timestamps(true);
             p.set_audio_ctx(384);
         }
+        // (dictating in English: Windows' own recognizer hears it too, at the same time, winsr.rs)
+        let win = (voice.patient.load(Ordering::SeqCst) && !voice.live.load(Ordering::SeqCst) && !wake_only && lang == "en" && audio.len() < RATE * 30).then(|| {
+            let (a, names) = (audio.clone(), voice.names.lock().unwrap().clone());
+            std::thread::spawn(move || crate::winsr::hear(&a, &names))
+        });
         let mut text = String::new();
         let mut no_speech = 0f32;
         let t0 = std::time::Instant::now();
@@ -539,8 +547,17 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let text = unrepeat(text.trim());
         crate::log_line(&format!("heard {:.1}s in {} ms: {text:?} (no-speech {no_speech:.2})", seg.len() as f32 / RATE as f32, t0.elapsed().as_millis()));
         let back = if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" };
-        let woke = has_wake(&text);
-        if no_speech < 0.6 && !is_noise(&text) && (!wake_only || woke) {
+        // (Windows' ears, waited on a moment at most once Whisper's done)
+        let win = win.and_then(|h| {
+            let t = std::time::Instant::now();
+            while !h.is_finished() && t.elapsed() < std::time::Duration::from_millis(700) {
+                std::thread::sleep(std::time::Duration::from_millis(15));
+            }
+            if h.is_finished() { h.join().ok().flatten() } else { None }
+        });
+        let noise = no_speech >= 0.6 || is_noise(&text);
+        let text = if win.is_some() { crate::winsr::fuse(&text, noise, win.as_ref(), &voice.names.lock().unwrap()) } else { (!noise).then_some(text) };
+        if let Some(text) = text.filter(|t| !wake_only || has_wake(t)) {
             let _ = app.emit_to("main", "heard", &text);
         }
         set_status(&app, back, "", 0.0);

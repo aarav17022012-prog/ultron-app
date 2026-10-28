@@ -11,8 +11,8 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{AppHandle, Emitter};
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage, KBDLLHOOKSTRUCT, LLKHF_INJECTED, LLMHF_INJECTED, MSG, MSLLHOOKSTRUCT, WH_KEYBOARD_LL,
-    WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_RBUTTONDOWN, WM_SYSKEYDOWN, WM_SYSKEYUP,
+    CallNextHookEx, KBDLLHOOKSTRUCT, LLKHF_INJECTED, LLMHF_INJECTED, MSLLHOOKSTRUCT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
+    WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 static KEYS: AtomicBool = AtomicBool::new(false);
@@ -75,8 +75,8 @@ unsafe extern "system" fn mouse(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT {
             let m = &*(lp.0 as *const MSLLHOOKSTRUCT);
             if m.flags & LLMHF_INJECTED == 0 {
                 match wp.0 as u32 {
-                    WM_LBUTTONDOWN | WM_RBUTTONDOWN => tell(4),
-                    WM_LBUTTONUP => tell(6),
+                    WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN => tell(4),
+                    WM_LBUTTONUP | WM_RBUTTONUP | WM_MBUTTONUP => tell(6),
                     _ => {}
                 }
             }
@@ -101,14 +101,8 @@ pub fn set(app: &AppHandle, keys: bool, clicks: bool) {
             let _ = app2.emit_to("main", "tick", kind);
         }
     });
-    std::thread::spawn(|| unsafe {
-        let k = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard), None, 0);
-        let m = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse), None, 0);
-        crate::log_line(&format!("sounds: listening for presses (keys {}, clicks {})", k.is_ok(), m.is_ok()));
-        let mut msg = MSG::default();
-        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
-            let _ = TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
-    });
+    // (on a time-critical thread that puts them back every 15 s: Windows quietly drops a low-level hook that once
+    //  answered late, and the sounds went silent until ULTRON was restarted)
+    crate::hooks::keep(Some(keyboard), Some(mouse));
+    crate::log_line("sounds: listening for presses");
 }

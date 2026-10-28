@@ -40,7 +40,7 @@ const START: &str = r#"(() => {
       for (const c of [...d.querySelectorAll('.generic-snippet .content')].slice(0, 8)){
         let p = c; for (let i = 0; i < 6 && p && !p.querySelector('.title'); i++) p = p.parentElement;
         const h2 = p ? t(p.querySelector('.title')) : '', s = t(c).replace(/^([A-Z][a-z]+ \d{1,2}, \d{4}|\d+ (minutes?|hours?|days?|weeks?|months?|years?) ago) - /, '');
-        if (s) out.push((h2 ? h2 + ': ' : '') + s);
+        if (s) out.push((h2 ? h2 + '\t' : '') + s);
       }
       const ib = d.querySelector('#infobox'); const ibt = ib ? t(ib).slice(0, 600) : '';
       if (ibt && out.length < 3) out.push(ibt);
@@ -174,6 +174,130 @@ pub fn warm(app: &AppHandle) {
     }
 }
 
+/// Is there internet at all (asked before saying there isn't: Brave's page failing to fetch isn't always that)
+pub fn online() -> bool {
+    ["1.1.1.1:443", "8.8.8.8:53"].iter().any(|a| a.parse().is_ok_and(|a| std::net::TcpStream::connect_timeout(&a, Duration::from_millis(700)).is_ok()))
+}
+
+/// The sentences in a piece of text (not cut at "Dr." or "U.S.")
+fn sentences(t: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let (b, mut from) = (t.as_bytes(), 0);
+    for i in 0..b.len() {
+        if matches!(b[i], b'.' | b'!' | b'?') && b.get(i + 1) == Some(&b' ') && b.get(i + 2).is_some_and(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || *c == b'"') {
+            let word = t[from..i].rsplit(' ').next().unwrap_or("");
+            if word.len() >= 3 && !word.contains('.') && !["Mr", "Mrs", "Ms", "Dr", "St", "Jr", "Sr", "vs", "No"].contains(&word) {
+                out.push(t[from..=i].trim());
+                from = i + 1;
+            }
+        }
+    }
+    if from < t.len() {
+        out.push(t[from..].trim());
+    }
+    out
+}
+
+/// A sentence without what's in brackets (a pronunciation, "ⓘ", a footnote mark): said aloud, they're noise
+fn unparen(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut depth = 0;
+    for c in s.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' if depth > 0 => depth -= 1,
+            _ if depth == 0 => out.push(c),
+            _ => {}
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ").replace(" ,", ",").replace(" .", ".").replace(" ;", ";")
+}
+
+/// The sentence in the results that answers the question, said as it is when one clearly does: at once, with no wait
+/// on the brain (on a laptop holding its graphics card back, the brain took ten seconds to retell it, and sometimes
+/// got it wrong). None: nothing answers it clearly, and the brain reads the results instead.
+pub fn answer_in(q: &str, text: &str) -> Option<String> {
+    const SKIP: [&str; 53] = ["the", "and", "what", "who", "how", "was", "were", "are", "is", "for", "does", "did", "with", "this", "that", "from", "when", "where",
+        "which", "why", "much", "many", "tell", "about", "me", "you", "your", "can", "could", "please", "of", "in", "on", "to", "do", "it", "its", "whats",
+        "define", "meaning", "mean", "an", "a", "be", "book", "books", "novel", "novels", "movie", "film", "song", "series", "name"];
+    // (one word for the forms a question and its answer put it in: "who wrote" is answered by "written by", "author")
+    let stem = |w: &str| -> String {
+        let w = w.trim_end_matches("'s").trim_end_matches('’');
+        let w = if w.len() > 3 { w.trim_end_matches('s') } else { w };
+        match w {
+            "wrote" | "write" | "written" | "writer" | "author" | "authored" => "write",
+            "directed" | "director" | "direct" => "direct",
+            "invented" | "inventor" | "invent" | "invention" => "invent",
+            "founded" | "founder" | "found" => "found",
+            "discovered" | "discoverer" | "discover" | "discovery" => "discover",
+            "painted" | "painter" | "paint" => "paint",
+            "sang" | "sung" | "singer" | "sing" => "sing",
+            "built" | "builder" | "build" => "build",
+            "born" | "birth" => "born",
+            "died" | "die" | "death" | "dead" => "die",
+            w => w,
+        }
+        .to_string()
+    };
+    let ql = q.to_lowercase().replace('’', "'");
+    let keys: Vec<String> = ql.split(|c: char| !c.is_alphanumeric() && c != '\'').filter(|w| w.len() > 1 && !SKIP.contains(w)).map(stem).collect();
+    if keys.is_empty() || keys.len() > 9 {
+        return None;
+    }
+    let num = ["how many", "how much", "how old", "how long", "how far", "how tall", "how big", "what year", "when ", "population", "price", "cost", "age of"].iter().any(|w| ql.contains(w));
+    let define = ql.starts_with("what is") || ql.starts_with("what are") || ql.starts_with("what's") || ql.contains("meaning") || ql.starts_with("define") || ql.starts_with("who is") || ql.starts_with("who was");
+    let mut best: Option<(f32, String)> = None;
+    for (rank, line) in text.lines().enumerate() {
+        let body = line.split_once('\t').map_or(line, |(_, b)| b);
+        for (k, s) in sentences(body).into_iter().enumerate() {
+            let s = unparen(s);
+            let s = s.as_str();
+            let n = s.chars().count();
+            if !(20..=240).contains(&n) || s.contains("...") || s.contains('…') || s.ends_with('?') || s.contains(" | ") {
+                continue;
+            }
+            let low = s.to_lowercase();
+            let words: Vec<String> = low.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).map(stem).collect();
+            let hit = keys.iter().filter(|k| words.contains(k)).count() as f32;
+            let cover = hit / keys.len() as f32;
+            if cover < 0.6 {
+                continue;
+            }
+            let digits = s.chars().any(|c| c.is_ascii_digit());
+            let mut score = cover * 3.0 + hit * 0.3 - rank as f32 * 0.35 - k as f32 * 0.25;
+            if num {
+                score += if digits { 0.8 } else { -1.5 };
+            }
+            if define && (low.contains(" is ") || low.contains(" are ") || low.contains(" was ") || low.contains(" refers to ")) {
+                score += 0.5;
+            }
+            if !s.starts_with(|c: char| c.is_uppercase() || c.is_ascii_digit()) {
+                score -= 1.0;
+            }
+            // ("He was the second person to walk on the Moon": true, and no answer to who)
+            let first = low.split_whitespace().next().unwrap_or("");
+            if ["he", "she", "it", "they", "this", "these", "those", "his", "her", "its", "their", "that", "there"].contains(&first) {
+                continue;
+            }
+            if n > 180 {
+                score -= 0.5;
+            }
+            if best.as_ref().map_or(true, |b| score > b.0) {
+                best = Some((score, s.to_string()));
+            }
+        }
+    }
+    let (score, mut s) = best.filter(|b| b.0 >= 1.8)?;
+    // (the little marks results carry: "[1]", a trailing dash or colon)
+    while let Some(a) = s.rfind('[').filter(|&a| s[a..].len() <= 5 && s.ends_with(']')) {
+        s.truncate(a);
+    }
+    let s = s.trim().trim_end_matches([',', ';', ':', '-', '—']).trim().to_string();
+    let s = if s.ends_with(['.', '!']) { s } else { s + "." };
+    crate::log_line(&format!("web: answered from the results themselves (sure {score:.1})"));
+    Some(s)
+}
+
 /// Brave's results for a question, boiled down to what bears on it (None: it's standing down, it didn't answer in time,
 /// there's no internet, or there was nothing).
 pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
@@ -184,7 +308,7 @@ pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
     let key = q.trim().to_lowercase();
     if let Some((at, text)) = SEEN.lock().unwrap().get(&key) {
         if at.elapsed() < Duration::from_secs(600) {
-            return Some(Facts { text: text.clone(), direct: None });
+            return Some(Facts { direct: answer_in(q, text), text: text.clone() });
         }
     }
     let _one = ONE.try_lock().ok()?; // (one look at a time)
@@ -195,13 +319,21 @@ pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
     keep_tidy(app);
     // (its page still coming in, the first time takes ten seconds or so: this question isn't kept waiting for it; the
     //  brain answers now, and the next question has Brave)
-    if fresh || run(&w, "(() => location.host === 'search.brave.com' && document.readyState !== 'loading')()") != Some(Value::Bool(true)) {
-        crate::log_line("web: Brave's page is still getting ready; answered without it this time");
-        return None;
+    // (its page still coming in: waited on for up to two seconds, it's usually ready in one; past that the question isn't
+    //  kept waiting, the brain answers now, and the next question has Brave)
+    let ready = || run(&w, "(() => location.host === 'search.brave.com' && document.readyState !== 'loading')()") == Some(Value::Bool(true));
+    let _ = fresh;
+    while !ready() {
+        if t0.elapsed() > Duration::from_millis(2000) {
+            crate::log_line("web: Brave's page is still getting ready; answered without it this time");
+            return None;
+        }
+        std::thread::sleep(Duration::from_millis(80));
     }
     let js = START.replace("WANT", &serde_json::to_string(q.trim()).unwrap_or_default());
     run(&w, &js)?;
-    while t0.elapsed() < Duration::from_millis(3000) {
+    let t1 = Instant::now();
+    while t1.elapsed() < Duration::from_millis(3000) {
         std::thread::sleep(Duration::from_millis(60));
         let Some(v) = run(&w, POLL) else { continue };
         if v.is_null() {
@@ -224,7 +356,7 @@ pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
             seen.retain(|_, (at, _)| at.elapsed() < Duration::from_secs(600));
             seen.insert(key, (Instant::now(), text.clone()));
         }
-        return (!text.is_empty()).then_some(Facts { text, direct: None });
+        return (!text.is_empty()).then(|| Facts { direct: answer_in(q, &text), text });
     }
     crate::log_line("web: Brave didn't answer in time");
     None
