@@ -3881,6 +3881,16 @@ html.vision .wc-in{border-radius:16px}
    shadow so they read over a bright page as well as a dark one. */
 html:not(.vision) .glass:not(.notch):not(.ears){--tint:rgba(255,255,255,.055) !important}
 html:not(.vision) .glass.panel-glass, html:not(.vision) .glass.panel-glass *, html:not(.vision) .dd, html:not(.vision) .dd *, html:not(.vision) .ds-tray *{text-shadow:0 .5px 1.5px rgba(0,0,0,.45) !important}
+
+/* ---------- words that never blend in ----------
+   Clear glass over something bright: its contents turn dark, as macOS's do. Everything in the glass is drawn in its
+   opposite light (white words go near-black, light buttons and boxes go dark on light), easing over a third of a second
+   as the glass crosses from dark to bright; pictures, app icons and live windows are turned back, so they keep their
+   own colours. The bar and the notch keep their own look. */
+.glass:not(.mbar):not(.notch):not(.ears) > :not(.gw){transition:filter .35s ease}
+.glass.lit:not(.mbar):not(.notch):not(.ears) > :not(.gw){filter:invert(1) hue-rotate(180deg)}
+.glass.lit:not(.mbar):not(.notch):not(.ears){color:#111}
+.glass.lit:not(.mbar):not(.notch):not(.ears) > :not(.gw) :is(img, video, picture, canvas){filter:invert(1) hue-rotate(180deg)}
 </style>
 </head>
 <body>
@@ -4475,7 +4485,7 @@ const GLUM = document.createElement('canvas'); GLUM.width = GLUM.height = 6;
 const GLUMX = GLUM.getContext('2d', {willReadFrequently:true});
 function glassLum(g){
   const p = g.parentElement, now = performance.now();
-  if (!p || !glassBmp || now - (p._lt || 0) < 380 || p.matches('.mbar, .notch, .ears')) return;
+  if (!p || !glassBmp || now - (p._lt || 0) < 300 || p.matches('.mbar, .notch, .ears')) return;
   p._lt = now;
   const r = p.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
   const sx = glassBmp.width / (screen.width || innerWidth), sy = glassBmp.height / (screen.height || innerHeight);
@@ -4483,12 +4493,15 @@ function glassLum(g){
     GLUMX.drawImage(glassBmp, Math.max(0, r.left * sx), Math.max(0, r.top * sy), Math.max(1, r.width * sx), Math.max(1, r.height * sy), 0, 0, 6, 6);
     const d = GLUMX.getImageData(0, 0, 6, 6).data; let s = 0;
     for (let i = 0; i < d.length; i += 4) s += .2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2];
-    const lum = Math.min(1, Math.max(0, (s / 36 / 255 - .15) / .75));
-    if (Math.abs((p._lum ?? -1) - lum) > .05){ p._lum = lum; p.style.setProperty('--lum', lum.toFixed(2)); }
+    const lum = s / 36 / 255;
+    // (two thresholds, so glass over something in between doesn't flicker from one to the other)
+    const lit = p.classList.contains('lit');
+    if (!lit && lum > .62) p.classList.add('lit'); else if (lit && lum < .5) p.classList.remove('lit');
   } catch(_){}
 }
 function glassDraw(g, a){
   if (!glassBmp) return;
+  glassLum(g);
   let c = g._c, blank = false;
   if (!c){ c = g._c = document.createElement('canvas'); c.className = 'gwc'; g.appendChild(c); g._x = c.getContext('2d', {alpha:false}); blank = true; }
   if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; blank = true; }
@@ -8740,6 +8753,7 @@ function setWall(url){
 }
 function placeGlass(el){
   const gw = el.querySelector(':scope > .gw'); if (!gw) return;
+  el._lt = 0;   // (opened: what's behind it is looked at now, so its words are light or dark to suit it from the start)
   // (where it's laid out; any transform it has, at rest or moving, is undone on the glass by glassHold)
   const x = el.offsetLeft, y = el.offsetTop;
   gw.style.left = -x + 'px'; gw.style.top = -y + 'px';
@@ -12060,7 +12074,7 @@ function dsGlass(){
   const gw = dsTray.querySelector(':scope > .gw'); if (!gw || !DS.box) return;
   gw.style.setProperty('left', -DS.box.x + 'px', 'important'); gw.style.setProperty('top', -DS.box.y + 'px', 'important');
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px';
-  glassDraw(gw);
+  dsTray._lt = 0; glassDraw(gw);
 }
 function dsGo(el, then){
   const col = dsEl.classList.contains('side') && !DS.apps;
