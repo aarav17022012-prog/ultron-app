@@ -1,9 +1,11 @@
 //! ULTRON's own Alt+Tab (Settings > Look & feel): while Alt is held, Tab goes to ULTRON instead of Windows, and the
-//! page shows the open windows as glass cards; letting go of Alt goes to the one chosen. A hook of its own, on a
-//! thread made only once this is first turned on. A game or anything else full screen keeps Windows' own, as does
-//! every Alt+Tab while this is off.
+//! page shows the open windows as glass cards; letting go of Alt goes to the one chosen. Holding Alt and scrolling
+//! (the mouse wheel, or two fingers on the touchpad) runs through them the same way, and Ctrl+Alt+Left/Right hops
+//! straight to the next or last window (a four-finger swipe can be set to send those, in Windows' touchpad settings).
+//! Hooks of its own, on a thread made only once this is first turned on. A game or anything else full screen keeps
+//! Windows' own, as does every Alt+Tab while this is off.
 
-use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering::SeqCst};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Mutex, OnceLock};
 
@@ -12,8 +14,9 @@ use windows::Win32::Foundation::{LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, GetWindowRect, SetWindowsHookExW, TranslateMessage, KBDLLHOOKSTRUCT, LLKHF_INJECTED, MSG,
-    WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+    CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, GetWindowLongPtrW, GetWindowRect, SetWindowsHookExW, TranslateMessage, GWL_STYLE,
+    KBDLLHOOKSTRUCT, LLKHF_INJECTED, LLMHF_INJECTED, MSG, MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_MOUSEWHEEL, WM_SYSKEYDOWN,
+    WM_SYSKEYUP, WS_CAPTION,
 };
 
 static ON: AtomicBool = AtomicBool::new(false);
@@ -21,6 +24,11 @@ static STARTED: AtomicBool = AtomicBool::new(false);
 /// the switcher is up (Alt still held)
 static UP: AtomicBool = AtomicBool::new(false);
 static TELL: OnceLock<Mutex<Sender<&'static str>>> = OnceLock::new();
+/// (developer mode: keys a test sends count as pressed; ULTRON's own never do)
+static TRYING: AtomicBool = AtomicBool::new(false);
+const OURS: usize = 0x0A17_7AB;
+/// a touchpad's scrolling comes in small steps: they're added up to a whole notch before the choice moves
+static WHEEL: AtomicI32 = AtomicI32::new(0);
 
 fn tell(what: &'static str) {
     if let Some(t) = TELL.get() {
@@ -45,6 +53,10 @@ fn full() -> bool {
             return false;
         }
         let m = mi.rcMonitor;
+        // (a maximized window with a title bar isn't full screen, even with no taskbar under it: only a borderless one is)
+        if GetWindowLongPtrW(h, GWL_STYLE) as u32 & WS_CAPTION.0 == WS_CAPTION.0 {
+            return false;
+        }
         let class = {
             let mut buf = [0u16; 32];
             let n = windows::Win32::UI::WindowsAndMessaging::GetClassNameW(h, &mut buf).max(0) as usize;
@@ -58,7 +70,7 @@ fn full() -> bool {
 fn mask() {
     let k = |up: bool| INPUT {
         r#type: INPUT_KEYBOARD,
-        Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VIRTUAL_KEY(0xE8), dwFlags: if up { KEYEVENTF_KEYUP } else { Default::default() }, ..Default::default() } },
+        Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VIRTUAL_KEY(0xE8), dwFlags: if up { KEYEVENTF_KEYUP } else { Default::default() }, dwExtraInfo: OURS, ..Default::default() } },
     };
     unsafe {
         SendInput(&[k(false), k(true)], std::mem::size_of::<INPUT>() as i32);
@@ -69,7 +81,7 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
     unsafe {
         if code >= 0 && ON.load(SeqCst) {
             let k = &*(lp.0 as *const KBDLLHOOKSTRUCT);
-            if k.flags.0 & LLKHF_INJECTED.0 == 0 {
+            if k.dwExtraInfo != OURS && (k.flags.0 & LLKHF_INJECTED.0 == 0 || TRYING.load(SeqCst)) {
                 let m = wp.0 as u32;
                 let down = m == WM_KEYDOWN || m == WM_SYSKEYDOWN;
                 let alt_key = matches!(k.vkCode, 0x12 | 0xA4 | 0xA5);
@@ -96,12 +108,41 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
                     }
                     return LRESULT(1);
                 }
+                // Ctrl+Alt+Left/Right: straight to the next window, or back to the last
+                if (k.vkCode == 0x25 || k.vkCode == 0x27) && down && held(0x12) && held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
+                    mask();
+                    tell(if k.vkCode == 0x27 { "hop-next" } else { "hop-prev" });
+                    return LRESULT(1);
+                }
                 if k.vkCode == 0x09 && down && held(0x12) && !held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
                     UP.store(true, SeqCst);
                     mask();
                     tell(if held(0x10) { "open-back" } else { "open" });
                     return LRESULT(1);
                 }
+            }
+        }
+        CallNextHookEx(None, code, wp, lp)
+    }
+}
+
+unsafe extern "system" fn mouse(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    unsafe {
+        if code >= 0 && ON.load(SeqCst) && wp.0 as u32 == WM_MOUSEWHEEL {
+            let m = &*(lp.0 as *const MSLLHOOKSTRUCT);
+            if (m.flags & LLMHF_INJECTED == 0 || TRYING.load(SeqCst)) && held(0x12) && !held(0x11) && (UP.load(SeqCst) || !full()) {
+                if !UP.swap(true, SeqCst) {
+                    WHEEL.store(0, SeqCst);
+                    mask();
+                    tell("open-wheel");
+                }
+                let d = (m.mouseData >> 16) as i16 as i32;
+                let sum = WHEEL.fetch_add(d, SeqCst) + d;
+                if sum.abs() >= 120 {
+                    WHEEL.store(0, SeqCst);
+                    tell(if sum < 0 { "next" } else { "prev" });
+                }
+                return LRESULT(1);
             }
         }
         CallNextHookEx(None, code, wp, lp)
@@ -120,6 +161,7 @@ pub fn set(app: &AppHandle, on: bool) {
     if STARTED.swap(true, SeqCst) {
         return;
     }
+    TRYING.store(std::env::var("ULTRON_DEV_INBOX").is_ok_and(|v| v == "1"), SeqCst);
     let (tx, rx) = channel::<&'static str>();
     let _ = TELL.set(Mutex::new(tx));
     let app = app.clone();
@@ -130,6 +172,7 @@ pub fn set(app: &AppHandle, on: bool) {
     });
     std::thread::spawn(|| unsafe {
         let _hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard), None, 0);
+        let _wheel = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse), None, 0);
         let mut m = MSG::default();
         while GetMessageW(&mut m, None, 0, 0).as_bool() {
             let _ = TranslateMessage(&m);

@@ -55,6 +55,8 @@ const TOOLS: &[(&str, &str, &str, &[&str])] = &[
     ("shop_search", "search a shopping or video site", r#"{"site":{"enum":["amazon","flipkart","youtube","google"]},"query":{"type":"string"}}"#, &["site", "query"]),
     ("command", "a quick PC command: volume, play/pause/next song, play X on spotify, timers and reminders, brightness, dark mode, settings pages, lock the PC",
      r#"{"text":{"type":"string"}}"#, &["text"]),
+    ("app_call", "read from or act in an app the user has connected (github, notion, todoist, slack, homeassistant, discord) through its web API: GET to read; POST, PATCH or DELETE to change something, only when the task asks for that change. path is the API path (e.g. /user/repos, /tasks, /search, /api/states); body is JSON",
+     r#"{"service":{"enum":["github","notion","todoist","slack","homeassistant","discord"]},"method":{"enum":["GET","POST","PATCH","PUT","DELETE"]},"path":{"type":"string"},"body":{"type":"object"}}"#, &["service", "method", "path"]),
     ("remember", "save a fact about the user for later", r#"{"fact":{"type":"string"}}"#, &["fact"]),
     ("undo", "undo the last file move, sort or rename", r#"{}"#, &[]),
     ("system_info", "this PC right now: battery, memory, disk space, processor, graphics, Wi-Fi, and the heaviest apps", r#"{}"#, &[]),
@@ -201,6 +203,7 @@ fn run_tool(app: &AppHandle, sess: &mut agent::Session, tool: &str, a: &Value) -
     let st = |k: &str| a.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
     match tool {
         "find_files" => tools::find_files(a),
+        "app_call" => crate::connect::call(a),
         "list_folder" => tools::list_folder(a),
         "organize_folder" => tools::organize_folder(a),
         "find_duplicates" => tools::find_duplicates(a),
