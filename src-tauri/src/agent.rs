@@ -1702,6 +1702,12 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
             if ask_eyes {
                 ghost::say(app, "Looking at your screen…");
                 let question = if q.is_empty() { "What's on this screen? Describe it in 3 or 4 sentences: what it is and the key things on it.".to_string() } else { q.clone() };
+                // (and the words the window itself says it shows: the small vision model misreads small print, and with
+                //  them beside the picture it names things right)
+                let shown: Vec<&str> = text.split_whitespace().take(220).collect();
+                let question = if shown.len() >= 5 { format!("{question}
+
+(The words this window shows, read from it directly, so you read them right: {})", shown.join(" ")) } else { question };
                 if let Some(answer) = crate::see::snapshot(h).and_then(|img| crate::see::ask(app, &img, &question)) {
                     ghost::mood(app, "idle");
                     cx.say = Some(answer);

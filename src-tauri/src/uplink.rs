@@ -298,9 +298,77 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
     Some(s)
 }
 
+fn untag(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut inside = false;
+    for c in s.chars() {
+        match c {
+            '<' => inside = true,
+            '>' => inside = false,
+            c if !inside => out.push(c),
+            _ => {}
+        }
+    }
+    out.replace("&amp;", "&").replace("&#x27;", "'").replace("&#39;", "'").replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
+        .split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// DuckDuckGo's results for a question (its plain page, which answers a plain request in about a second): asked at
+/// the same time as Brave, so a check on Brave's side, or its page still getting ready, never leaves a question without
+/// the web.
+fn ddg(q: &str) -> Option<Facts> {
+    let t0 = Instant::now();
+    let url = format!("https://html.duckduckgo.com/html/?q={}", enc(q.trim()));
+    let html = crate::net::agent(Duration::from_millis(2600)).get(&url)
+        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
+        .call().ok()?.into_string().ok()?;
+    let mut lines = Vec::new();
+    for block in html.split("class=\"result results_links").skip(1) {
+        if block.contains("result--ad") || lines.len() >= 8 {
+            continue;
+        }
+        let pick = |mark: &str| block.split_once(mark).and_then(|(_, r)| r.split_once('>')).and_then(|(_, r)| r.split_once("</a>")).map(|(t, _)| untag(t)).unwrap_or_default();
+        let (title, words) = (pick("class=\"result__a\""), pick("class=\"result__snippet\""));
+        if !words.is_empty() {
+            lines.push(if title.is_empty() { words } else { format!("{title}\t{words}") });
+        }
+    }
+    OFFLINE.store(false, SeqCst);
+    let text = boil(q, &lines.join("\n"), 700);
+    crate::log_line(&format!("web: DuckDuckGo's results for that in {} ms, boiled down to {} characters", t0.elapsed().as_millis(), text.len()));
+    (!text.is_empty()).then(|| Facts { direct: answer_in(q, &text), text })
+}
+
+/// The web's facts for a question: Brave and DuckDuckGo asked at once. The first with a sentence that answers it is
+/// used; failing that, Brave's results if they came, else DuckDuckGo's.
+pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
+    let (tx, rx) = mpsc::channel::<(bool, Option<Facts>)>();
+    for brave_side in [true, false] {
+        let (tx, app, q) = (tx.clone(), app.clone(), q.to_string());
+        std::thread::spawn(move || {
+            let _ = tx.send((brave_side, if brave_side { brave(&app, &q) } else { ddg(&q) }));
+        });
+    }
+    drop(tx);
+    let t0 = Instant::now();
+    let (mut kept, mut from_brave) = (None::<Facts>, false);
+    while let Some(left) = Duration::from_millis(3200).checked_sub(t0.elapsed()) {
+        let Ok((is_brave, f)) = rx.recv_timeout(left) else { break };
+        let Some(f) = f else { continue };
+        if f.direct.is_some() {
+            return Some(f);
+        }
+        if kept.is_none() || (is_brave && !from_brave) {
+            from_brave = is_brave;
+            kept = Some(f);
+        }
+    }
+    kept
+}
+
 /// Brave's results for a question, boiled down to what bears on it (None: it's standing down, it didn't answer in time,
 /// there's no internet, or there was nothing).
-pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
+fn brave(app: &AppHandle, q: &str) -> Option<Facts> {
     if BLOCKED.lock().unwrap().is_some_and(|t| t > Instant::now()) {
         return None;
     }

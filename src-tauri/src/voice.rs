@@ -475,6 +475,8 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         // the name has to be) is heard first, the quick way; the careful pass is kept for when the name is there.
         let prompt = voice.prompt.lock().unwrap().clone();
         let lang = voice.lang.lock().unwrap().clone();
+        // (only when nothing is waiting for plain speech: dictating, or after a tap on the notch's mic, everything said counts)
+        let music = music && !voice.patient.load(Ordering::SeqCst) && !voice.live.load(Ordering::SeqCst);
         if music && voice.wake.load(Ordering::SeqCst) {
             let t0 = std::time::Instant::now();
             let head = prepare(&seg[..seg.len().min(RATE * 8 / 5)]);
@@ -509,7 +511,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         // a long unbroken stretch while music plays is the song coming through the mic, not you:
         // only its start is transcribed, quickly, instead of all of it
         let seg = if music && seg.len() > RATE * 9 { seg[..RATE * 5].to_vec() } else { seg };
-        let wake_only = music && seg.len() == RATE * 5;
+        let wake_only = music && voice.wake.load(Ordering::SeqCst) && seg.len() == RATE * 5;
         set_status(&app, "transcribing", "", 0.0);
         let audio = prepare(&seg);
         let mut p = params(&prompt, &lang, threads, audio.len());
