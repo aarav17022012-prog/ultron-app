@@ -421,6 +421,7 @@ pub fn start(app: AppHandle) {
         let (mut dims, mut last, mut retry) = ((0usize, 0usize), Vec::new(), Instant::now());
         let (mut shown, mut spent, mut since, mut told) = (0u32, Duration::ZERO, Instant::now(), false);
         let (mut sent, mut sent_at) = (String::new(), Instant::now());
+        let mut moving = false;
         loop {
             let every = EVERY.load(Ordering::SeqCst);
             let fast = every > 0 && every <= FAST && !paused();
@@ -464,6 +465,7 @@ pub fn start(app: AppHandle) {
                     match unsafe { f.next(100, dims.0, dims.1) } {
                         // (a picture taken as ULTRON was being put back into captures would have ULTRON in it)
                         Ok(Some(shot)) if !paused() && differs(&shot, &last) => {
+                            moving = true;
                             if let Some(url) = finish(&shot, dims.0, dims.1) {
                                 let _ = app.emit_to("main", "backdrop", url);
                                 shown += 1;
@@ -471,7 +473,7 @@ pub fn start(app: AppHandle) {
                             }
                             last = shot;
                         }
-                        Ok(_) => {}
+                        Ok(_) => moving = false,
                         Err(()) => {
                             feed = None;
                             LIVE.store(false, Ordering::SeqCst);
@@ -483,7 +485,9 @@ pub fn start(app: AppHandle) {
                         told = true;
                         crate::log_line(&format!("live glass: following the screen as it's drawn ({} pictures in {:.1} s, {} ms each)", shown, since.elapsed().as_secs_f32(), spent.as_millis() / shown as u128));
                     }
-                    std::thread::sleep(Duration::from_millis(every.max(50)).saturating_sub(t0.elapsed()));
+                    // (something moving behind the glass, a video, a scroll: 30 pictures a second, so the glass keeps up with
+                    //  it; still, nothing new is sent at all)
+                    std::thread::sleep(Duration::from_millis(if moving { every.min(33) } else { every.max(50) }).saturating_sub(t0.elapsed()));
                     continue;
                 }
             }

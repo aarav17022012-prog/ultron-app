@@ -21,6 +21,8 @@ static ONE: Mutex<()> = Mutex::new(());
 static LAST: Mutex<Option<Instant>> = Mutex::new(None);
 static BLOCKED: Mutex<Option<Instant>> = Mutex::new(None);
 static TIDY: AtomicBool = AtomicBool::new(false);
+/// The last look found no internet (the page's fetch couldn't reach anything)
+pub static OFFLINE: AtomicBool = AtomicBool::new(false);
 /// What Brave said to each question in the last ten minutes
 static SEEN: std::sync::LazyLock<Mutex<std::collections::HashMap<String, (Instant, String)>>> = std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
 
@@ -214,6 +216,7 @@ pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
             let _ = w.navigate("https://search.brave.com/".parse().ok()?);
             return None;
         }
+        OFFLINE.store(v["offline"] == true, SeqCst);
         let text = boil(q, v["text"].as_str().unwrap_or(""), 700);
         crate::log_line(&format!("web: Brave's results for that in {} ms, boiled down to {} characters{}", t0.elapsed().as_millis(), text.len(), if v["offline"] == true { " (no internet)" } else { "" }));
         if !text.is_empty() {

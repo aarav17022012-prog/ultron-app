@@ -439,6 +439,39 @@ async fn assist(app: AppHandle, text: String) -> commands::Reply {
         .unwrap_or_else(|_| commands::Reply { reply: "Something went wrong.".into(), action: String::new(), icon: "chat", ok: false })
 }
 
+/// Something for ULTRON to do: it starts with what to do ("open…", "play…", "set…"), or asks for it ("can you open…",
+/// "please send…", "I want to play…", "let's start…"). Anything else (a remark, a feeling, thanks, a story) is talked
+/// about, not done: the task rules below read a job into ordinary sentences far too often.
+fn ordering(text: &str) -> bool {
+    const DO: &[&str] = &[
+        "open", "play", "close", "type", "write", "send", "message", "text", "email", "set", "turn", "search", "find", "make", "create", "delete", "remove", "move", "copy",
+        "rename", "click", "start", "stop", "pause", "resume", "show", "take", "record", "call", "remind", "add", "switch", "mute", "unmute", "lock", "shut", "restart",
+        "install", "uninstall", "download", "translate", "summarize", "summarise", "rewrite", "read", "organize", "organise", "clean", "compress", "zip", "unzip", "extract",
+        "go", "put", "save", "print", "schedule", "book", "order", "navigate", "scroll", "press", "select", "choose", "minimize", "maximize", "enable", "disable", "connect",
+        "learn", "teach", "run", "repeat", "draft", "reply", "post", "upload", "share", "edit", "change", "update", "fix", "check", "look", "build", "launch", "quit", "exit",
+        "skip", "next", "previous", "replay", "shuffle", "increase", "decrease", "raise", "lower", "dim", "brighten", "snap", "tile", "maximise", "minimise", "empty",
+        "convert", "resize", "crop", "rotate", "merge", "split", "sort", "list", "count", "calculate", "convert", "dictate", "screenshot", "capture", "visit", "browse",
+    ];
+    let low = text.to_lowercase();
+    let words: Vec<String> = low.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'').to_string()).filter(|w| !w.is_empty()).collect();
+    let w = |i: usize| words.get(i).map(String::as_str).unwrap_or("");
+    let mut i = 0;
+    while ["ultron", "hey", "ok", "okay", "please", "so", "now", "then", "and", "just", "also", "quickly", "kindly", "pls"].contains(&w(i)) {
+        i += 1;
+    }
+    if ["can", "could", "would", "will"].contains(&w(i)) && w(i + 1) == "you" {
+        i += 2;
+        if w(i) == "please" {
+            i += 1;
+        }
+    } else if w(i) == "i" && ["want", "need"].contains(&w(i + 1)) && w(i + 2) == "to" || (w(i) == "i'd" && w(i + 1) == "like" && w(i + 2) == "to") {
+        i += 3;
+    } else if ["let's", "lets"].contains(&w(i)) {
+        i += 1;
+    }
+    DO.contains(&w(i))
+}
+
 /// A question for ULTRON to answer, not a job for it: it asks (who, what, how, is..., or ends with a question mark), and
 /// it isn't about this PC ("how much battery do I have" is the PC's to answer) or a polite order ("can you open
 /// Spotify?" is a job).
@@ -526,6 +559,18 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
         // straight to the answer. The task rules below took "open" in "how do I open a PDF" for a job, and now and then
         // a question was done as one.
         if asking(&text) {
+            if let Some(a) = ai::ask(&app, &text) {
+                return a;
+            }
+        }
+        // only an order goes on to the task rules; anything else is talked about (see ordering)
+        let order = ordering(&text);
+        if !order && !asking(&text) {
+            crate::log_line(&format!("not an order: talked about ({text:?})"));
+            let r = commands::run(&app, &text);
+            if r.ok && r.icon != "smalltalk" && r.icon != "agent" {
+                return r;
+            }
             if let Some(a) = ai::ask(&app, &text) {
                 return a;
             }

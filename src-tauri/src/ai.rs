@@ -215,7 +215,7 @@ pub struct Config {
     pub length: String, // short | normal | detailed
     pub ghost: bool,   // show ULTRON's cursor during tasks
     pub type_speed: String, // natural | fast | instant
-    pub gemini: bool,  // answers from Gemini on the web, no key (gemini.rs)
+    pub gemini: bool,  // Web mode: every question looked up on Brave and answered from it (the name kept from before)
 }
 
 impl Default for Config {
@@ -1437,11 +1437,13 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // (thinking questions are reasoning, not facts: no lookup, so the smart brain has less to read)
     // (for a recipe it's what the dish really is, so the brain doesn't reinvent it; other many-part answers need no lookup)
     let look_up = if many { dish_of(user) } else { Some(user.to_string()) };
+    // (Web mode, chosen in Settings > Brain: every question is looked up on Brave, small talk aside)
+    let web_mode = config(app).gemini && !small_talk(user);
     let mut google_said: Option<String> = None;
-    let web = if let (true, Some(q)) = (config(app).web && (!thinking || many || cloud.is_some()), look_up) {
+    let web = if let (true, Some(q)) = ((config(app).web || web_mode) && (!thinking || many || cloud.is_some() || web_mode), look_up) {
         // Uplink: a question about the world is looked up on Google too, its results boiled down to the lines that
         // bear on it (uplink.rs); the other sources (Wikipedia, news, DuckDuckGo) look at the same time
-        let google = (!many && crate::web::wants_facts(&q)).then(|| {
+        let google = (!many && (web_mode || crate::web::wants_facts(&q))).then(|| {
             let (a, q2) = (app.clone(), q.clone());
             std::thread::spawn(move || crate::uplink::facts(&a, &q2))
         });
@@ -1478,6 +1480,10 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
         None
     };
     // (a fact looked up is said in one sentence: a second one was where the small brain went wrong)
+    // (Web mode with no internet: said so, not guessed at)
+    if web_mode && web.is_none() && crate::uplink::OFFLINE.load(std::sync::atomic::Ordering::SeqCst) {
+        return Some(Reply { reply: "No internet right now. Try again later, or switch to Local in Settings › Brain.".into(), action: String::new(), icon: "chat", ok: false });
+    }
     let cap = if many { 0 } else if web.is_some() && !thinking { 1 } else { sentence_cap(app) };
     let max = if many { 400 } else { match (cap, thinking) { (0, _) => 320, (1, false) => 50, (1, true) => 80, (_, false) => 90, (_, true) => 140 } };
     // (a service or the graphics card reads it all in a blink; the processor gets the first few sentences)
@@ -1530,6 +1536,12 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
                 via = "cloud";
             }
             Err(e) => {
+                // (no internet: said so, rather than a weaker answer from here passed off as the service's)
+                let l = e.to_lowercase();
+                if ["dns", "resolve", "connect", "timed out", "timeout", "network", "unreachable", "11001", "no such host"].iter().any(|w| l.contains(w)) {
+                    crate::log_line(&format!("your own key: no internet ({e})"));
+                    return Some(Reply { reply: "No internet right now. Try again later, or switch to Local in Settings › Brain.".into(), action: String::new(), icon: "chat", ok: false });
+                }
                 crate::log_line(&format!("your own key: {e} Answering on this PC instead."));
                 let _ = app.emit_to("main", "ai-phase", format!("Couldn't reach {}, answering here…", crate::cloud::name_of(&c.provider)));
             }
