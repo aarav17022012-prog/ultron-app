@@ -387,7 +387,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
     // The speech model is about 350 MB once loaded, and in a quiet room it sits unused most of the day. After four
     // minutes with nothing heard it's put away, and the next thing heard brings it back first (a fraction of a
     // second: the file is still in Windows' cache). While something with words in it plays, it never goes quiet.
-    const QUIET: std::time::Duration = std::time::Duration::from_secs(240);
+    const QUIET: std::time::Duration = std::time::Duration::from_secs(120);
     let mut held = Some(state);
     let mut last = std::time::Instant::now();
     loop {

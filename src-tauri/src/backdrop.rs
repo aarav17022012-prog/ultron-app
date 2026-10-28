@@ -229,6 +229,20 @@ fn small_size(r: RECT) -> (usize, usize) {
     (W as usize, (((r.bottom - r.top) as f32 / k).round() as usize).max(1))
 }
 
+/// Whether two small pictures of the screen (BGRA) differ by enough to show through the glass's blur: the average
+/// difference over a sample of their pixels, more than a level and a half of 255.
+fn differs(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return true;
+    }
+    let (mut sum, mut n) = (0u64, 0u64);
+    for i in (0..a.len().saturating_sub(4)).step_by(4 * 5) {
+        sum += a[i].abs_diff(b[i]) as u64 + a[i + 1].abs_diff(b[i + 1]) as u64 + a[i + 2].abs_diff(b[i + 2]) as u64;
+        n += 3;
+    }
+    n > 0 && sum * 2 > n * 3
+}
+
 /// A small picture of the screen (BGRA), blurred and toned, as a JPEG data URL.
 fn finish(shot: &[u8], w: usize, hh: usize) -> Option<String> {
     let mut small: Vec<f32> = Vec::with_capacity(w * hh * 3);
@@ -449,7 +463,7 @@ pub fn start(app: AppHandle) {
                     let t0 = Instant::now();
                     match unsafe { f.next(100, dims.0, dims.1) } {
                         // (a picture taken as ULTRON was being put back into captures would have ULTRON in it)
-                        Ok(Some(shot)) if !paused() && shot != last => {
+                        Ok(Some(shot)) if !paused() && differs(&shot, &last) => {
                             if let Some(url) = finish(&shot, dims.0, dims.1) {
                                 let _ = app.emit_to("main", "backdrop", url);
                                 shown += 1;
@@ -469,7 +483,7 @@ pub fn start(app: AppHandle) {
                         told = true;
                         crate::log_line(&format!("live glass: following the screen as it's drawn ({} pictures in {:.1} s, {} ms each)", shown, since.elapsed().as_secs_f32(), spent.as_millis() / shown as u128));
                     }
-                    std::thread::sleep(Duration::from_millis(every).saturating_sub(t0.elapsed()));
+                    std::thread::sleep(Duration::from_millis(every.max(50)).saturating_sub(t0.elapsed()));
                     continue;
                 }
             }

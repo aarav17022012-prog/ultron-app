@@ -55,6 +55,10 @@ const TOOLS: &[(&str, &str, &str, &[&str])] = &[
     ("shop_search", "search a shopping or video site", r#"{"site":{"enum":["amazon","flipkart","youtube","google"]},"query":{"type":"string"}}"#, &["site", "query"]),
     ("command", "a quick PC command: volume, play/pause/next song, play X on spotify, timers and reminders, brightness, dark mode, settings pages, lock the PC",
      r#"{"text":{"type":"string"}}"#, &["text"]),
+    ("ui_read", "list what can be acted on in an app's window (every button, switch, checkbox, box, dropdown, list item, tab and slider, by name, with how it's set now); works for nearly every app. app is the app's name, or empty for the window in front",
+     r#"{"app":{"type":"string"}}"#, &["app"]),
+    ("ui_do", "act on one control in an app's window by its name, straight through the app (fast; the pointer isn't moved): click, on, off, set (text into a box, or a number for a slider), select (an option, in value, of a dropdown or list), expand, collapse, focus, scroll, read",
+     r#"{"app":{"type":"string"},"control":{"type":"string"},"action":{"enum":["click","on","off","set","select","expand","collapse","focus","scroll","read"]},"value":{"type":"string"}}"#, &["app", "control", "action"]),
     ("app_call", "read from or act in an app the user has connected (github, notion, todoist, slack, homeassistant, discord) through its web API: GET to read; POST, PATCH or DELETE to change something, only when the task asks for that change. path is the API path (e.g. /user/repos, /tasks, /search, /api/states); body is JSON",
      r#"{"service":{"enum":["github","notion","todoist","slack","homeassistant","discord"]},"method":{"enum":["GET","POST","PATCH","PUT","DELETE"]},"path":{"type":"string"},"body":{"type":"object"}}"#, &["service", "method", "path"]),
     ("remember", "save a fact about the user for later", r#"{"fact":{"type":"string"}}"#, &["fact"]),
@@ -204,6 +208,10 @@ fn run_tool(app: &AppHandle, sess: &mut agent::Session, tool: &str, a: &Value) -
     match tool {
         "find_files" => tools::find_files(a),
         "app_call" => crate::connect::call(a),
+        "ui_read" => crate::uictl::window_of(app, &st("app")).ok_or_else(|| format!("{} isn't open.", st("app"))).and_then(crate::uictl::read),
+        "ui_do" => crate::uictl::window_of(app, &st("app"))
+            .ok_or_else(|| format!("{} isn't open.", st("app")))
+            .and_then(|h| crate::uictl::act(h, &st("control"), &st("action"), &st("value"))),
         "list_folder" => tools::list_folder(a),
         "organize_folder" => tools::organize_folder(a),
         "find_duplicates" => tools::find_duplicates(a),

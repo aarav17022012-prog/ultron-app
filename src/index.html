@@ -4548,13 +4548,17 @@ function loopStep(now){
   // collapsed while a song plays: the character keeps time (and the meter hears the song) for hours on end. Drawn 12
   // times a second, 20 while the pointer moves, the little bars look the same as at 30, for well under half the work.
   const tune = !open_ && !hovering && !!(disp && disp.playing);
-  return open_ || performance.now() < liveUntil || flow.on || tintA ? 15.5 : window.WH && WH.open ? 32 : tune ? (still ? 80 : 48) : calm ? (now - lastAim > 30000 ? 80 : 48) : 32;   // (calm half a minute: 12 a second; its slow breathing looks the same)
+  // (open and calm, the pointer still, nothing heard or being answered: 30 a second, and drawn only when it looks
+  //  different. Drawn with the screen all the while it was open, it was most of what an open notch cost: 85% of a core)
+  const busy = performance.now() < liveUntil || flow.on || tintA || !still || micTarget >= .08 || !!aiStream;
+  if (open_) return busy ? 15.5 : now - lastAim > 6000 ? 66 : 33;   // (still for a while: its slow breathing looks the same at 15)
+  return busy ? 15.5 : window.WH && WH.open ? 32 : tune ? (still ? 80 : 48) : calm ? (now - lastAim > 30000 ? 80 : 48) : 32;   // (calm half a minute: 12 a second; its slow breathing looks the same)
 }
 /* Open (or while something is moving), the loop runs with the screen. Collapsed, it is woken only when the next
    picture is due: on a 144 Hz screen it used to be called 144 times a second to draw 12, and every call is a turn of
    the web engine's whole frame machinery, drawn or not. Whatever needs it sooner (the notch opening, the pointer
    moving, a voice) wakes it at once. */
-var loopT = 0;                                              // (var: things earlier in the file call wake() while it loads)
+var loopT = 0, waveStill = false;                                              // (var: things earlier in the file call wake() while it loads)
 function pump(now){
   const step = loopStep(now);
   if (step < 200 && now - lastFrame >= step - 2){ lastFrame = now; frame(now); }
@@ -4598,13 +4602,14 @@ function frame(now){
   // Collapsed, the character is drawn again only when it would look different: while it just breathes that's about
   // half as often (a pose a fraction of a pixel off the last one isn't drawn). Each drawing costs a frame of the
   // whole overlay, and that was most of what ULTRON used while sitting idle (18% of a core, measured).
-  if (isOpen || resized || t - lastRender > 1 / 30){
-    let draw = isOpen || resized || faceCur || faceK > .01 || (window.WEAR && WEAR.anim.length > 0), fine = '', big = '';
+  const openLive = isOpen && (now - lastAim < 2000 || now < liveUntil || micLevel > .08 || !!aiStream || flow.on);
+  if (openLive || resized || t - lastRender > 1 / 30){
+    let draw = openLive || resized || faceCur || faceK > .01 || (window.WEAR && WEAR.anim.length > 0), fine = '', big = '';
     if (!draw){
       // A change you could see (a third of a pixel or more: a blink, a look, a hop) is drawn at once. The slow drift of
       // breathing moves the character less than that from one frame to the next, and is caught up on five times a second.
       big = poseKey(4); fine = poseKey(1);
-      draw = big !== lastBig || (fine !== lastPose && t - lastRender > .2);
+      draw = big !== lastBig || (fine !== lastPose && (isOpen || t - lastRender > .2));
     }
     if (draw){ lastPose = fine; lastBig = big; lastRender = t; renderer.render(scene, camera); }
   }
@@ -4612,7 +4617,9 @@ function frame(now){
   const tt = reduce ? 0 : t;
   const miniLive = micLevel > .08 || voiceState === 'transcribing' || voiceState === 'hearing';   // (.08: above a quiet room's hum)
   if (!isOpen && (miniLive || !miniStill)){ drawWave(miniCv, tt, 5, 2.5, .9); miniStill = !miniLive; }
-  if (vbar.classList.contains('show')) drawWave(waveCv, tt, 0, 3, activeTab === 'assistant' ? 1 : .85);
+  // (the voice bar's wave: drawn while something is heard or said; flat and still otherwise, so drawn once and left)
+  const waveLive = micLevel > .05 || voiceState === 'hearing' || voiceState === 'transcribing' || vbar.classList.contains('talking');
+  if (vbar.classList.contains('show') && (waveLive || !waveStill)){ drawWave(waveCv, tt, 0, 3, activeTab === 'assistant' ? 1 : .85); waveStill = !waveLive; }
 }
 
 /* ---------- tabs + height ---------- */
@@ -6819,8 +6826,36 @@ function dictPrompt(){
   // (the names go first and are never cut: the whole used to be cut to its last 240 letters, which dropped the names
   //  you'd listed as soon as there was much said before)
   const w = [...new Set([...(S.dictWords || []), ...(S.dictLearned || []).slice(-30).reverse()])].join(', ').slice(0, 320);
-  const tail = DICT.before.replace(/\s+/g, ' ').trim().slice(-200);
+  const tail = DICT.before.replace(/\s+/g, ' ').trim().slice(-90).replace(/^\S*\s/, '');
   return (w ? w + '. ' : '') + (tail || (S.lang && S.lang !== 'en' ? '' : 'Hi, how are you? I’m fine, thanks. Let’s meet at 4 PM.'));
+}
+/* What's typed twice, taken out. The recognizer is told what was said just before (for its punctuation and names), and
+   on a short or quiet stretch it now and then "hears" that again: the end of the last sentence came back at the start
+   of the next, or a piece already typed came again whole. And now and then it says a run of words twice over ("I think
+   we should I think we should go"). */
+function dictUnecho(t){
+  const key = x => x.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+  const prev = DICT.before.split(/\s+/).map(key).filter(Boolean).slice(-40);
+  let w = t.split(/\s+/).filter(Boolean);
+  const wk = () => w.map(key);
+  // (a run of three words or more said twice in a row: once)
+  for (let n = Math.min(8, Math.floor(w.length / 2)); n >= 3; n--){
+    for (let i = 0; i + 2 * n <= w.length; i++){
+      const k = wk();
+      if (k.slice(i, i + n).join(' ') === k.slice(i + n, i + 2 * n).join(' ')){ w.splice(i + n, n); i--; }
+    }
+  }
+  const k = wk().filter(Boolean);
+  if (!prev.length || !k.length) return w.join(' ');
+  // (all of it is what was said just now: heard again, not said again)
+  const tail = ' ' + prev.join(' ') + ' ', all = ' ' + k.join(' ') + ' ';
+  if (k.length >= 3 && tail.slice(-Math.max(all.length + 40, 120)).includes(all)) return '';
+  if (k.length <= 2 && prev.slice(-k.length).join(' ') === k.join(' ') && k.join('').length > 3) return '';
+  // (its start is the end of what's there: that much is dropped)
+  for (let n = Math.min(k.length - 1, prev.length, 12); n >= 2; n--){
+    if (k.slice(0, n).join(' ') === prev.slice(-n).join(' ')){ let c = 0; while (c < w.length && n > 0){ if (key(w[c])) n--; c++; } w = w.slice(c); break; }
+  }
+  return w.join(' ');
 }
 function dictIdle(){ clearTimeout(DICT.idleT); DICT.idleT = setTimeout(() => dictOff('Dictation ended after a minute of quiet.'), 60000); }
 function dictBoard(){ return DICT.mode === 'card' ? WC.board : DICT.mode === 'try' ? DT.board : null; }
@@ -6874,12 +6909,14 @@ async function dictPiece(text){
   finally { DICT.final = false; DICT.cur = ''; DICT.prevWords = []; if (DICT.part) dictPartNext(); }
 }
 async function dictFinal(text){
-  const t = text.trim();
+  let t = text.trim();
   if (DICT_STOP.test(t)) return dictOff();
   if (DICT_PAUSE.test(t)) return dictPause(true);
   if (DICT_RESUME.test(t)) return dictPause(false);
   if (!DICT.on || DICT.paused) return;
   dictIdle(); clearTimeout(DICT.heldT);
+  const t0 = t; t = dictUnecho(t);
+  if (!t){ invoke('page_log', {msg:'dictation: dropped a repeat of what was just said: ' + t0}); return; }
   if (DICT.mode === 'try') dtHeard(t);
   const board = dictBoard(), ai = S.dictAI || (S.dictFix && DICT_CUE.test(t));
   // (typed into an app, it can't be changed after: the brain's version is waited for. On a card the rules' version
@@ -6924,7 +6961,8 @@ async function dictPartNext(){
   DICT.partBusy = true;
   try {
     while (DICT.part && !DICT.final && DICT.on){
-      const t = DICT.part; DICT.part = '';
+      const t = dictUnecho(DICT.part); DICT.part = '';
+      if (!t){ DICT.prevWords = []; continue; }
       const b = dictBoard();
       if (b){ boardLive(b, t); continue; }
       const w = t.split(/\s+/).filter(Boolean), key = x => x.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
@@ -7502,6 +7540,7 @@ function warmAI(){ if (Date.now() - warmAt > 20000){ warmAt = Date.now(); invoke
 
 /* typing to ULTRON */
 const askIn = $('askIn');
+askIn.addEventListener('input', () => { if (S.web && TAURI && performance.now() - (askIn._warm || -1e9) > 40000){ askIn._warm = performance.now(); invoke('web_warm'); } });
 askIn.addEventListener('input', () => vbar.classList.toggle('typing', !!askIn.value.trim()));
 askIn.addEventListener('click', e => e.stopPropagation());
 askIn.addEventListener('focus', warmAI);
@@ -8035,6 +8074,7 @@ function tzParts(tz, d){
   return {y:+p.year, mo:+p.month, d:+p.day, h:+p.hour % 24, m:+p.minute, s:+p.second};
 }
 function paintWorld(){
+  if (!document.getElementById('dd').classList.contains('open') || !document.getElementById('wc0')) return;
   const now = new Date(), here = tzParts(CITIES[0][1], now);
   CITIES.forEach(([name, tz], i) => {
     const t = tzParts(tz, now), row = document.getElementById('wc' + i); if (!row) return;
@@ -8321,6 +8361,7 @@ function setBar(id, frac, text, hot){
   if (b){ b.firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%'; b.classList.toggle('hot', !!hot); }
 }
 async function paintSystem(){
+  if (ddFor?.dataset.menu !== 'system' || !document.getElementById('dd').classList.contains('open')) return;
   const st = await invoke('sys_stats'); if (!st || ddFor?.dataset.menu !== 'system') return;
   setBar('cpu', st.cpu, Math.round(st.cpu * 100) + '%', st.cpu > .85);
   setBar('mem', st.mem_used / st.mem_total, `${gb(st.mem_used)} / ${gb(st.mem_total)} GB`, st.mem_used / st.mem_total > .9);
@@ -9273,7 +9314,7 @@ function calNow(){
 const calToday = () => { const n = calNow(); return new Date(n.y, n.mo, n.d); };
 const calKey = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 function tickCal(){
-  const T = document.getElementById('caTime'); if (!T) return;
+  const T = document.getElementById('caTime'); if (!T || !calEl.classList.contains('open')) return;
   const n = calNow(), h12 = n.h % 12 || 12, c = calCountry(), away = CAL_TZ[c] && CAL_TZ[c][0] !== HERE_TZ;
   T.innerHTML = `${h12}:${pad2(n.m)}<small>:${pad2(n.s)} ${n.h < 12 ? 'AM' : 'PM'}</small>`;
   document.getElementById('caDate').textContent = `${DAYS[n.wd]}, ${n.d} ${MONTHS[n.mo]} ${n.y}` + (away ? ` · ${CAL_TZ[c][1] || countryName(c)}` : '');
@@ -9710,7 +9751,7 @@ if (TAURI){
   let notchWas = false;
   new MutationObserver(() => {
     const o = notch.classList.contains('open');
-    if (o && !notchWas){ if (glassOn()) invoke('backdrop_now'); if (S.web) invoke('web_warm'); }   // (a fresh picture of what's under it as it opens)
+    if (o && !notchWas && glassOn()) invoke('backdrop_now');   // (a fresh picture of what's under it as it opens)
     notchWas = o;
   }).observe(notch, {attributes:true, attributeFilter:['class']});
   listen('intro-start', () => { document.body.classList.add('intro'); setOpen(false); closeDD(); closePanels(); });

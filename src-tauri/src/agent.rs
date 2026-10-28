@@ -52,6 +52,7 @@ pub enum Step {
     SiteSearch(String, String), // (site, what to look for, with any "under 2000" / "cheapest")
     Present(String, usize),     // (topic, number of slides)
     Command(String),            // anything the regular commands handle (volume, search, music...)
+    Ui(String, String, String), // (action, control, value): a control in the window acted on by name (uictl.rs)
 }
 
 /* ---------------- understanding the request ---------------- */
@@ -688,6 +689,38 @@ pub fn parse_step(piece: &str) -> Step {
         let name = after(raw, &["save it as", "save the file as", "save this as", "save as", "save the document as"]).map(unquote).filter(|n| !n.is_empty());
         return Step::SaveAs(name);
     }
+    {
+        let clean = |s: &str| s.trim().trim_start_matches("the ").trim_end_matches(" switch").trim_end_matches(" toggle").trim_end_matches(" option").trim_end_matches(" checkbox").trim_end_matches(" box").trim().to_string();
+        let skip = |s: &str| ["volume", "brightness", "the volume", "the brightness", "a timer", "an alarm", "a reminder", "dark mode", "light mode", "wifi", "wi-fi", "bluetooth", "night light"].iter().any(|x| s.starts_with(x));
+        for (words, act) in [(&["turn on", "switch on", "enable", "tick"][..], "on"), (&["turn off", "switch off", "disable", "untick", "uncheck"][..], "off"), (&["expand"][..], "expand"), (&["collapse"][..], "collapse")] {
+            if let Some(rest) = after(&l, words) {
+                if !skip(rest) && !rest.is_empty() {
+                    return Step::Ui(act.into(), clean(rest), String::new());
+                }
+            }
+        }
+        for (end, act) in [(" on", "on"), (" off", "off")] {
+            if let Some(mid) = after(&l, &["turn", "switch"]).and_then(|r| r.strip_suffix(end)) {
+                if !skip(mid) && !mid.is_empty() {
+                    return Step::Ui(act.into(), clean(mid), String::new());
+                }
+            }
+        }
+        if let Some(rest) = after(&l, &["set"]) {
+            if let Some((name, val)) = rest.split_once(" to ") {
+                if !skip(name) && !name.is_empty() {
+                    let raw_val = raw.rsplit_once(" to ").map(|(_, v)| v).unwrap_or(val);
+                    return Step::Ui("set".into(), clean(name), unquote(raw_val.trim()));
+                }
+            }
+        }
+        if let Some(rest) = after(&l, &["select", "choose", "pick"]) {
+            if let Some((val, name)) = rest.split_once(" in ").or_else(|| rest.split_once(" from ")) {
+                let raw_val = after(raw, &["select", "choose", "pick", "Select", "Choose", "Pick"]).and_then(|r| r.split_once(" in ").or_else(|| r.split_once(" from "))).map(|(v, _)| v).unwrap_or(val);
+                return Step::Ui("select".into(), clean(name), unquote(raw_val.trim().trim_start_matches("the ")));
+            }
+        }
+    }
     if let Some(rest) = after(&l, &["click on", "click", "tap on", "double click"]) {
         return Step::Click(rest.trim_start_matches("the ").trim_end_matches(" button").to_string());
     }
@@ -793,6 +826,11 @@ fn doing(s: &Step) -> String {
         Step::TypeIn(f, t) => format!("Typing “{}” in {}", short(t, 20), short(f, 18)),
         Step::Wait(n) => format!("Waiting {n:.0}s"),
         Step::Minimize => "Minimizing the window".into(),
+        Step::Ui(act, x, v) => match act.as_str() {
+            "set" => format!("Setting “{}” to {}", short(x, 20), short(v, 20)),
+            "select" => format!("Choosing {} in “{}”", short(v, 20), short(x, 20)),
+            _ => format!("Turning “{}” {act}", short(x, 24)),
+        },
         Step::Maximize => "Maximizing the window".into(),
         Step::SwitchTo(x) => format!("Switching to {}", title(x)),
         Step::Message(app, to, _) => format!("Messaging {} on {}", title(to), title(app)),
@@ -827,6 +865,7 @@ fn did(s: &Step, cmd_action: &str) -> String {
         Step::TypeIn(f, t) => format!("typed “{}” in the {f}", short(t, 40)),
         Step::Wait(_) => "waited".into(),
         Step::Minimize => "minimized it".into(),
+        Step::Ui(act, x, _) => format!("{act} {x}"),
         Step::Maximize => "maximized it".into(),
         Step::SwitchTo(x) => format!("switched to {}", title(x)),
         Step::Message(app, to, _) => format!("wrote your message to {} in {}", title(to), title(app)),
@@ -1289,6 +1328,13 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
                 cx.target = Some(fg);
             }
             Ok(String::new())
+        }
+        Step::Ui(act, name, value) => {
+            let h = ensure_target(app, cx).ok_or("There's no window to work in.")?;
+            let said = crate::uictl::act(h, name, act, value)?;
+            crate::log_line(&format!("ui: {act} “{name}” → {said}"));
+            std::thread::sleep(Duration::from_millis(200));
+            Ok(said)
         }
         Step::TypeIn(field, text) => {
             let h = ensure_target(app, cx).ok_or("There's no window to type into.")?;

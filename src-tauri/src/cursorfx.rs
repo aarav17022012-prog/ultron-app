@@ -128,6 +128,7 @@ unsafe fn run() {
         let mut trail: Vec<(f32, f32)> = Vec::new();
         let mut strength = 0.0f32;
         let mut shown = false;
+        let mut still = 0u32; // (frames the pointer hasn't moved for)
         loop {
             // (its window answers Windows' messages: one that never did would leave anything that sends to every
             // window, a setting or wallpaper change, waiting on it, and that froze things)
@@ -145,7 +146,9 @@ unsafe fn run() {
                 std::thread::sleep(Duration::from_millis(60));
                 continue;
             }
-            if DwmFlush().is_err() {
+            if !shown && still > 30 {
+                std::thread::sleep(Duration::from_millis(33));
+            } else if DwmFlush().is_err() {
                 std::thread::sleep(Duration::from_millis(7));
             }
             let mut ci = CURSORINFO { cbSize: std::mem::size_of::<CURSORINFO>() as u32, ..Default::default() };
@@ -160,6 +163,7 @@ unsafe fn run() {
             }
             let Some(s) = shp.as_ref() else { continue };
             let p = (ci.ptScreenPos.x as f32, ci.ptScreenPos.y as f32);
+            still = if trail.last() == Some(&p) { still + 1 } else { 0 };
             // (a jump, not a movement: the pointer put somewhere else at once draws no streak)
             if let Some(q) = trail.last() {
                 if ((p.0 - q.0).powi(2) + (p.1 - q.1).powi(2)).sqrt() > 360.0 {

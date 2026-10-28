@@ -128,7 +128,7 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
         let mut near = false;
         loop {
             // (near something clickable: as often as the screen is drawn, so it's ready the moment the pointer arrives)
-            std::thread::sleep(Duration::from_millis(if near { 16 } else { 33 }));
+            std::thread::sleep(Duration::from_millis(if near { 16 } else { 50 }));
             let mut p = POINT::default();
             if unsafe { GetCursorPos(&mut p) }.is_err() {
                 continue;
