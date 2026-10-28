@@ -182,3 +182,65 @@ pub fn call(a: &Value) -> Result<String, String> {
     let text: String = text.chars().take(6000).collect();
     if code >= 400 { Err(format!("{} answered {code}: {text}", s.name)) } else { Ok(format!("{} answered {code}: {text}", s.name)) }
 }
+
+/* ---------------- your own apps and files (the Connect tab) ---------------- */
+
+/// Windows' own Open box, for files (several) or one folder.
+pub fn pick(owner: Option<isize>, folder: bool) -> Vec<String> {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED};
+    use windows::Win32::UI::Shell::{FileOpenDialog, IFileOpenDialog, FOS_ALLOWMULTISELECT, FOS_FORCEFILESYSTEM, FOS_PICKFOLDERS, SIGDN_FILESYSPATH};
+    std::thread::spawn(move || unsafe {
+        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        let mut out = Vec::new();
+        let _ = (|| -> windows::core::Result<()> {
+            let d: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
+            d.SetOptions(d.GetOptions()? | FOS_FORCEFILESYSTEM | if folder { FOS_PICKFOLDERS } else { FOS_ALLOWMULTISELECT })?;
+            d.SetTitle(&windows::core::HSTRING::from(if folder { "Choose a folder for ULTRON to work with" } else { "Choose files for ULTRON to work with" }))?;
+            d.SetOkButtonLabel(&windows::core::HSTRING::from("Connect"))?;
+            d.Show(owner.map(|h| HWND(h as _)))?;
+            let items = d.GetResults()?;
+            for i in 0..items.GetCount()? {
+                let p = items.GetItemAt(i)?.GetDisplayName(SIGDN_FILESYSPATH)?;
+                out.push(p.to_string().unwrap_or_default());
+                CoTaskMemFree(Some(p.0 as _));
+            }
+            Ok(())
+        })();
+        out
+    })
+    .join()
+    .unwrap_or_default()
+}
+
+/// What a connected file says, for the brain to answer from: the text of a text file, code, a Word document, or the
+/// names of what a folder holds. Cut to what a question can use.
+pub fn file_text(path: &str) -> Result<String, String> {
+    let p = std::path::Path::new(path);
+    if p.is_dir() {
+        let mut names: Vec<String> = std::fs::read_dir(p).map_err(|e| e.to_string())?.flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect();
+        names.sort();
+        let n = names.len();
+        names.truncate(120);
+        return Ok(format!("The folder holds {n} things: {}", names.join(", ")));
+    }
+    let ext = p.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let text = if ext == "docx" {
+        // (a Word document is a zip; its words are in word/document.xml)
+        use std::os::windows::process::CommandExt;
+        let script = "Add-Type -A System.IO.Compression.FileSystem; $z = [IO.Compression.ZipFile]::OpenRead($args[0]); $e = $z.GetEntry('word/document.xml'); $r = New-Object IO.StreamReader($e.Open()); $x = $r.ReadToEnd(); $z.Dispose(); ($x -replace '</w:p>', [char]10 -replace '<[^>]+>', '')";
+        let out = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", script, path])
+            .creation_flags(0x0800_0000)
+            .output()
+            .map_err(|e| e.to_string())?;
+        String::from_utf8_lossy(&out.stdout).to_string()
+    } else if ["pdf", "xlsx", "pptx", "png", "jpg", "jpeg", "mp4", "mp3", "zip", "exe"].contains(&ext.as_str()) {
+        return Err(format!("I can't read the words in a .{ext} file yet."));
+    } else {
+        let bytes = std::fs::read(p).map_err(|e| e.to_string())?;
+        String::from_utf8_lossy(&bytes[..bytes.len().min(400_000)]).to_string()
+    };
+    let t: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    Ok(t.chars().take(9000).collect())
+}

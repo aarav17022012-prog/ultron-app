@@ -698,6 +698,11 @@ pub fn warm(app: &AppHandle) {
     if crate::cloud::active(app).is_some() {
         return;
     }
+    // (the quick brain is still loading: the big one loading beside it slowed both, and the quick one took a minute
+    //  instead of seconds; quick answers come from it, so it goes first)
+    if crate::quick::warming() {
+        return;
+    }
     let app = app.clone();
     std::thread::spawn(move || {
         let ai = app.state::<Ai>();
@@ -1414,8 +1419,17 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
         }
         // don't keep you waiting on a slow site: answer without it after ~1.8 s (4.5 s for Google's page, which takes ~3.5)
         let t0 = Instant::now();
-        let most = Duration::from_millis(if google.is_some() { 4500 } else { 1800 });
+        let ql = user.to_lowercase();
+        let fresh = ["today", "tonight", "latest", "news", "current", "right now", "score", "price", "weather", "who won", "this week", "this year", "yesterday", "tomorrow", "live", "stock", "election", "2025", "2026", "update"]
+            .iter()
+            .any(|w| ql.contains(w));
+        // (Google is waited on for up to 3.2 s only for what changes; otherwise 1.6 s, and once the other sources are
+        //  back, a little more at most: waiting 4.5 s on every question was most of why answers felt slow)
+        let most = Duration::from_millis(if google.is_some() { if fresh { 3200 } else { 1600 } } else { 1500 });
         while !(looking.is_finished() && google.as_ref().map_or(true, |g| g.is_finished())) && t0.elapsed() < most && !cancelled() {
+            if !fresh && looking.is_finished() && t0.elapsed() > Duration::from_millis(1100) {
+                break;
+            }
             std::thread::sleep(Duration::from_millis(40));
         }
         let from_google = google.filter(|g| g.is_finished()).and_then(|g| g.join().ok().flatten());

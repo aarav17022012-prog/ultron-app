@@ -76,12 +76,5 @@ pub fn set(app: &AppHandle, on: bool) {
             let _ = app.emit_to("main", "osd", Level { kind: "vol", level, muted: crate::commands::muted().unwrap_or(false) });
         }
     });
-    std::thread::spawn(|| unsafe {
-        let _hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard), None, 0);
-        let mut m = MSG::default();
-        while GetMessageW(&mut m, None, 0, 0).as_bool() {
-            let _ = TranslateMessage(&m);
-            DispatchMessageW(&m);
-        }
-    });
+    crate::hooks::keep(Some(keyboard), None);
 }

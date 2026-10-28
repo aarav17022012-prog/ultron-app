@@ -40,30 +40,11 @@ fn held(vk: i32) -> bool {
     unsafe { GetAsyncKeyState(vk) as u16 & 0x8000 != 0 }
 }
 
-/// The window in front fills its whole screen (a game, a video, a slideshow).
+/// A game or anything else is full screen (as Windows says, the same as ULTRON's bar stands aside for): Windows' own
+/// switcher is left to it. (Measuring the window in front took some maximized apps with no title bar for full screen
+/// when ULTRON's bar was set to hide away, and Windows' Alt+Tab came up over them.)
 fn full() -> bool {
-    unsafe {
-        let h = GetForegroundWindow();
-        let mut r = RECT::default();
-        if h.is_invalid() || GetWindowRect(h, &mut r).is_err() {
-            return false;
-        }
-        let mut mi = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
-        if !GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), &mut mi).as_bool() {
-            return false;
-        }
-        let m = mi.rcMonitor;
-        // (a maximized window with a title bar isn't full screen, even with no taskbar under it: only a borderless one is)
-        if GetWindowLongPtrW(h, GWL_STYLE) as u32 & WS_CAPTION.0 == WS_CAPTION.0 {
-            return false;
-        }
-        let class = {
-            let mut buf = [0u16; 32];
-            let n = windows::Win32::UI::WindowsAndMessaging::GetClassNameW(h, &mut buf).max(0) as usize;
-            String::from_utf16_lossy(&buf[..n])
-        };
-        class != "Progman" && class != "WorkerW" && r.left <= m.left && r.top <= m.top && r.right >= m.right && r.bottom >= m.bottom
-    }
+    crate::appbar::FULL.load(SeqCst)
 }
 
 /// A key no program uses, pressed while Alt is held: Alt coming up after it doesn't open the app's menu bar.
@@ -170,13 +151,5 @@ pub fn set(app: &AppHandle, on: bool) {
             let _ = app.emit_to("main", "alttab", what);
         }
     });
-    std::thread::spawn(|| unsafe {
-        let _hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard), None, 0);
-        let _wheel = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse), None, 0);
-        let mut m = MSG::default();
-        while GetMessageW(&mut m, None, 0, 0).as_bool() {
-            let _ = TranslateMessage(&m);
-            DispatchMessageW(&m);
-        }
-    });
+    crate::hooks::keep(Some(keyboard), Some(mouse));
 }

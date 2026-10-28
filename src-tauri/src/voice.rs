@@ -38,6 +38,9 @@ pub struct Voice {
     pub wake: AtomicBool,
     /// Dictating: a pause has to be twice as long before it ends what you're saying.
     pub patient: AtomicBool,
+    /// You've tapped the notch's mic: what you say is shown as you say it, heard in one quick pass, and a shorter
+    /// pause ends it.
+    pub live: AtomicBool,
     sens: AtomicU32, // f32 bits
     prompt: Mutex<String>,
     /// The language you talk in ("en", "hi", ..., or "auto"), and that it has just changed (the model is swapped)
@@ -56,6 +59,7 @@ impl Default for Voice {
             ready: AtomicBool::new(false),
             wake: AtomicBool::new(false),
             patient: AtomicBool::new(false),
+            live: AtomicBool::new(false),
             sens: AtomicU32::new(1.0f32.to_bits()),
             prompt: Mutex::new(String::new()),
             lang: Mutex::new("en".into()),
@@ -406,12 +410,17 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
             }
             set_status(&app, if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" }, "", 0.0);
         }
+        // (the mic tapped: the speech model is got ready now, not when the first words are in)
+        if held.is_none() && voice.live.load(Ordering::SeqCst) {
+            held = WhisperContext::new_with_params(path.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
+            last = std::time::Instant::now();
+        }
         // (what's finished comes first; meanwhile, while dictating, what's still being said is heard as it grows)
         let got = match rx.try_recv() {
             Ok(s) => Ok(s),
             Err(_) => match parts.try_recv() {
                 Ok(so_far) => {
-                    if voice.patient.load(Ordering::SeqCst) {
+                    if voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst) {
                         if held.is_none() {
                             held = WhisperContext::new_with_params(path.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
                         }
@@ -496,7 +505,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let audio = prepare(&seg);
         let mut p = params(&prompt, &lang, threads, audio.len());
         // (dictating: one quick pass, two or three times faster; what you said already showed as you said it)
-        if voice.patient.load(Ordering::SeqCst) {
+        if voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst) {
             p = quick_params(&prompt, &lang, threads, audio.len());
         }
         if wake_only {
@@ -557,7 +566,7 @@ impl Vad {
     }
 
     /// One 20 ms frame plus RNNoise's "is this a voice?" score. Returns a finished utterance when one ends.
-    fn frame(&mut self, app: &AppHandle, f: &[f32], sens: f32, voice_p: f32, patient: bool) -> Option<Vec<f32>> {
+    fn frame(&mut self, app: &AppHandle, f: &[f32], sens: f32, voice_p: f32, quiet: u32) -> Option<Vec<f32>> {
         let rms = (f.iter().map(|s| s * s).sum::<f32>() / f.len() as f32).sqrt();
         self.tick += 1;
         if self.tick % 3 == 0 {
@@ -597,7 +606,7 @@ impl Vad {
         }
         let long = self.seg.len() >= RATE * 20;
         // ~0.7 s without a voice = you're done (short pauses mid-sentence don't cut you off); dictating, 1.3 s
-        if self.silence >= if patient { 60 } else { 30 } || long {
+        if self.silence >= quiet || long {
             self.speaking = false;
             self.hot = 0;
             let mut seg = std::mem::take(&mut self.seg);
@@ -713,12 +722,14 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
             let a = probs.pop_front().unwrap_or(last_p);
             let b = probs.pop_front().unwrap_or(a);
             last_p = b;
-            if let Some(seg) = vad.frame(&app, &out16[used..used + FRAME], sens, a.max(b), voice.patient.load(Ordering::SeqCst)) {
+            // (how long a pause ends what's said: long while dictating, short when you've tapped the mic to ask)
+            let quiet = if voice.patient.load(Ordering::SeqCst) { 60 } else if voice.live.load(Ordering::SeqCst) { 24 } else { 30 };
+            if let Some(seg) = vad.frame(&app, &out16[used..used + FRAME], sens, a.max(b), quiet) {
                 if let Some(tx) = voice.seg_tx.lock().unwrap().as_ref() {
                     let _ = tx.try_send(seg);
                 }
                 sent = 0;
-            } else if vad.speaking && voice.patient.load(Ordering::SeqCst) && vad.seg.len() >= RATE / 2 && vad.seg.len() >= sent + RATE * 3 / 5 {
+            } else if vad.speaking && (voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst)) && vad.seg.len() >= RATE / 2 && vad.seg.len() >= sent + RATE * 3 / 5 {
                 // (dictating: what's been said so far, every 0.6 s; dropped if the last one is still being heard)
                 if let Some(tx) = voice.part_tx.lock().unwrap().as_ref() {
                     if tx.try_send(vad.seg.clone()).is_ok() {

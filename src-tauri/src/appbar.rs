@@ -124,17 +124,21 @@ pub fn remove() {
 /// arrow under it flickered. Now going is put off a moment and done only if what's in front still fills its screen and
 /// is an app's window; coming back is at once.
 static FULL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+/// An app is full screen now (a game, a video), as Windows has said: ULTRON's Alt+Tab steps aside for it.
+pub static FULL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 fn full_screen(on: bool) {
     let n = FULL_SEQ.fetch_add(1, SeqCst) + 1;
     let Some(app) = APP.get().cloned() else { return };
     if !on {
+        FULL.store(false, SeqCst);
         let _ = app.emit_to("main", "fullscreen", false);
         return;
     }
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(260));
         if FULL_SEQ.load(SeqCst) == n && really_full() {
+            FULL.store(true, SeqCst);
             let _ = app.emit_to("main", "fullscreen", true);
         }
     });

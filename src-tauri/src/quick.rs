@@ -198,6 +198,11 @@ fn card_fits() -> bool {
 }
 
 /// Start it in the background once ULTRON is up.
+/// Still getting ready (the first minute or so after ULTRON starts).
+pub fn warming() -> bool {
+    WARMING.load(Ordering::SeqCst)
+}
+
 pub fn start(app: AppHandle) {
     let _ = APP.set(app.clone());
     let s = crate::router::specs();

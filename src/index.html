@@ -3405,6 +3405,51 @@ html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--ha
   background:radial-gradient(50% 160% at 50% 0, rgba(127,224,168,.42), rgba(127,224,168,.12) 55%, transparent 80%); transform-origin:50% 0}
 .barglow.on{animation:barGlow 2.4s cubic-bezier(.3,.6,.3,1)}
 @keyframes barGlow{0%{opacity:0; transform:scaleX(.15)} 25%{opacity:1} 100%{opacity:0; transform:scaleX(1.25)}}
+/* ---------- the Connect tab: your apps and files, chosen from two drop-down lists ---------- */
+.cx-top{position:relative; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:2px 0 12px}
+.cx-dd{display:flex; align-items:center; gap:10px; min-width:0; height:52px; padding:0 10px 0 9px; border:0; border-radius:16px; color:#fff; font:inherit; text-align:left; cursor:default;
+  background:rgba(255,255,255,.07); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.09); transition:background .2s, box-shadow .2s, transform .3s var(--spring)}
+.cx-dd:hover{background:rgba(255,255,255,.11)} .cx-dd:active{transform:scale(.97)}
+.cx-dd.on{background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.cx-ic{width:32px; height:32px; flex:none; border-radius:10px; display:grid; place-items:center; background:linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,.06))}
+.cx-ic svg, .cx-chev{width:18px; height:18px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.cx-l{flex:1; min-width:0; display:flex; flex-direction:column} .cx-l b{font-size:13px; font-weight:650} .cx-l small{font-size:11px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cx-chev{width:15px; height:15px; opacity:.7; transition:transform .35s var(--spring)} .cx-dd.on .cx-chev{transform:rotate(180deg)}
+/* (the list opens inside the tab, under its button, and the notch grows round it) */
+.cx-menu{grid-column:1 / -1; display:none; flex-direction:column; max-height:236px; padding:6px; border-radius:16px; overflow:hidden;
+  background:rgba(0,0,0,.28); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.1); transform-origin:var(--ox, 25%) 0}
+.cx-menu.on{display:flex; animation:cxDrop .42s cubic-bezier(.2,1.2,.32,1)}
+@keyframes cxDrop{from{opacity:0; transform:translateY(-6px) scale(.96)}}
+.cx-menu.right{--ox:75%}
+.cx-q{height:32px; flex:none; margin-bottom:5px; padding:0 11px; border:0; border-radius:10px; outline:0; background:rgba(255,255,255,.08); color:#fff; font:inherit; font-size:12.5px}
+.cx-q::placeholder{color:rgba(255,255,255,.4)}
+.cx-opts{overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.2) transparent}
+.cx-o{display:flex; align-items:center; gap:10px; width:100%; height:36px; padding:0 8px; border:0; border-radius:10px; background:none; color:#fff; font:inherit; font-size:12.5px; text-align:left; cursor:default}
+.cx-o:hover{background:rgba(255,255,255,.08)}
+.cx-o img, .cx-o .cx-oi{width:20px; height:20px; flex:none; border-radius:5px; object-fit:contain}
+.cx-o .cx-oi{display:grid; place-items:center; background:rgba(255,255,255,.1)} .cx-o .cx-oi svg{width:13px; height:13px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round}
+.cx-o span{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cx-o i{width:18px; height:18px; flex:none; border-radius:50%; box-shadow:inset 0 0 0 1.4px rgba(255,255,255,.3); transition:background .2s, box-shadow .2s}
+.cx-o.on i{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23111' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; box-shadow:none}
+.cx-sec{margin-bottom:12px} .cx-sec:empty, .cx-sec.none{display:none}
+.cx-h{margin:0 2px 7px; font-size:11.5px; font-weight:650; color:var(--dim)}
+.cx-apps{display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:6px}
+.cx-a{position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:11px 4px 9px; border:0; border-radius:14px; background:rgba(255,255,255,.06); color:#fff; font:inherit; cursor:default; transition:background .2s, transform .3s var(--spring)}
+.cx-a:hover{background:rgba(255,255,255,.1)} .cx-a:active{transform:scale(.95)}
+.cx-a img{width:30px; height:30px; object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.3))}
+.cx-a span{max-width:100%; font-size:11px; font-weight:550; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cx-a em, .cx-f em{position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-size:10px; color:#fff; background:rgba(0,0,0,.45); opacity:0; transition:opacity .2s}
+.cx-a:hover em, .cx-f:hover em{opacity:1}
+.cx-new{animation:cxIn .5s cubic-bezier(.2,1.4,.32,1)} @keyframes cxIn{from{opacity:0; transform:scale(.7)}}
+.cx-files{display:flex; flex-direction:column; gap:5px}
+.cx-f{position:relative; display:flex; align-items:center; gap:10px; padding:8px 30px 8px 10px; border-radius:12px; background:rgba(255,255,255,.06)}
+.cx-f .cx-oi{width:26px; height:26px; flex:none; border-radius:7px; display:grid; place-items:center; background:rgba(255,255,255,.1)} .cx-f .cx-oi svg{width:15px; height:15px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.cx-f span{flex:1; min-width:0; display:flex; flex-direction:column} .cx-f b{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .cx-f small{font-size:10.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; direction:rtl; text-align:left}
+.cx-f em{top:50%; margin-top:-9px; right:8px}
+.cx-empty{margin:4px 2px 12px; font-size:12px; line-height:1.5; color:var(--dim)} .cx-empty.none{display:none}
+.cx-more{margin-top:4px; border-radius:12px} .cx-more summary{list-style:none; padding:8px 4px; font-size:12px; font-weight:600; color:var(--dim); cursor:default}
+.cx-more summary::before{content:"›"; display:inline-block; width:14px; transition:transform .25s} .cx-more[open] summary::before{transform:rotate(90deg)}
+.cx-more .cn-list{grid-template-columns:1fr; margin:2px 0 8px} .cx-more .tc-list{margin:2px 0 8px}
 /* ---------- app connections (Settings > Tasks) ---------- */
 .cn-list{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:-4px 0 14px}
 .cn{position:relative; padding:12px 13px; border-radius:14px; background:rgba(255,255,255,.06); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.08); transition:background .25s}
@@ -3945,7 +3990,7 @@ html.vision .wc-in{border-radius:16px}
       <div class="dt-cmds"><div class="dt-cmd"><b>new line</b><span>Line break</span></div><div class="dt-cmd"><b>new paragraph</b><span>Blank line</span></div><div class="dt-cmd"><b>comma, period</b><span>, .</span></div><div class="dt-cmd"><b>question mark</b><span>?</span></div><div class="dt-cmd"><b>open quote … close quote</b><span>“ ”</span></div><div class="dt-cmd"><b>bullet point</b><span>•</span></div><div class="dt-cmd"><b>scratch that</b><span>Takes back the last thing said</span></div><div class="dt-cmd"><b>pause dictation</b><span>Then “resume dictation”</span></div><div class="dt-cmd"><b>stop dictation</b><span>Done</span></div></div>
     </section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="gem" role="radio" class="soon" disabled aria-disabled="true" title="Cloud is under development"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Cloud<small>Under development</small></span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Web answers<small>Questions about the world are looked up on Google, boiled down, and answered</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
-    <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row cn-row"><span class="sw-l">App connections<small>Let tasks read from and act in your apps. Each is signed in with a key you make in that app; it stays in Windows Credential Manager on this PC and only ever goes to that app.</small></span></div><div class="cn-list" id="cnList"></div><div class="sw-row"><span class="sw-l">Taught tasks<small>Show ULTRON something once and it can do it again, on this PC, with no key and no limit</small></span></div><div class="tc-list" id="tcList"></div><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
+    <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
     <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">How ULTRON looks, and the character in the notch.</p><div class="ui-pick" id="uiPick" role="radiogroup" aria-label="Look"><button data-ui="ultron" role="radio"><span class="ui-pv pv-u"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-glint"></i></span><span class="ui-nm"><b>ULTRON</b><small>Liquid glass</small></span></button><button data-ui="vision" role="radio"><span class="ui-pv pv-v"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-fab"></i></span><span class="ui-nm"><b>VISION</b><small>Solid and quick, for lighter PCs</small></span></button></div><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Glass dialogs<small>Windows’ message boxes (“Save changes?”) appear as ULTRON’s own glass ones</small></span><button class="tg" role="switch" data-set="glassDlg" aria-label="Glass dialogs"></button></div><div class="sw-row"><span class="sw-l">ULTRON’s volume and brightness<small>Shown under the notch instead of Windows’ own box when you press the volume keys</small></span><button class="tg" role="switch" data-set="osd" aria-label="ULTRON’s volume and brightness"></button></div><div class="sw-row"><span class="sw-l">ULTRON’s Alt+Tab<small>Your open windows as glass cards. Alt+Tab, or hold Alt and scroll (mouse or two fingers on the touchpad); Ctrl+Alt+← / → hops to the next window. Full-screen games keep Windows’ own.</small></span><button class="tg" role="switch" data-set="altTab" aria-label="ULTRON’s Alt+Tab"></button></div><div class="sw-row"><span class="sw-l">Desktop switch<small>Moving to another of Windows’ desktops, or making a new one, shows which one you’re on</small></span><button class="tg" role="switch" data-set="deskHud" aria-label="Desktop switch"></button></div><div class="sw-row"><span class="sw-l">Key sounds<small>A soft sound for every key you press, like a keyboard with creamy switches</small></span><button class="tg" role="switch" data-set="keySounds" aria-label="Key sounds"></button></div><div class="sw-row"><span class="sw-l">Click sounds<small>A light tick for each click</small></span><button class="tg" role="switch" data-set="clickSounds" aria-label="Click sounds"></button></div><div class="sw-row"><span class="sw-l">Switches<small>How the keys sound. Pick one to hear it</small></span><span class="seg ks-seg" data-set="keyPack" role="radiogroup"><button data-v="creamy" role="radio">Creamy</button><button data-v="thock" role="radio">Thocky</button><button data-v="clicky" role="radio">Clicky</button><button data-v="typewriter" role="radio">Typewriter</button><button data-v="bubble" role="radio">Bubble</button><button data-v="marble" role="radio">Marble</button></span></div><div class="sw-row"><span class="sw-l">Sound volume</span><input class="rng" type="range" min="0.1" max="1" step="0.01" data-set="keyVol" aria-label="Key sound volume"></div><div class="sw-row"><span class="sw-l">Pointer motion blur<small>A soft streak trails the pointer when it moves fast</small></span><button class="tg" role="switch" data-set="cursorBlur" aria-label="cursorBlur"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lkp-row"><div class="lkp" id="lkPrev"><div class="lkp-in"><div class="lk-date" id="lkpDate"></div><div class="lk-time" id="lkpTime"></div></div></div></div><div class="sw-row lk-only"><span class="sw-l">Clock<small>Glass shows your wallpaper through the figures</small></span><span class="seg" data-set="lkClock" role="radiogroup"><button data-v="glass" role="radio">Glass</button><button data-v="solid" role="radio">Solid</button></span></div><div class="sw-row lk-only"><span class="sw-l">Clock weight</span><span class="seg" data-set="lkWeight" role="radiogroup"><button data-v="thin" role="radio">Thin</button><button data-v="regular" role="radio">Regular</button><button data-v="bold" role="radio">Bold</button></span></div><div class="sw-row lk-only"><span class="sw-l">Clock colour</span><span class="seg" data-set="lkTint" role="radiogroup"><button data-v="white" role="radio">White</button><button data-v="warm" role="radio">Warm</button><button data-v="ice" role="radio">Ice</button><button data-v="rose" role="radio">Rose</button></span></div><div class="sw-row lk-only"><span class="sw-l">Battery and weather<small>Under the clock, in small pieces of glass</small></span><button class="tg" role="switch" data-set="lkWid" aria-label="Battery and weather on the lock screen"></button></div><div class="sw-row lk-only"><span class="sw-l">Only ULTRON’s lock screen<small id="lkWinSay">When the PC wakes, Windows won’t ask for its own sign-in first: ULTRON’s comes up instead. Restarts and Win L still use Windows’ sign-in.</small></span><button class="tg" role="switch" data-set="lkWin" aria-label="Only ULTRON’s lock screen"></button></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
     <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div><div class="sw-row"><span class="sw-l">Drop Shelf edge<small>Where it comes out: rest the pointer on that edge, or drag a file to it</small></span><span class="seg" data-set="dsSide" role="radiogroup"><button data-v="bottom" role="radio">Bottom</button><button data-v="left" role="radio">Left</button><button data-v="right" role="radio">Right</button></span></div><div class="sw-row"><span class="sw-l">Drop Shelf size</span><span class="seg" data-set="dsSize" role="radiogroup"><button data-v="compact" role="radio">Compact</button><button data-v="normal" role="radio">Normal</button><button data-v="large" role="radio">Large</button></span></div><div class="sw-row"><span class="sw-l">Names under items</span><button class="tg" role="switch" data-set="dsNames" aria-label="Names under items"></button></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>ULTRON’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or ULTRON closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="nfQuiet"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="nfSound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
@@ -4003,6 +4048,7 @@ html.vision .wc-in{border-radius:16px}
     <div class="tabs" role="tablist">
       <span class="pill" id="pill"></span>
       <button role="tab" data-tab="assistant" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h0"/></svg><span>Ask</span></button>
+      <button role="tab" data-tab="connect" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9.5 14.5l5-5"/><path d="M11 6.5l1.6-1.6a3.9 3.9 0 0 1 5.5 5.5L16.5 12"/><path d="M13 17.5l-1.6 1.6a3.9 3.9 0 0 1-5.5-5.5L7.5 12"/></svg><span>Connect</span></button>
       <button role="tab" data-tab="lyrics" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span>Music</span></button>
       <button role="tab" data-tab="today" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3.2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Today</span></button>
       <button role="tab" data-tab="browser" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg><span>Web</span></button>
@@ -4048,6 +4094,18 @@ html.vision .wc-in{border-radius:16px}
         <div class="srcnote" id="srcnote"><span id="srcnoteText">Lyrics from LRCLIB · follows whatever Windows is playing</span><button class="floatbtn" id="floatBtn" aria-pressed="false" title="Keep the lyrics floating on screen when the notch is closed"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><rect x="11" y="11" width="7" height="5" rx="1.5" fill="currentColor" stroke="none"/></svg>Float</button><span class="nudge" id="nudge" title="Nudge the lyrics if they run early or late"><button data-n="-0.5" aria-label="Lyrics earlier">−</button><span id="nudgeV">sync</span><button data-n="0.5" aria-label="Lyrics later">+</button></span></div>
       </section>
 
+      <section class="pane" data-pane="connect" role="tabpanel">
+        <div class="cx-top">
+          <button class="cx-dd" data-cx="apps" aria-haspopup="listbox"><span class="cx-ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><path d="M16.75 14v5.5M14 16.75h5.5"/></svg></span><span class="cx-l"><b>Apps</b><small id="cxAppsN">Choose apps to connect</small></span><svg class="cx-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg></button>
+          <button class="cx-dd" data-cx="files" aria-haspopup="listbox"><span class="cx-ic"><svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H10l2 2.2h5.5A2.5 2.5 0 0 1 20 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/></svg></span><span class="cx-l"><b>Files</b><small id="cxFilesN">Choose files and folders</small></span><svg class="cx-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg></button>
+          <div class="cx-menu" id="cxMenu" role="listbox"></div>
+        </div>
+        <div class="cx-sec" id="cxAppsSec"><div class="cx-h">Apps</div><div class="cx-apps" id="cxApps"></div></div>
+        <div class="cx-sec" id="cxFilesSec"><div class="cx-h">Files</div><div class="cx-files" id="cxFiles"></div></div>
+        <p class="cx-empty" id="cxEmpty">Connect the apps and files you work in. Then say “in Spotify, turn on shuffle” or “what does budget.docx say about rent?”, and it’s done there.</p>
+        <details class="cx-more"><summary>Online accounts</summary><div class="cn-list" id="cnList"></div></details>
+        <details class="cx-more"><summary>Taught tasks</summary><div class="tc-list" id="tcList"></div></details>
+      </section>
       <section class="pane" data-pane="today" role="tabpanel">
         <div class="td-top"><div class="td-day"><b id="tdDay"></b><span id="tdDate"></span></div><div class="td-wx off" id="tdWx"><b id="tdTemp"></b><span id="tdSky"></span></div></div>
         <ul class="list td-list">
@@ -4625,7 +4683,7 @@ function frame(now){
 /* ---------- tabs + height ---------- */
 const tabs = [...document.querySelectorAll('.tabs button')], pill = $('pill');
 const panes = Object.fromEntries([...document.querySelectorAll('.pane')].map(p => [p.dataset.pane, p]));
-const order = ['assistant', 'lyrics', 'today', 'browser', 'activity', 'wardrobe', 'settings'];
+const order = ['assistant', 'connect', 'lyrics', 'today', 'browser', 'activity', 'wardrobe', 'settings'];
 // the browser's tab shows only while there's a browser to go back to
 function webTab(){ let on = activeTab === 'browser'; try { on = on || bwHasPage; } catch(_){} document.querySelector('.tabs').classList.toggle('web', on); }
 function placePill(){ const b = tabs.find(x => x.dataset.tab === activeTab); pill.style.left = b.offsetLeft + 'px'; pill.style.width = b.offsetWidth + 'px'; }
@@ -4707,6 +4765,8 @@ function selectTab(name){
   if (wasBrowser) syncBrowser();
   webTab();
   if (name === 'activity') renderActivity();
+  if (name === 'connect'){ cxPaint(); cnPaint(); tcPaint(); }
+  if (name !== 'connect' && CX.menu) cxMenu('');
   if (name === 'today'){ tdPaint(); tdWeather(); }
   if (name === 'wardrobe') wearWarm();
   if (name === 'lyrics') { lastLine = -9; lyrQuiet = true; }
@@ -6954,6 +7014,8 @@ async function dictFinal(text){
    as soon as two of these agree on it (the last word, perhaps half heard, waits for the next), shaped as the finished
    piece will be, so what's typed only grows; the finished piece then sets the last of it right. */
 listen('heard-partial', t => {
+  // (asked by tapping the mic: what you're saying shows in the notch as you say it)
+  if (!DICT.on && pttUntil && t && !isEcho(t)){ you.classList.remove('hint'); you.textContent = t.replace(WAKE, '').trim(); fit(); return; }
   if (!DICT.on || DICT.paused || DICT_STOP.test(t) || DICT_PAUSE.test(t)) return;
   DICT.part = t; if (!DICT.partBusy && !DICT.final) dictPartNext();
 });
@@ -7054,13 +7116,18 @@ listen('link-command', async c => {
    it, an envelope each. Space is deeper, Enter fuller, Backspace a touch higher; each press is a hair different in
    pitch, as real keys are. */
 var KS = {ctx:null, bufs:null, gain:null};
+/* Each sound is a little physical model, not a recording and not a beep: the key bottoming out is a few thousandths of
+   a second of noise, dulled by the cap (soft caps, more dulled), and that knock sets the case ringing at a handful of
+   pitches that don't fit a scale (as wood and plastic do), each dying away at its own pace. A stabilizer rattles a
+   little under the space bar and Enter; letting go is a softer, higher tap; a desk answers it a few milliseconds
+   later. Each press uses one of four takes, a hair apart in pitch. */
 const KS_PACKS = {
-  creamy:{body:170, bodyDecay:.045, noise:1700, q:1.2, noiseDecay:.018, mix:.55, up:.35},
-  thock:{body:115, bodyDecay:.06, noise:850, q:1, noiseDecay:.022, mix:.65, up:.28},
-  clicky:{body:320, bodyDecay:.018, noise:4200, q:2.2, noiseDecay:.009, mix:.25, up:.55, click:true},
-  typewriter:{body:260, bodyDecay:.03, noise:2600, q:1.6, noiseDecay:.03, mix:.35, up:.2, ping:3200},
-  bubble:{bubble:true, up:.0},
-  marble:{body:240, bodyDecay:.03, noise:3300, q:2.5, noiseDecay:.014, mix:.4, up:.4},
+  creamy:{f0:330, modes:[1, 1.62, 2.31, 3.4], amps:[1, .5, .26, .12], decay:.032, bright:1500, snap:.9, body:.75, up:.38},
+  thock:{f0:205, modes:[1, 1.48, 2.21, 3.12], amps:[1, .6, .26, .12], decay:.05, bright:1050, snap:.8, body:.95, up:.3},
+  clicky:{f0:540, modes:[1, 1.71, 2.62], amps:[1, .42, .2], decay:.022, bright:3800, snap:1, body:.45, up:.55, click:true},
+  typewriter:{f0:290, modes:[1, 2.76, 5.4], amps:[1, .35, .25], decay:.04, bright:3200, snap:1, body:.6, up:.25, ping:2950},
+  bubble:{bubble:true, up:.5},
+  marble:{f0:780, modes:[1, 1.83, 2.71, 4.1], amps:[1, .45, .32, .18], decay:.055, bright:5200, snap:.7, body:.6, up:.45},
 };
 /* The language you talk, dictate and are answered in. Any but English needs the speech model that knows them all
    (about 190 MB, fetched once, the first time) and, to be spoken back, that language's voice (about 60 MB). Japanese,
@@ -7119,6 +7186,84 @@ document.addEventListener('click', async e => {
   if (b.dataset.tc === 'play'){ closeSettings(); teachPlay(b.dataset.n); }
   else { await invoke('teach_forget', {name:b.dataset.n}); tcPaint(); }
 }, true);
+/* The Connect tab: apps and files you choose from its two lists. A task that names a connected app ("in Spotify, turn on
+   shuffle") brings that app to the front and is done there at once; a question that names a connected file is
+   answered from what the file says. */
+const CX = {menu:'', ctx:''};
+const CX_FILE = '<svg viewBox="0 0 24 24"><path d="M7 3.5h6.5L18 8v12.5H7z"/><path d="M13 3.5V8h5"/></svg>', CX_DIR = '<svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H10l2 2.2h5.5A2.5 2.5 0 0 1 20 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/></svg>';
+function cxPaint(fresh){
+  const apps = S.cxApps || [], files = S.cxFiles || [];
+  $('cxAppsN').textContent = apps.length ? apps.length + (apps.length === 1 ? ' app connected' : ' apps connected') : 'Choose apps to connect';
+  $('cxFilesN').textContent = files.length ? files.length + (files.length === 1 ? ' connected' : ' connected') : 'Choose files and folders';
+  $('cxApps').innerHTML = apps.map(a => `<button class="cx-a${fresh === a.name ? ' cx-new' : ''}" data-cxa="${esc(a.name)}" title="Bring ${esc(a.name)} to the front"><img alt="" src="${esc(iconCache.get(a.launch) || '')}"><span>${esc(a.name)}</span><em data-cxx="${esc(a.name)}">✕</em></button>`).join('');
+  $('cxFiles').innerHTML = files.map(f => `<div class="cx-f${fresh === f.path ? ' cx-new' : ''}"><i class="cx-oi">${f.dir ? CX_DIR : CX_FILE}</i><span><b>${esc(f.name)}</b><small>${esc(f.path)}</small></span><em data-cxf="${esc(f.path)}">✕</em></div>`).join('');
+  $('cxAppsSec').classList.toggle('none', !apps.length); $('cxFilesSec').classList.toggle('none', !files.length);
+  $('cxEmpty').classList.toggle('none', !!(apps.length || files.length));
+  const need = apps.map(a => a.launch).filter(l => l && !iconCache.has(l));
+  if (need.length) invoke('app_icons', {sources:need}).then(u => { (u || []).forEach((x, i) => { if (x) iconCache.set(need[i], x); }); cxPaint(); });
+}
+async function cxMenu(which){
+  const m = $('cxMenu');
+  document.querySelectorAll('.cx-dd').forEach(b => b.classList.toggle('on', b.dataset.cx === which && CX.menu !== which));
+  if (CX.menu === which || !which){ CX.menu = ''; m.classList.remove('on'); fit(); return; }
+  CX.menu = which; m.classList.toggle('right', which === 'files');
+  if (which === 'apps'){
+    if (!startApps) startApps = (await invoke('start_apps')) || [];
+    m.innerHTML = '<input class="cx-q" placeholder="Find an app" spellcheck="false"><div class="cx-opts" id="cxOpts"></div>';
+    const paint = q => {
+      const on = new Set((S.cxApps || []).map(a => a.name)), list = startApps.filter(a => !q || a.name.toLowerCase().includes(q)).slice(0, 80);
+      $('cxOpts').innerHTML = list.map(a => `<button class="cx-o${on.has(a.name) ? ' on' : ''}" data-cxo="${esc(a.name)}" data-l="${esc(a.launch)}"><img alt="" src="${esc(iconCache.get(a.launch) || '')}"><span>${esc(a.name)}</span><i></i></button>`).join('') || '<div class="cx-o"><span>No app by that name</span></div>';
+      const need = list.map(a => a.launch).filter(l => l && !iconCache.has(l)).slice(0, 40);
+      if (need.length) invoke('app_icons', {sources:need}).then(u => { (u || []).forEach((x, i) => { if (x) iconCache.set(need[i], x); }); $('cxOpts')?.querySelectorAll('img').forEach(im => { const l = im.parentElement.dataset.l; if (!im.getAttribute('src') && iconCache.get(l)) im.src = iconCache.get(l); }); });
+    };
+    paint(''); const q = m.querySelector('.cx-q'); q.addEventListener('input', () => paint(q.value.trim().toLowerCase())); setTimeout(() => q.focus({preventScroll:true}), 60);
+  } else {
+    m.innerHTML = `<div class="cx-opts"><button class="cx-o" data-cxp="files"><i class="cx-oi">${CX_FILE}</i><span>Choose files…</span></button><button class="cx-o" data-cxp="folder"><i class="cx-oi">${CX_DIR}</i><span>Choose a folder…</span></button></div>`;
+  }
+  m.classList.add('on'); fit();
+}
+function cxSave(fresh){ save(); cxPaint(fresh); }
+document.addEventListener('click', async e => {
+  const t = e.target.closest ? e.target : null; if (!t) return;
+  const dd = t.closest('.cx-dd'); if (dd){ cxMenu(dd.dataset.cx); return; }
+  const o = t.closest('[data-cxo]');
+  if (o){ const list = S.cxApps || [], i = list.findIndex(a => a.name === o.dataset.cxo);
+    if (i >= 0) list.splice(i, 1); else list.push({name:o.dataset.cxo, launch:o.dataset.l});
+    S.cxApps = list; o.classList.toggle('on', i < 0); cxSave(i < 0 ? o.dataset.cxo : ''); return; }
+  const pk = t.closest('[data-cxp]');
+  if (pk){ cxMenu(''); const got = (await invoke('connect_pick', {folder:pk.dataset.cxp === 'folder'})) || [];
+    const files = S.cxFiles || [];
+    for (const path of got) if (path && !files.some(f => f.path === path)) files.push({path, name:path.split(/[\\/]/).pop(), dir:pk.dataset.cxp === 'folder'});
+    S.cxFiles = files; cxSave(got[0] || ''); return; }
+  const x = t.closest('[data-cxx]'); if (x){ e.stopPropagation(); S.cxApps = (S.cxApps || []).filter(a => a.name !== x.dataset.cxx); cxSave(); return; }
+  const xf = t.closest('[data-cxf]'); if (xf){ S.cxFiles = (S.cxFiles || []).filter(f => f.path !== xf.dataset.cxf); cxSave(); return; }
+  const a = t.closest('[data-cxa]'); if (a){ invoke('app_task', {name:a.dataset.cxa, text:''}); return; }
+  if (CX.menu && !t.closest('#cxMenu')) cxMenu('');
+});
+// a request that names a connected app or file
+async function cxRoute(cmd){
+  const l = cmd.toLowerCase(), word = s => new RegExp('(^|[^\\p{L}\\p{N}])' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^\\p{L}\\p{N}])', 'iu');
+  for (const a of S.cxApps || []){
+    const names = [a.name, a.name.split(/\s+/)[0]].filter(n => n.length >= 3);
+    const n = names.find(n => word(n).test(cmd)); if (!n) continue;
+    const re = new RegExp('^(?:(?:in|on|with|using|inside|open)\\s+(?:the\\s+)?' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s+app)?[,:]?\\s*(?:and\\s+|then\\s+)?)|(?:\\s+(?:in|on|with|using)\\s+(?:the\\s+)?' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s+app)?[.!?]?$)', 'i');
+    if (!re.test(cmd)) continue;
+    const rest = cmd.replace(re, ' ').trim();
+    if (rest && !/^(turn|switch|enable|disable|set|select|choose|pick|click|press|tap|type|write|tick|untick|uncheck|expand|collapse|open|go to|search|scroll|play|pause)\b/i.test(rest)) continue;
+    const m0 = rest ? `In ${a.name}: ${rest}` : `Bringing up ${a.name}.`;
+    reply.classList.remove('bad', 'long', 'steps'); reveal(reply, m0, 45); fit();
+    let said = ''; try { said = await invokeLoud('app_task', {name:a.name, text:rest}); } catch(err){ said = String(err).replace(/^Error:\s*/, ''); }
+    if (said){ reveal(reply, said, 40); fit(); }
+    return {reply:said || m0, ok:true, action:'', icon:'chat'};
+  }
+  for (const f of S.cxFiles || []){
+    const stem = f.name.replace(/\.[^.]+$/, '');
+    if (!(l.includes(f.name.toLowerCase()) || (stem.length >= 3 && word(stem).test(cmd)))) continue;
+    try { const text = await invokeLoud('connect_file_text', {path:f.path}); CX.ctx = `\n\n(This is about the user's ${f.dir ? 'folder' : 'file'} “${f.name}”. ${f.dir ? '' : 'What it says: '}${text})`; } catch(_){}
+    break;
+  }
+  return null;
+}
 /* App connections (connect.rs): a card for each app; Connect opens a field for its key (and its address, for the two
    that need one), and a link to where that app makes keys */
 const CN_HELP = {github:['Personal access token', 'https://github.com/settings/tokens?type=beta'], notion:['Integration secret', 'https://www.notion.so/my-integrations'],
@@ -7241,35 +7386,54 @@ listen('osd', d => { if (S.osd) osdShow(d.kind, d.level, d.muted); });
 listen('bright', v => { if (S.osd) osdShow('bright', v / 100); });
 if (TAURI && S.osd) setTimeout(() => invoke('osd_set', {on:true}), 2500);
 function ksSync(){ invoke('sounds_set', {keys:!!S.keySounds, clicks:!!S.clickSounds}); }
-// (one press's sound as samples: kind 0 key, 1 space, 2 enter, 3 backspace, 4 click, 5 key up, 6 click up)
-function ksMake(ctx, pk, kind){
-  const sr = ctx.sampleRate, up = kind === 5 || kind === 6, len = Math.round(sr * .14), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0);
-  const f = kind === 1 ? .72 : kind === 2 ? .85 : kind === 3 ? 1.12 : kind === 4 || kind === 6 ? 1.9 : 1, loud = (kind === 2 ? 1.15 : kind === 1 ? 1.1 : 1) * (up ? pk.up : 1);
+// (one press's sound as samples: kind 0 key, 1 space, 2 enter, 3 backspace, 4 click, 5 key up, 6 click up; take 0-3)
+function ksMake(ctx, pk, kind, take){
+  const sr = ctx.sampleRate, up = kind === 5 || kind === 6, mouse = kind === 4 || kind === 6, big = kind === 1 || kind === 2;
+  const len = Math.round(sr * (pk.bubble ? .12 : .2)), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0);
+  let seed = (kind * 7 + take * 131 + 17) >>> 0; const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296) * 2 - 1;
   if (pk.bubble){
-    let ph = 0;
-    for (let i = 0; i < len; i++){ const t = i / sr, fr = (up ? 900 : 620) * f * Math.exp(-t * 18) + 180; ph += 2 * Math.PI * fr / sr; d[i] = Math.sin(ph) * Math.exp(-t * 55) * .55 * (up ? .35 : 1); }
+    // (a drop into water: a tone that rises as the bubble closes, a soft attack, gone in a tenth of a second)
+    let ph = 0; const base = (mouse ? 900 : 520) * (kind === 1 ? .78 : kind === 2 ? .86 : 1) * (up ? 1.25 : 1) * (1 + rand() * .04);
+    for (let i = 0; i < len; i++){ const t = i / sr, fr = base * (1 + 1.4 * (1 - Math.exp(-t * 38))); ph += 2 * Math.PI * fr / sr;
+      d[i] = Math.sin(ph) * Math.min(1, t / .0015) * Math.exp(-t * (up ? 70 : 42)) * .6 * (up ? pk.up : 1); }
     return b;
   }
-  // a band-pass filter (two poles) for the noise
-  const w = 2 * Math.PI * pk.noise * f / sr, al = Math.sin(w) / (2 * pk.q), a0 = 1 + al, b0 = al / a0, b2 = -al / a0, a1 = -2 * Math.cos(w) / a0, a2 = (1 - al) / a0;
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0, ph = 0, pp = 0;
+  const f0 = (mouse ? 1750 : pk.f0) * (kind === 1 ? .7 : kind === 2 ? .8 : kind === 3 ? 1.07 : 1) * (up ? 1.32 : 1) * (1 + rand() * .025);
+  const dec = pk.decay * (big ? 1.45 : 1) * (up ? .55 : 1) * (mouse ? .3 : 1);
+  const modes = pk.modes.map((r, i) => ({w:2 * Math.PI * f0 * r * (1 + rand() * .012) / sr, a:pk.amps[i] * (1 + rand() * .15), env:1, k:Math.exp(-1 / (sr * dec / (1 + i * .7))), ph:Math.abs(rand()) * Math.PI}));
+  const lpa = Math.exp(-2 * Math.PI * pk.bright * (mouse ? 1.8 : up ? 1.3 : 1) / sr), hit = Math.round(sr * (mouse ? .0018 : .0035));
+  const rattle = big ? [Math.round(sr * .0065), Math.round(sr * .0115)] : [];
+  let lp = 0, exc = 0;
   for (let i = 0; i < len; i++){
-    const t = i / sr, x = Math.random() * 2 - 1, y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x; y2 = y1; y1 = y;
-    ph += 2 * Math.PI * pk.body * f * (up ? 1.4 : 1) / sr;
-    let s = y * Math.exp(-t / (pk.noiseDecay * (up ? .7 : 1))) * 1.6 + Math.sin(ph) * Math.exp(-t / (pk.bodyDecay * (up ? .6 : 1))) * pk.mix;
-    if (pk.click && t < .002) s += (Math.random() * 2 - 1) * .6;
-    if (pk.ping && !up){ pp += 2 * Math.PI * (kind === 2 ? 4200 : pk.ping) / sr; s += Math.sin(pp) * Math.exp(-t / (kind === 2 ? .12 : .02)) * (kind === 2 ? .25 : .06); }
-    d[i] = s * loud * .5;
+    const t = i / sr;
+    // the knock: noise under a falling slope, through the cap's low-pass
+    let x = i < hit ? rand() * (1 - i / hit) : 0;
+    for (const r of rattle) if (i >= r && i < r + sr * .0012) x += rand() * .22 * (1 - (i - r) / (sr * .0012));
+    if (pk.click && !up && (i < sr * .0009 || (i > sr * .009 && i < sr * .0098))) x += rand() * .8;
+    lp = x + (lp - x) * lpa; exc = exc * .995 + Math.abs(lp) * .02;
+    let s = lp * pk.snap * 2.2;
+    for (const m of modes){ s += Math.sin(m.ph) * m.a * m.env * pk.body * (i < hit ? i / hit : 1); m.ph += m.w; m.env *= m.k; }
+    if (pk.ping && !up){ s += Math.sin(2 * Math.PI * (kind === 2 ? 4100 : pk.ping) * t) * Math.exp(-t / (kind === 2 ? .14 : .025)) * (kind === 2 ? .22 : .07); }
+    s += rand() * .025 * Math.exp(-t / .01);                           // (the spring, very faint)
+    d[i] = s;
   }
+  // a desk under it: the same, 7 ms on, softer and darker
+  const dl = Math.round(sr * .007); let rlp = 0;
+  for (let i = len - 1; i >= dl; i--){ rlp = d[i - dl]; d[i] += rlp * .18; }
+  let peak = 0; for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(d[i]));
+  const g = (peak ? .85 / peak : 1) * (up ? pk.up : 1) * (mouse ? .6 : big ? 1.05 : .9);
+  const fade = Math.round(sr * .012);
+  for (let i = 0; i < len; i++) d[i] *= g * (i > len - fade ? (len - i) / fade : 1);
   return b;
 }
 function ksPlay(kind){
   if (!KS.ctx){ KS.ctx = new AudioContext({latencyHint:'interactive'}); KS.gain = KS.ctx.createGain(); KS.gain.connect(KS.ctx.destination); }
   if (KS.ctx.state === 'suspended') KS.ctx.resume();
-  if (!KS.bufs){ const pk = KS_PACKS[S.keyPack] || KS_PACKS.creamy; KS.bufs = [0, 1, 2, 3, 4, 5, 6].map(k => ksMake(KS.ctx, pk, k)); }
-  const src = KS.ctx.createBufferSource(); src.buffer = KS.bufs[kind] || KS.bufs[0];
-  src.playbackRate.value = .96 + Math.random() * .08;
-  KS.gain.gain.value = S.keyVol ?? .6;
+  if (!KS.bufs){ const pk = KS_PACKS[S.keyPack] || KS_PACKS.creamy; KS.bufs = [0, 1, 2, 3, 4, 5, 6].map(k => [0, 1, 2, 3].map(n => ksMake(KS.ctx, pk, k, n))); }
+  const takes = KS.bufs[kind] || KS.bufs[0], src = KS.ctx.createBufferSource();
+  src.buffer = takes[(Math.random() * takes.length) | 0];
+  src.playbackRate.value = .98 + Math.random() * .04;
+  KS.gain.gain.value = (S.keyVol ?? .6) * (.92 + Math.random() * .16);
   src.connect(KS.gain); src.start();
 }
 listen('tick', k => { if ((k <= 3 || k === 5) ? S.keySounds : S.clickSounds) ksPlay(k); });
@@ -7491,6 +7655,7 @@ async function runAssist(cmd){
   hideConfirm();
   const ph = cmd.match(/^(?:on|in|using|with)\s+my\s+phone[,:]?\s+(.+)$/i) || cmd.match(/^(.+?)\s+on\s+my\s+phone[.!?]?$/i);
   if (ph) return phoneDo(ph[1].trim());
+  if (TAURI){ const cx = await cxRoute(cmd); if (cx) return cx; }
   const tl = cmd.match(/^(?:learn|watch me|teach (?:you|ultron))(?:\s+how)?(?:\s+to)?\s+(.+?)[.!?]?$/i);
   if (tl && TAURI) return teachStart(tl[1]);
   const tp = cmd.match(/^(?:do|run|repeat)\s+(?:my\s+|the\s+)?(.+?)[.!?]?$/i);
@@ -7508,7 +7673,7 @@ async function runAssist(cmd){
   if (nbCompact()) nbShow(NB_DOTS + 'Working on it…');     // asked with the notch closed: the bubble says so straight away
   Voice.stop();
   syncStop(true);
-  const r = await invoke('assist', {text:cmd});
+  const r = await invoke('assist', {text:cmd + (CX.ctx || '')}); CX.ctx = '';
   const stopped = mine.stopped, streamed = mine.started, said = mine.text, agent = mine.agent;
   if (aiStream !== mine) return r;                       // (a newer question took over while this one was winding down)
   aiStream = null; setThinking(false);
@@ -7886,10 +8051,11 @@ function startTalk(){
   $('micSt').classList.add('ptt');
   setOpen(true); selectTab('assistant');
   you.classList.add('hint'); you.textContent = 'Go ahead, I\'m listening…'; reply.innerHTML = '';
+  invoke('voice_config', {live:true});
   hop = .7;
   clearTimeout(pttT); pttT = setTimeout(endTalk, 12000);
 }
-function endTalk(){ pttUntil = 0; $('micSt').classList.remove('ptt'); clearTimeout(pttT); }
+function endTalk(){ pttUntil = 0; $('micSt').classList.remove('ptt'); clearTimeout(pttT); invoke('voice_config', {live:false}); }
 $('micSt').title = 'Click to talk · right-click to mute';
 $('micSt').addEventListener('click', e => {
   e.stopPropagation(); closeDD(); closePanels();
@@ -9229,7 +9395,7 @@ $('swMem').addEventListener('click', e => {
   b.parentElement.classList.add('gone'); setTimeout(paintMemory, 380);
 });
 function openSettings(sec){
-  setTimeout(() => { window.lkStyle && lkStyle(); window.cnPaint && cnPaint(); window.tcPaint && tcPaint(); }, 0);
+  setTimeout(() => { window.lkStyle && lkStyle(); }, 0);
   paintMemory(); paintRoutines();
   closeDD(); closeWifi(); closeStart(); closeCal();
   if (sec) showSec(sec);
