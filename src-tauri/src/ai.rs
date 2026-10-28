@@ -22,7 +22,7 @@ use crate::media::Media;
 const FAST_FILE: &str = "qwen2.5-1.5b-instruct-q4_k_m.gguf";
 const FAST_URL: &str = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf";
 // which smart brain (and which eyes) a PC gets is decided in router.rs
-const NO_WINDOW: u32 = 0x0800_0000;
+const NO_WINDOW: u32 = 0x0000_0008; // DETACHED_PROCESS: no console (and no Console Window Host beside it)
 /// the brain works at slightly lower priority, so the notch's animations never stutter while it thinks
 const BELOW_NORMAL: u32 = 0x0000_4000;
 /// the brain file that's loaded now
@@ -285,6 +285,13 @@ impl Ai {
 /// Keep an exchange: in the running conversation, and in the history on disk.
 pub fn remember_chat(app: &AppHandle, user: &str, reply: &str) {
     app.state::<Ai>().remember(user, reply);
+    if heartfelt(user) && !reply.trim().is_empty() {
+        let mut t = HEART_TOLD.lock().unwrap();
+        t.push(reply.trim().chars().take(160).collect());
+        if t.len() > 6 {
+            t.remove(0);
+        }
+    }
     crate::chats::add(app, user, reply);
 }
 
@@ -740,7 +747,34 @@ pub fn set_config(app: &AppHandle, c: Config) {
 
 /* ---------------- talking to it ---------------- */
 
+/// The language you talk to ULTRON in (Settings > Voice); it replies in it too.
+pub static LANG: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+
+fn tongue() -> &'static str {
+    match LANG.lock().unwrap().as_str() {
+        "hi" => "Hindi",
+        "es" => "Spanish",
+        "fr" => "French",
+        "de" => "German",
+        "pt" => "Portuguese",
+        "it" => "Italian",
+        "ar" => "Arabic",
+        "ru" => "Russian",
+        "ja" => "Japanese",
+        "zh" => "Chinese",
+        "ko" => "Korean",
+        "ur" => "Urdu",
+        "bn" => "Bengali",
+        "mr" => "Marathi",
+        "tr" => "Turkish",
+        "id" => "Indonesian",
+        "auto" => "the language the user writes in",
+        _ => "English",
+    }
+}
+
 fn system_prompt(len: &str) -> String {
+    let tongue = tongue();
     let size = match len {
         "short" => "one short sentence, under 15 words",
         "detailed" => "a few sentences, up to about 6, with real detail",
@@ -748,7 +782,7 @@ fn system_prompt(len: &str) -> String {
     };
     format!("You are ULTRON, a sharp, warm, slightly witty assistant that lives in the menu bar of the user's Windows PC. \
 You run on this computer and your replies are spoken aloud, so talk the way a relaxed, clever person talks out loud: contractions, natural rhythm, \
-{size}, plain spoken English, no lists, no headings, no emojis, no symbols you wouldn't say (a key word or two may be in **bold**: it's shown, not spoken). \
+{size}, plain spoken {tongue}, no lists, no headings, no emojis, no symbols you wouldn't say (a key word or two may be in **bold**: it's shown, not spoken). \
 Answer questions directly, correctly and helpfully. Be accurate: if you don't know or aren't sure, say so in a few words instead of guessing, \
 and never invent facts, numbers, names, links or anything about the user's PC. Never encourage violence, hatred or harm toward any person or group; if asked to, decline in one short, calm sentence. The last system message gives the current time, date, front app and music; \
 use it when asked about those. Sometimes a system message with fresh web results comes right before the question: they are newer than what you \
@@ -765,7 +799,8 @@ set a timer for <duration>; remind me in <duration> to <thing>; snap window left
 set brightness to <0-100>; dark mode on; dark mode off; open <wifi, bluetooth, display, sound, apps or update> settings; \
 find file <name>; open latest download; new folder <name> on <desktop, documents or downloads>; \
 wait <seconds>; take a screenshot; show desktop; lock the pc. Only use type or write when the user asks you to type or write something. \
-Never invent other commands, and never write a \">>\" line for small talk, questions, or when nothing needs doing.")
+Never invent other commands, and never write a \">>\" line for small talk, questions, or when nothing needs doing.{}",
+        if tongue == "English" { "" } else { " Always reply in that language; only the lines after \">> \" stay in English, exactly as listed." })
 }
 
 fn context_line(app: &AppHandle) -> String {
@@ -1310,6 +1345,21 @@ fn quick_math(q: &str) -> Option<String> {
 }
 
 /// A greeting, thanks, "how are you": small talk, which needs no lookup and no big model.
+/// The last few things said to feelings, fun and joke questions (so the next one isn't the same again).
+static HEART_TOLD: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+/// Chat about feelings, fun and jokes.
+fn heartfelt(user: &str) -> bool {
+    let l = format!(" {} ", user.to_lowercase());
+    const SAID: [&str; 40] = [
+        "joke", "funny", "make me laugh", "pun", "roast me", "pick up line", "pickup line", "riddle", "cheer me up", "motivate me", "compliment", "flirt",
+        "i feel", "i'm feeling", "im feeling", "i am feeling", "i'm sad", "im sad", "i am sad", "lonely", "depressed", "anxious", "stressed", "heartbroken", "bored",
+        "i'm happy", "im happy", "i love you", "love you", "miss you", "do you love", "are you real", "do you have feelings", "are you alive", "your favourite",
+        "your favorite", "would you rather", "truth or dare", "tell me something", "fun fact",
+    ];
+    SAID.iter().any(|s| l.contains(s))   // ("hi" and "thanks" stay here: instant)
+}
+
 fn small_talk(user: &str) -> bool {
     const SAID: [&str; 44] = [
         "hi", "hello", "hey", "hey there", "hi there", "hello there", "yo", "sup", "whats up", "how are you", "how are you doing", "how r u", "hows it going",
@@ -1349,6 +1399,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // (thinking questions are reasoning, not facts: no lookup, so the smart brain has less to read)
     // (for a recipe it's what the dish really is, so the brain doesn't reinvent it; other many-part answers need no lookup)
     let look_up = if many { dish_of(user) } else { Some(user.to_string()) };
+    let mut google_said: Option<String> = None;
     let web = if let (true, Some(q)) = (config(app).web && (!thinking || many || cloud.is_some()), look_up) {
         // Uplink: a question about the world is looked up on Google too, its results boiled down to the lines that
         // bear on it (uplink.rs); the other sources (Wikipedia, news, DuckDuckGo) look at the same time
@@ -1368,7 +1419,11 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             std::thread::sleep(Duration::from_millis(40));
         }
         let from_google = google.filter(|g| g.is_finished()).and_then(|g| g.join().ok().flatten());
-        from_google.or_else(|| if looking.is_finished() { looking.join().ok().flatten() } else { None })
+        // (Google's own answer, when there is one, is said as it is: quick, and better than the small brain's retelling)
+        if let Some(d) = from_google.as_ref().and_then(|f| f.direct.clone()) {
+            google_said = Some(d);
+        }
+        from_google.map(|f| f.text).filter(|t| !t.is_empty()).or_else(|| if looking.is_finished() { looking.join().ok().flatten() } else { None })
     } else {
         None
     };
@@ -1388,6 +1443,33 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     let t_gen = Instant::now();
     let mut via = "";
     let mut text = None;
+    if let Some(d) = google_said.filter(|_| !many) {
+        emit(&d);
+        text = Some(d);
+        via = "google";
+    }
+    // (feelings, fun and jokes: answered warmly and freshly, by your own key's model when it's set; this PC's small brain
+    //  was bland there and told the same jokes again, so it's told what it has already said, and let loose a little)
+    let heart = !many && heartfelt(user);
+    let heart_note = if heart {
+        let told = HEART_TOLD.lock().unwrap().clone();
+        format!("\n\nThis is about feelings, fun or a joke: answer like a warm, witty friend, natural and varied, in two or three sentences. A joke must be fresh and clever{}.",
+            if told.is_empty() { String::new() } else { format!(", and not any of these, already told: {}", told.join(" | ")) })
+    } else {
+        String::new()
+    };
+    if text.is_none() && heart {
+        if let Some(c) = &cloud {
+            let mut msgs = build_messages(app, user, None);
+            if let Some(first) = msgs.first_mut() {
+                first.1.push_str(&heart_note);
+            }
+            if let Ok(t) = crate::cloud::chat(c, &msgs, 220, 0.9, 0, |f| emit(f), cancelled) {
+                text = Some(t);
+                via = "cloud";
+            }
+        }
+    }
     if let (true, Some(c)) = (text.is_none(), &cloud) {
         // (a service gets the ordinary conversation prompt: it needs no lean one to be quick)
         let msgs = if many { steps_messages(app, user, web.as_deref()) } else { build_messages(app, user, web.as_deref()) };
@@ -1417,8 +1499,14 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             if quick.is_some() && !many {
                 quick_ready(app);
             }
-            let msgs = if many { steps_messages(app, user, web.as_deref()) } else if thinking { thinking_messages(app, user) } else { build_messages(app, user, brief_web.as_deref()) };
-            let t = generate_in(app, &msgs, max, if many { 0.3 } else if quick.is_some() { 0.25 } else { 0.4 }, None, quick, cap, |f| emit(f))?;
+            let mut msgs = if many { steps_messages(app, user, web.as_deref()) } else if thinking { thinking_messages(app, user) } else { build_messages(app, user, brief_web.as_deref()) };
+            if heart {
+                if let Some(first) = msgs.first_mut() {
+                    first.1.push_str(&heart_note);
+                }
+            }
+            let temp = if heart { 0.85 } else if many { 0.3 } else if quick.is_some() { 0.25 } else { 0.4 };
+            let t = generate_in(app, &msgs, max, temp, None, quick, cap, |f| emit(f))?;
             if let (Some(p), false) = (quick, many) {
                 *QUICK_HOLDS.lock().unwrap() = (p, "chat"); // (its memory still starts with the chat opening)
             }

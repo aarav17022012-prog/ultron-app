@@ -60,8 +60,13 @@ mod procs;
 mod coders;
 mod minfx;
 mod signin;
+mod dialogs;
+mod osd;
+mod alttab;
+mod desks;
 mod uplink;
 mod link;
+mod sounds;
 mod watchdog;
 mod words;
 
@@ -383,7 +388,15 @@ fn voice_status(voice: State<Voice>) -> voice::VoiceStatus {
 }
 
 #[tauri::command]
-fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>) {
+fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>, lang: Option<String>) {
+    if let Some(l) = lang {
+        let mut cur = voice.lang.lock().unwrap();
+        if *cur != l {
+            *cur = l.clone();
+            voice.reload.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+        *ai::LANG.lock().unwrap() = l;
+    }
     if let Some(p) = patient {
         voice.patient.store(p, std::sync::atomic::Ordering::SeqCst);
     }
@@ -653,6 +666,12 @@ fn ai_stop() {
 #[tauri::command]
 fn tts_voice(app: AppHandle, name: String) {
     tts::set_voice(&app, &name);
+}
+
+/// The language ULTRON speaks back in (Settings > Voice): its voice for that language, fetched the first time.
+#[tauri::command]
+fn tts_lang(app: AppHandle, lang: String) {
+    tts::set_tongue(&app, &lang);
 }
 
 /// One sentence in ULTRON's voice, as a WAV (base64).
@@ -946,6 +965,56 @@ async fn shelf_thumb(path: String) -> Option<String> {
 fn shelf_drag(app: AppHandle, paths: Vec<String>) -> u32 {
     let Some(h) = app.get_webview_window("main").and_then(|w| hit::hwnd_of(&w)) else { return 0 };
     shelf::drag(h, &paths)
+}
+
+/// The notch has opened: the web-answer window is made ready on Google's page (it closes again when unused).
+#[tauri::command]
+async fn web_warm(app: AppHandle) {
+    let _ = tauri::async_runtime::spawn_blocking(move || uplink::warm(&app)).await;
+}
+
+/// Key and click sounds on or off (sounds.rs).
+#[tauri::command]
+fn sounds_set(app: AppHandle, keys: bool, clicks: bool) {
+    sounds::set(&app, keys, clicks);
+}
+
+/// Glass dialogs (dialogs.rs): Windows' plain message boxes shown as ULTRON's own.
+#[tauri::command]
+fn dialogs_set(app: AppHandle, on: bool) {
+    dialogs::set(&app, on);
+}
+
+/// ULTRON's own volume indicator (osd.rs): the volume keys answered by ULTRON, not Windows.
+#[tauri::command]
+fn osd_set(app: AppHandle, on: bool) {
+    osd::set(&app, on);
+}
+
+/// ULTRON's own Alt+Tab (alttab.rs), and the windows it shows, the one in front first.
+#[tauri::command]
+fn alttab_set(app: AppHandle, on: bool) {
+    alttab::set(&app, on);
+}
+
+#[tauri::command]
+async fn alttab_list(app: AppHandle) -> Vec<apps::OpenWin> {
+    tauri::async_runtime::spawn_blocking(move || app.state::<apps::Apps>().open_windows()).await.unwrap_or_default()
+}
+
+#[tauri::command]
+fn dialog_shown(hwnd: isize) {
+    dialogs::shown(hwnd);
+}
+
+#[tauri::command]
+fn dialog_press(hwnd: isize, id: i32) {
+    dialogs::press(hwnd, id);
+}
+
+#[tauri::command]
+fn dialog_pass(hwnd: isize) {
+    dialogs::pass(hwnd);
 }
 
 /// The phone link (link.rs): phones running ULTRON on this network.
@@ -1646,7 +1715,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, web_warm, tts_lang, sounds_set, dialogs_set, osd_set, alttab_set, alttab_list, dialog_shown, dialog_press, dialog_pass, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
@@ -1684,6 +1753,7 @@ fn main() {
             calls::start(handle.clone());
             coders::start(handle.clone());
             lid::start(handle.clone());
+            desks::start(handle.clone());
             keepbelow::start();
             watchdog::start(handle.clone());
             watchdog::keep();
@@ -1722,6 +1792,7 @@ fn main() {
                 appbar::remove(); // always give the screen space back
                 dock::leave(app); // (and Windows its taskbar)
                 notes::leave(app); // (and Windows its banners)
+                dialogs::quit(); // (and any message box shown as glass, its own look)
             }
         });
 }

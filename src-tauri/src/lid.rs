@@ -15,6 +15,9 @@ use windows::Win32::UI::WindowsAndMessaging::{DEVICE_NOTIFY_CALLBACK, PBT_APMRES
 
 /// GUID_LIDSWITCH_STATE_CHANGE: the lid's state, 0 closed, 1 open (sent once straight away, then on each change).
 const LID: GUID = GUID::from_u128(0xba3e0f4d_b817_4094_a2d1_d56379e6a0f3);
+/// GUID_VIDEO_CURRENT_MONITOR_BRIGHTNESS: the screen's brightness, 0 to 100 (for ULTRON's own indicator)
+const BRIGHT: GUID = GUID::from_u128(0x8ffee2c6_2d01_46be_adb9_398addc5b4ff);
+static BRIGHT_WAS: AtomicI32 = AtomicI32::new(-1);
 
 static APP: OnceLock<AppHandle> = OnceLock::new();
 /// The lid as last told (-1: not told yet).
@@ -33,6 +36,15 @@ unsafe extern "system" fn on_power(_ctx: *const core::ffi::c_void, kind: u32, se
         PBT_APMRESUMEAUTOMATIC => tell("wake"),
         PBT_POWERSETTINGCHANGE if !setting.is_null() => {
             let s = unsafe { &*(setting as *const POWERBROADCAST_SETTING) };
+            if s.PowerSetting == BRIGHT && s.DataLength >= 4 {
+                let v = unsafe { *(s.Data.as_ptr() as *const u32) } as i32;
+                // (the first word is only how bright it is now)
+                if BRIGHT_WAS.swap(v, SeqCst) >= 0 {
+                    if let Some(app) = APP.get() {
+                        let _ = app.emit_to("main", "bright", v);
+                    }
+                }
+            }
             if s.PowerSetting == LID && s.DataLength >= 1 {
                 let open = unsafe { *s.Data.as_ptr() } != 0;
                 let was = LAST.swap(open as i32, SeqCst);
@@ -62,5 +74,6 @@ pub fn start(app: AppHandle) {
         if let Err(e) = RegisterPowerSettingNotification(h, &LID, DEVICE_NOTIFY_CALLBACK) {
             crate::log_line(&format!("lid: no lid notices ({e})"));
         }
+        let _ = RegisterPowerSettingNotification(h, &BRIGHT, DEVICE_NOTIFY_CALLBACK);
     }
 }

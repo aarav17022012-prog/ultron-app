@@ -165,6 +165,13 @@ body:not(.boot) .mbar{transform:translateY(-100%)}
 body.boot .mbar{animation:barIn .55s var(--glide) backwards}
 @keyframes barIn{from{transform:translateY(-100%)}}
 body.fullscreen .mbar, body.leaving .mbar{transform:translateY(-100%); opacity:0}
+body.fullscreen .mbar{transition:transform .5s cubic-bezier(.55,0,.75,.2) .12s, opacity .3s ease .3s}
+body.fullscreen .notch:not(.call), body.fullscreen .ears{animation:ulBow .42s cubic-bezier(.5,0,.75,0) both}
+@keyframes ulBow{from{translate:0 0; scale:1; opacity:1} to{translate:0 -110%; scale:.6; opacity:0}}
+body.unfull .mbar{animation:ulBarBack .75s cubic-bezier(.2,1.25,.35,1) both}
+@keyframes ulBarBack{from{transform:translateY(-100%); opacity:0} 30%{opacity:1}}
+body.unfull .notch:not(.call), body.unfull .ears{animation:ulBack .7s cubic-bezier(.2,1.45,.35,1) .2s both}
+@keyframes ulBack{from{translate:0 -110%; scale:.6; opacity:0} 40%{opacity:1}}
 /* the menu bar set to hide away (Settings, Look & feel): bar, notch and its ears slide up together, and come back down together */
 body.autohide .mbar{transition:transform .4s var(--glide), opacity .3s, translate .5s var(--glide)}
 body.autohide .notch{transition:width .48s var(--glide), height .42s var(--glide), border-radius .48s var(--glide), box-shadow .4s var(--soft), margin-left .48s var(--glide), translate .5s var(--glide), opacity .3s}
@@ -237,6 +244,10 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 .dd .dd-c > button:hover, .dd .dd-c > button:focus-visible{background:rgba(255,255,255,.16); outline:none}
 .dd kbd{font:inherit; font-size:12.5px; color:rgba(255,255,255,.45)}
 .dd .dd-c > button:hover kbd{color:rgba(255,255,255,.85)}
+/* (a switch inside a menu item: Start with Windows) */
+.dd-tg{position:relative; flex:none; width:30px; height:18px; margin-left:12px; border-radius:99px; background:rgba(255,255,255,.18); transition:background .3s}
+.dd-tg::after{content:""; position:absolute; left:2px; top:2px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35); transition:transform .35s var(--spring)}
+.dd-tg.on{background:#34c759} .dd-tg.on::after{transform:translateX(12px)}
 .dd hr{border:0; height:1px; background:rgba(255,255,255,.12); margin:4px 8px}
 /* rich menu panels */
 .rp{width:300px; padding:8px 8px 6px; text-shadow:0 1px 2px rgba(0,0,0,.3)}
@@ -544,7 +555,7 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 .start.open{opacity:1; visibility:visible; transform:translate(-50%, 0); transition:opacity .25s, transform .62s cubic-bezier(.16,1.1,.3,1), visibility 0s}
 .sm-top{padding:22px 26px 6px}
 /* ---------- settings window ---------- */
-.setw{position:fixed; z-index:33; top:44px; left:50%; width:min(780px, 94vw); height:min(540px, calc(100vh - 64px)); border-radius:26px; color:#fff;
+.setw{position:fixed; z-index:33; top:44px; left:50%; width:min(800px, 94vw); height:min(660px, calc(100vh - 64px)); grid-template-rows:minmax(0, 1fr); border-radius:26px; color:#fff;
   --tint:rgba(16,16,22,.5); text-shadow:0 1px 2px rgba(0,0,0,.3); display:grid; grid-template-columns:206px 1fr; overflow:hidden;
   opacity:0; visibility:hidden; transform:translate(-50%, -40px) scale(.95); filter:blur(8px);
   transition:opacity .2s, transform .35s var(--glide), filter .25s, visibility 0s .35s}
@@ -553,6 +564,16 @@ body.barhid .mbar, body.barhid .notch:not(.open), body.barhid .ears{translate:0 
 .sw-nav{position:relative; padding:18px 10px; background:rgba(0,0,0,.14); box-shadow:inset -1px 0 0 rgba(255,255,255,.1); display:flex; flex-direction:column; gap:2px}
 .sw-brand{display:flex; align-items:center; gap:9px; font-size:15px; font-weight:700; padding:4px 12px 14px}
 .sw-brand svg{width:22px; height:22px}
+/* Settings' search: pages without the words fade back, the first that has them opens with the matching rows lit */
+.sw-q{display:flex; align-items:center; gap:7px; height:32px; margin:0 2px 10px; padding:0 10px; border-radius:10px; background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.08); transition:background .2s, box-shadow .2s}
+.sw-q:focus-within{background:rgba(255,255,255,.13); box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.sw-q svg{flex:none; width:14px; height:14px; fill:none; stroke:rgba(255,255,255,.6); stroke-width:2; stroke-linecap:round}
+.sw-q input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:12.5px}
+.sw-q input::placeholder{color:rgba(255,255,255,.42)}
+.setw.mac .sw-q{display:none}
+.sw-nav button.dim{opacity:.32; transition:opacity .25s}
+.sw-row.hit{animation:swHit 1.4s ease}
+@keyframes swHit{0%, 60%{background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}}
 .sw-nav button{position:relative; z-index:1; display:flex; align-items:center; gap:11px; width:100%; height:38px; padding:0 12px; border:0; background:none;
   color:rgba(255,255,255,.72); font:inherit; font-size:13.5px; font-weight:550; border-radius:11px; cursor:default; transition:color .2s}
 .sw-nav button:hover{color:#fff}
@@ -1137,6 +1158,47 @@ body.docked.fullscreen .wheel, body.docked.barhid .wheel, body.docked.leaving .w
 .lk-hint{position:absolute; left:50%; bottom:8.5%; font-size:13px; color:rgba(255,255,255,.88); transform:translate(-50%, 14px)}
 .lock.on .lk-hint{opacity:1; transform:translate(-50%, 0); transition:opacity .6s 1.15s, transform .85s var(--glide) 1.15s}
 .lock.on.ask .lk-date, .lock.on.ask .lk-hint{opacity:0; transition:opacity .22s}
+/* ---------- the lock screen, made your own ----------
+   The date sits above a big clock; the clock is glass (each figure shows the wallpaper through it, brighter and more
+   vivid, with a lit rim and a shadow under) or solid, thin to bold, in one of four colours. A minute changing rolls
+   only the figure that changed. Battery and weather sit under it in small pieces of glass. Unlocking, it all lifts away. */
+.lock, .lkp{--lkc:#fff}
+.lock[data-tint="warm"], .lkp[data-tint="warm"]{--lkc:#ffe0bd}
+.lock[data-tint="ice"], .lkp[data-tint="ice"]{--lkc:#cfe6ff}
+.lock[data-tint="rose"], .lkp[data-tint="rose"]{--lkc:#ffd3df}
+.lock .lk-time{font-size:clamp(150px, 25vh, 236px)}
+.lock[data-w="regular"] .lk-time, .lkp[data-w="regular"] .lk-time{font-weight:400; letter-spacing:-.04em}
+.lock[data-w="bold"] .lk-time, .lkp[data-w="bold"] .lk-time{font-weight:700; letter-spacing:-.035em}
+.lock .lk-time span, .lkp .lk-time span{background-image:linear-gradient(180deg, var(--lkc) 18%, color-mix(in srgb, var(--lkc) 60%, transparent))}
+.lock.gl .lk-time span, .lkp.gl .lk-time span{background-image:linear-gradient(180deg, color-mix(in srgb, var(--lkc) 82%, transparent), color-mix(in srgb, var(--lkc) 38%, transparent) 78%), var(--lkw, var(--wall));
+  background-size:100% 100%, 100vw 100vh; background-position:0 0, center; background-attachment:scroll, fixed; -webkit-text-stroke:1.3px color-mix(in srgb, var(--lkc) 55%, transparent)}
+.lock.gl .lk-time span{filter:blur(14px) saturate(1.7) brightness(1.2) drop-shadow(0 8px 26px rgba(0,0,0,.3))}
+.lock.on.gl .lk-time span{filter:blur(0) saturate(1.7) brightness(1.2) drop-shadow(0 8px 26px rgba(0,0,0,.3))}
+.lk-time span.tick{animation:lkTick .7s cubic-bezier(.2,1.2,.3,1)}
+@keyframes lkTick{0%{opacity:0; transform:translateY(.22em) scale(.92)} 100%{opacity:1; transform:none}}
+.lock .lk-date, .lkp .lk-date{order:-1; margin-bottom:-10px; padding:0; border-radius:0; background:none; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none;
+  font-size:21px; font-weight:600; color:var(--lkc); text-shadow:0 1px 10px rgba(0,0,0,.28)}
+.lock.on .lk-date{transition:opacity .6s .15s, transform .85s var(--glide) .15s}
+.lk-wid{display:flex; gap:10px; margin-top:2px}
+.lk-wid .lk-glass{display:flex; align-items:center; gap:8px; padding:9px 16px; font-size:14px; color:var(--lkc); transform:translateY(14px) scale(.94)}
+.lk-wid svg{width:22px; height:13px; flex:none; overflow:visible}
+.lock.on .lk-wid .lk-glass{opacity:1; transform:none; transition:opacity .6s calc(1s + var(--i) * .1s), transform .85s var(--glide) calc(1s + var(--i) * .1s)}
+.lock.nowid .lk-wid, .lock.on.ask .lk-wid{opacity:0; pointer-events:none; transition:opacity .22s}
+.lock.nowid .lk-wid{display:none}
+.lk-hint span{color:transparent; background:linear-gradient(90deg, rgba(255,255,255,.62) 40%, #fff 50%, rgba(255,255,255,.62) 60%) 100% 0 / 250% 100%; -webkit-background-clip:text; background-clip:text; animation:lkShine 3.2s linear 2s infinite}
+@keyframes lkShine{to{background-position:-150% 0}}
+.lock.on.bye .lk-mid{transform:translateY(-9vh) scale(1.05); opacity:0; transition:transform .5s cubic-bezier(.5,0,.75,0), opacity .4s}
+/* (in Settings: the preview) */
+.lkp-row{display:block}
+.sw-rows:not(.lk-off) .sw-row.lkp-row{max-height:240px}
+.lkp{position:relative; height:200px; border-radius:16px; overflow:hidden; background:var(--wall, #222) center/cover; display:grid; place-items:center;
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14); color:#fff}
+.lkp::before{content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.05) 50%, rgba(0,0,0,.3))}
+.lkp-in{position:relative; display:flex; flex-direction:column; align-items:center; gap:2px}
+.lkp .lk-date{font-size:13px; margin-bottom:-4px}
+.lkp .lk-time{font-size:92px; font-weight:200; line-height:1; letter-spacing:-.045em; display:flex}
+.lkp .lk-time span{opacity:1; transform:none; filter:drop-shadow(0 4px 14px rgba(0,0,0,.25)); transition:filter .3s}
+.lkp.gl .lk-time span{filter:saturate(1.7) brightness(1.2) drop-shadow(0 4px 14px rgba(0,0,0,.3)); -webkit-text-stroke-width:.8px}
 /* the passcode: a glass field with a dot for each character typed. Wrong, it shakes its head; right, it swells and lets go */
 .lk-ask{position:absolute; left:0; right:0; top:45%; display:flex; flex-direction:column; align-items:center; gap:14px; opacity:0; transform:translateY(28px) scale(.92); pointer-events:none; transition:opacity .2s, transform .35s var(--glide)}
 .lock.on.ask .lk-ask{opacity:1; transform:none; pointer-events:auto; transition:opacity .35s .12s, transform .75s var(--spring) .12s}
@@ -1815,7 +1877,12 @@ html.live .notch.glass > .gw{transition:opacity .26s ease .16s}
    fade (one small element each), so nothing else is restyled while it runs. ---------- */
 @property --bt{syntax:'<color>'; inherits:true; initial-value:rgba(18,18,24,.3)}
 @property --bt2{syntax:'<color>'; inherits:true; initial-value:rgba(16,16,22,.46)}
-.mbar.glass::before{--tint:var(--bt); transition:--bt .9s ease}
+/* (the bar's highlight and its foot's shade fade out as the notch's sheet opens, and back as it closes: they used to
+    be swapped for another picture at once, and the whole bar flashed) */
+@property --hsk{syntax:'<number>'; inherits:false; initial-value:1}
+.mbar.glass::before{--tint:var(--bt); --hsk:1; transition:--bt .9s ease, --hsk .45s ease;
+  background:radial-gradient(160px 70px at var(--hx,30%) var(--hy,0%), rgba(255,255,255,calc(.2 * var(--hs, 1) * var(--hsk))), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%, rgba(0,0,0,calc(.1 * var(--hsk)))), var(--tint, rgba(20,20,26,.3))}
 .notch.glass.open::before, .notch.glass.call::before{
   background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) calc(var(--bar) * .42), rgba(0,0,0,.1) var(--bar)),
     linear-gradient(180deg, var(--bt) var(--bar), var(--bt2) calc(var(--bar) + 80px))}
@@ -1887,7 +1954,8 @@ body.fullscreen .barfil, body.barhid .barfil{opacity:0; transform:scaleY(0)}
    inset groups with thin dividers; switches, segments and buttons as macOS draws them. ---------- */
 .mac-tl, .mac-search, .mac-acct, .mac-tb, .mh-ic{display:none}
 .setw.mac{border-radius:14px; grid-template-columns:236px 1fr; --tint:rgba(30,30,33,.6); transition:opacity .25s, transform .62s cubic-bezier(.16,1.1,.3,1), filter .4s, visibility 0s, width .5s cubic-bezier(.22,1,.36,1), height .5s cubic-bezier(.22,1,.36,1)}
-.setw.mac.zoom{width:min(1020px, 96vw); height:min(700px, calc(100vh - 64px))}
+.setw.mac.zoom{width:min(1020px, 96vw); height:min(760px, calc(100vh - 64px))}
+.setw .sw-nav{min-height:0; overflow-y:auto; scrollbar-width:none}
 .setw.mac.glass.panel-glass::after{background:linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.07))}
 .setw.mac .sw-x{display:none}
 .setw.mac .sw-nav{padding:14px 10px; gap:1px; background:rgba(255,255,255,.035); box-shadow:inset -.5px 0 0 rgba(0,0,0,.5), inset -1.5px 0 0 rgba(255,255,255,.05); overflow-y:auto; scrollbar-width:none}
@@ -2001,12 +2069,13 @@ body.fullscreen .barfil, body.barhid .barfil{--fr:0px; visibility:hidden}
 /* (where the sheet meets the bar both are the same: the bar's tint, nothing darker or lighter on either side; what's
     behind them is made the same too, see glassDraw) */
 .ears.glass::before{background:linear-gradient(180deg, rgba(18,18,24,.3) 1px, color-mix(in srgb, rgba(18,18,24,.3), var(--bt) 18%) 13px); transition:--bt .55s ease, --bt2 .55s ease}
-body.sheet .mbar.glass::before{background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 42%), var(--tint, rgba(20,20,26,.3))}
+body.sheet .mbar.glass::before{--hsk:0}
 .notch.glass::before{transition:opacity .1s linear .3s, --bt .55s ease, --bt2 .55s ease}
 
 /* ---------- full screen (a video, a game): the notch stays away entirely, like the bar; it can't be opened there,
    and its place can't be clicked ---------- */
-body.fullscreen .notch:not(.call), body.fullscreen .ears, body.fullscreen .barfil{opacity:0 !important; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility 0s .2s}
+body.fullscreen .barfil{opacity:0 !important; visibility:hidden; pointer-events:none; transition:opacity .2s, visibility 0s .2s}
+body.fullscreen .notch:not(.call), body.fullscreen .ears{visibility:hidden; pointer-events:none; transition:visibility 0s .42s}
 
 /* ---------- status lines: when one changes, what stays the same stays put and only the rest rolls over ("Translating…" becomes "Translated") ---------- */
 .sl-line, .sl-keep, .sl-swap, .sl-new{display:inline-block !important; gap:0; white-space:pre}
@@ -2105,7 +2174,7 @@ body.fullscreen .notch:not(.call), body.fullscreen .ears, body.fullscreen .barfi
 .sm-search input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:15.5px; text-shadow:inherit}
 .sm-search input::placeholder{color:rgba(255,255,255,.5)}
 .start.open .sm-search{animation:rowIn .5s .12s var(--glide) backwards}
-.sm-views{position:relative; height:376px; margin-top:8px; overflow:hidden}
+.sm-views{position:relative; height:376px; margin-top:8px; overflow:hidden; transition:height .4s var(--glide)}
 .sm-view{position:absolute; inset:0; display:flex; flex-direction:column; padding:6px 22px 10px; opacity:0; visibility:hidden; transform:translateX(24px); transition:opacity .2s, transform .35s var(--glide), visibility 0s .35s}
 .sm-view.on{opacity:1; visibility:visible; transform:none; transition:opacity .25s .05s, transform .45s .05s var(--glide), visibility 0s}
 .sm-view.left{transform:translateX(-24px)}
@@ -2726,6 +2795,20 @@ body.leaving .ears{animation:earsOut .35s var(--soft) forwards}
 .ds-i.out{animation:dsOut .3s cubic-bezier(.4,0,.6,1) forwards; pointer-events:none}
 @keyframes dsOut{to{opacity:0; transform:translateY(10px) scale(.5)}}
 .ds-i.gone{width:0; margin-right:-8px; padding:0}
+/* the shelf at the left or right edge: a column centred on the edge, growing out of it */
+.dshelf.side .ds-tray{left:16px; bottom:auto; top:50%; margin-left:0; margin-top:calc(var(--dsh) / -2); border-radius:28px}
+.dshelf.side.right .ds-tray{left:auto; right:16px}
+.dshelf.side:not(.apps) .ds-head, .dshelf.side:not(.apps) .ds-row, .dshelf.side:not(.apps) .ds-drop{translate:0 0}
+.dshelf.side:not(.apps) .ds-row{flex-direction:column; align-items:center; height:calc(var(--dsH) - 60px); overflow-x:hidden; overflow-y:auto}
+.dshelf.side:not(.apps) .ds-head{flex-direction:column; align-items:center; gap:6px; height:auto; margin-bottom:6px}
+.dshelf.side:not(.apps) .ds-acts span, .dshelf.side:not(.apps) .ds-t em, .dshelf.side:not(.apps) .ds-a.clr{display:none}
+.dshelf.side:not(.apps) .ds-a{padding:4px 7px}
+.dshelf.side:not(.apps) .ds-drop{height:auto; bottom:14px; top:58px}
+.dshelf.side .ds-drop small{display:none}
+/* sizes, and names shown or not */
+.dshelf.sm .ds-i{width:66px; height:80px} .dshelf.sm .ds-p{width:46px; height:46px} .dshelf.sm .ds-n{max-width:62px; font-size:10px}
+.dshelf.lg .ds-i{width:96px; height:114px} .dshelf.lg .ds-p{width:70px; height:70px} .dshelf.lg .ds-n{max-width:92px; font-size:12px}
+.dshelf.nonames .ds-n{display:none} .dshelf.nonames .ds-i{height:auto; padding-bottom:7px}
 .ds-i.drag{opacity:.32}
 .ds-drop{position:absolute; z-index:1; left:14px; right:14px; top:44px; bottom:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:18px; height:98px; bottom:auto;
   border:1.5px dashed rgba(255,255,255,.3); text-align:center; opacity:0; pointer-events:none; transition:opacity .25s, border-color .25s, background .25s, transform .3s var(--glide)}
@@ -3249,6 +3332,179 @@ html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--ha
 .ag-tx{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; text-align:left}
 .ag-tx b{font-size:12.5px; font-weight:650}
 .ag-tx span{font-size:11.5px; font-weight:500; color:rgba(12,12,14,.58); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+/* the battery panel, and the plugged-in moment */
+#batSt{cursor:pointer}
+.batw{position:fixed; z-index:40; top:calc(var(--bar) + 8px); left:0; width:300px; padding:18px 16px 14px; border-radius:24px; color:#fff;
+  background:linear-gradient(180deg, rgba(36,36,42,.94), rgba(22,22,26,.96)); box-shadow:0 0 0 .8px rgba(255,255,255,.12), 0 24px 60px rgba(0,0,0,.5);
+  opacity:0; visibility:hidden; transform:translateY(-14px) scale(.94); transform-origin:50% 0; transition:opacity .2s, transform .35s cubic-bezier(.5,0,.75,0), visibility 0s .35s; --bc:#7fe0a8}
+.batw.open{opacity:1; visibility:visible; transform:none; transition:opacity .22s, transform .6s cubic-bezier(.2,1.3,.32,1), visibility 0s}
+.batw.low{--bc:#ff8a7a} .batw.chg{--bc:#7fe0a8}
+.bw-ring{position:relative; width:132px; height:132px; margin:0 auto 12px}
+.bw-ring svg{width:100%; height:100%; transform:rotate(-90deg)}
+.bw-track{fill:none; stroke:rgba(255,255,255,.1); stroke-width:10}
+.bw-fill{fill:none; stroke:var(--bc); stroke-width:10; stroke-linecap:round; stroke-dasharray:314; stroke-dashoffset:314; transition:stroke-dashoffset 1s cubic-bezier(.3,.9,.25,1), stroke .4s; filter:drop-shadow(0 0 6px var(--bc))}
+.batw.chg .bw-fill{animation:bwPulse 1.8s ease-in-out infinite}
+@keyframes bwPulse{50%{filter:drop-shadow(0 0 14px var(--bc))}}
+.bw-mid{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px}
+.bw-mid b{font-size:30px; font-weight:750; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.bw-mid span{font-size:11.5px; color:rgba(255,255,255,.62); text-align:center; max-width:110px}
+.bw-tips{display:flex; flex-direction:column; gap:7px}
+.bw-tip{padding:9px 11px; border-radius:14px; background:rgba(255,255,255,.06); box-shadow:inset 3px 0 0 var(--bc); display:flex; flex-direction:column; gap:2px; opacity:0; transform:translateY(8px)}
+.batw.open .bw-tip{animation:bwTip .5s cubic-bezier(.2,1.2,.32,1) forwards; animation-delay:calc(.35s + var(--i) * .12s)}
+@keyframes bwTip{to{opacity:1; transform:none}}
+.bw-tip b{font-size:12.5px; font-weight:700} .bw-tip span{font-size:11.5px; line-height:1.4; color:rgba(255,255,255,.66)}
+.bw-go{display:block; width:100%; margin-top:10px; height:32px; border:0; border-radius:12px; background:rgba(255,255,255,.1); color:#fff; font:inherit; font-size:12.5px; font-weight:650; cursor:pointer; transition:background .2s}
+.bw-go:hover{background:rgba(255,255,255,.18)}
+/* plugged in: the notch opens, like an island, into a charging card. The battery fills to where it is with a liquid
+   that keeps moving, the bolt strikes, a ring of light runs once round the edge and the number counts up; then it all
+   folds back into the notch. */
+@property --pa{syntax:'<angle>'; inherits:false; initial-value:0deg}
+.plugfx{position:fixed; z-index:47; left:50%; top:4px; width:286px; margin-left:-143px; pointer-events:none; visibility:hidden; --pc:#5fe39a; --pc2:rgba(95,227,154,.5)}
+.plugfx.low{--pc:#ffc45e; --pc2:rgba(255,196,94,.5)}
+.plugfx.on, .plugfx.off{visibility:visible}
+.pf-in{position:relative; display:flex; align-items:center; gap:14px; height:62px; padding:0 22px 0 18px; border-radius:31px; color:#fff; background:#000;
+  box-shadow:0 0 0 .8px rgba(255,255,255,.1), 0 18px 44px rgba(0,0,0,.5); transform-origin:50% 0; opacity:0; transform:scale(.42, .5); filter:blur(4px)}
+.plugfx.on .pf-in{animation:pfOpen .78s cubic-bezier(.2,1.25,.3,1) forwards, pfGlow 2.2s ease-in-out .5s}
+.plugfx.off .pf-in{opacity:1; transform:none; filter:none; animation:pfClose .46s cubic-bezier(.55,0,.7,.2) forwards}
+@keyframes pfOpen{0%{opacity:0; transform:scale(.42, .5); filter:blur(4px)} 30%{opacity:1} 100%{opacity:1; transform:none; filter:none}}
+@keyframes pfClose{to{opacity:0; transform:scale(.42, .5); filter:blur(4px)}}
+@keyframes pfGlow{0%, 100%{box-shadow:0 0 0 .8px rgba(255,255,255,.1), 0 18px 44px rgba(0,0,0,.5)} 40%{box-shadow:0 0 0 .8px var(--pc2), 0 18px 44px rgba(0,0,0,.5), 0 0 34px -4px var(--pc2)}}
+.pf-ring{position:absolute; inset:-1px; border-radius:inherit; padding:1.6px; pointer-events:none; opacity:0;
+  background:conic-gradient(from var(--pa), transparent 0 62%, var(--pc) 80%, #eafff2 86%, transparent 94%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude}
+.plugfx.on .pf-ring{animation:pfRing 1.5s cubic-bezier(.45,.1,.3,1) .35s}
+@keyframes pfRing{0%{opacity:0; --pa:-40deg} 15%{opacity:1} 85%{opacity:1} 100%{opacity:0; --pa:340deg}}
+.pf-bat{width:54px; height:28px; flex:none; overflow:visible}
+.pf-shell{fill:none; stroke:rgba(255,255,255,.4); stroke-width:1.6}
+.pf-cap{fill:rgba(255,255,255,.4)}
+.pf-liq{transform:translateX(-46px); transition:transform 1.25s cubic-bezier(.25,.9,.25,1) .3s}
+.pf-wave{fill:var(--pc); transition:fill .6s .9s; animation:pfWave 1.1s linear infinite}
+@keyframes pfWave{to{transform:translateY(-14px)}}
+.pf-bolt{fill:#fff; stroke:#000; stroke-width:1.4; stroke-linejoin:round; transform-box:fill-box; transform-origin:50% 50%; opacity:0}
+.plugfx.on .pf-bolt{animation:pfBolt .7s cubic-bezier(.2,1.8,.35,1) .45s forwards, pfPulse 1.6s ease-in-out 1.3s infinite}
+@keyframes pfBolt{0%{opacity:0; transform:scale(.2) rotate(-25deg)} 100%{opacity:1; transform:none}}
+@keyframes pfPulse{0%, 100%{opacity:1} 50%{opacity:.72}}
+.pf-tx{display:flex; flex:1; align-items:baseline; justify-content:space-between; min-width:0}
+.pf-tx em{font-style:normal; font-size:14px; font-weight:600; color:rgba(255,255,255,.88)}
+.pf-tx b{font-size:22px; font-weight:700; letter-spacing:-.02em; color:var(--pc); font-variant-numeric:tabular-nums; transition:color .6s .9s}
+.plugfx.on .pf-tx > *{animation:rowIn .5s var(--glide) .3s backwards} .plugfx.on .pf-tx b{animation-delay:.38s}
+.barglow{position:fixed; z-index:31; left:0; top:0; width:100%; height:var(--bar); pointer-events:none; opacity:0;
+  background:radial-gradient(50% 160% at 50% 0, rgba(127,224,168,.42), rgba(127,224,168,.12) 55%, transparent 80%); transform-origin:50% 0}
+.barglow.on{animation:barGlow 2.4s cubic-bezier(.3,.6,.3,1)}
+@keyframes barGlow{0%{opacity:0; transform:scaleX(.15)} 25%{opacity:1} 100%{opacity:0; transform:scaleX(1.25)}}
+/* ---------- glass dialogs: a Windows message box, as ULTRON's own ----------
+   It drops in where the real one is, a little large and soft, and settles; its buttons stand side by side, the one
+   Enter presses filled. Answered, it shrinks away. */
+.lang-sel{max-width:180px}
+/* ULTRON's Alt+Tab: the open windows as glass cards, each with a picture of what's in it. The light behind the chosen
+   one slides from card to card; letting go of Alt, the chosen card swells a little and it all melts away. */
+.atb{position:fixed; inset:0; z-index:61; display:grid; place-items:center; pointer-events:none; visibility:hidden}
+.atb.on, .atb.off{visibility:visible}
+.atb-in{position:relative; max-width:94vw; padding:14px; border-radius:30px; --tint:rgba(24,24,30,.4); opacity:0; transform:scale(.9); filter:blur(8px)}
+.atb.on .atb-in{pointer-events:auto; opacity:1; transform:none; filter:none; transition:opacity .2s, transform .5s cubic-bezier(.2,1.2,.32,1), filter .25s}
+.atb.off .atb-in{opacity:0; transform:scale(.96); filter:blur(4px); transition:opacity .22s, transform .3s ease-in, filter .22s}
+.atb-row{position:relative; display:flex; gap:8px}
+.atb-sel{position:absolute; left:0; top:0; width:var(--cw, 196px); height:100%; border-radius:20px; background:rgba(255,255,255,.17);
+  box-shadow:inset 0 0 0 1.2px rgba(255,255,255,.5), inset 0 1px 0 rgba(255,255,255,.35), 0 8px 24px rgba(0,0,0,.25); transition:transform .42s cubic-bezier(.2,1.25,.3,1)}
+.atb-c{position:relative; width:var(--cw, 196px); padding:8px 8px 9px; border:0; border-radius:20px; background:none; color:#fff; font:inherit; text-align:left; cursor:default; display:flex; flex-direction:column; gap:8px}
+.atb.on .atb-c{animation:atbIn .45s cubic-bezier(.2,1.2,.32,1) backwards; animation-delay:calc(var(--i) * 30ms)}
+@keyframes atbIn{from{opacity:0; transform:translateY(12px) scale(.9)}}
+.atb-p{position:relative; height:calc(var(--cw, 196px) * .62); border-radius:13px; overflow:hidden; background:rgba(255,255,255,.07); display:grid; place-items:center; transition:transform .4s var(--spring)}
+.atb-p img.shot{width:100%; height:100%; object-fit:cover; object-position:50% 0; opacity:0; transition:opacity .3s}
+.atb-p img.shot.in{opacity:1}
+.atb-p img.big{position:absolute; width:46px; height:46px; filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+.atb-p img.shot.in + img.big{width:30px; height:30px; left:8px; bottom:8px; transition:all .3s var(--glide)}
+.atb-c.sel .atb-p{transform:scale(1.03)}
+.atb.off .atb-c.sel .atb-p{transform:scale(1.08)}
+.atb-t{display:flex; align-items:center; gap:7px; min-width:0; padding:0 3px; font-size:12px; font-weight:600}
+.atb-t span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.atb-c:not(.sel) .atb-t{color:rgba(255,255,255,.72)}
+/* Desktop switch: a pill under the notch with a dot for each desktop; the lit one slides to where you've gone, and a
+   new desktop's dot pops in. */
+.dkh{position:fixed; z-index:58; top:calc(var(--bar) + 8px); left:50%; pointer-events:none; translate:-50% 0; visibility:hidden}
+.dkh.on{visibility:visible}
+.dkh-in{display:flex; align-items:center; gap:14px; height:42px; padding:0 18px; border-radius:21px; color:#fff;
+  background:linear-gradient(180deg, rgba(36,36,42,.95), rgba(20,20,24,.97)); box-shadow:0 0 0 .8px rgba(255,255,255,.12), 0 14px 34px rgba(0,0,0,.45);
+  transform-origin:50% 0; opacity:0; transform:translateY(-22px) scale(.72, .5); transition:opacity .2s, transform .36s cubic-bezier(.5,0,.75,0)}
+.dkh.on .dkh-in{opacity:1; transform:none; transition:opacity .16s, transform .52s cubic-bezier(.2,1.35,.32,1)}
+.dkh b{font-size:13.5px; font-weight:650; white-space:nowrap}
+.dkh-dots{position:relative; display:flex; gap:8px}
+.dkh-dots i{width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.26)}
+.dkh-dots i.new{animation:dkhNew .6s cubic-bezier(.2,1.8,.35,1)}
+@keyframes dkhNew{from{transform:scale(0)}}
+.dkh-dots em{position:absolute; left:0; top:-2px; width:12px; height:12px; margin-left:-2px; border-radius:50%; background:#fff; box-shadow:0 0 10px rgba(255,255,255,.6); transition:transform .5s cubic-bezier(.2,1.3,.3,1)}
+/* ULTRON's volume and brightness: a small pill that drops out of the notch, the level sliding along it */
+.osd{position:fixed; z-index:58; top:calc(var(--bar) + 8px); left:50%; width:230px; margin-left:-115px; height:40px; padding:0 15px; border-radius:20px; display:flex; align-items:center; gap:11px; color:#fff;
+  background:linear-gradient(180deg, rgba(36,36,42,.95), rgba(20,20,24,.97)); box-shadow:0 0 0 .8px rgba(255,255,255,.12), 0 14px 34px rgba(0,0,0,.45);
+  pointer-events:none; opacity:0; visibility:hidden; transform-origin:50% 0; transform:translateY(-22px) scale(.72, .5); transition:opacity .2s, transform .36s cubic-bezier(.5,0,.75,0), visibility 0s .36s}
+.osd.on{opacity:1; visibility:visible; transform:none; transition:opacity .16s, transform .52s cubic-bezier(.2,1.35,.32,1), visibility 0s}
+.osd-ic{width:19px; height:19px; flex:none; fill:none; stroke:#fff; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.osd-ic .f{fill:#fff; stroke:none}
+.osd-bar{flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.16); overflow:hidden}
+.osd-bar i{display:block; height:100%; border-radius:3px; background:#fff; transform-origin:0 50%; transform:scaleX(0); transition:transform .22s cubic-bezier(.2,.9,.3,1), background .2s}
+.osd.mute .osd-bar i{background:rgba(255,255,255,.32)}
+.osd b{width:28px; text-align:right; font-size:12px; font-weight:650; font-variant-numeric:tabular-nums}
+.osd.bump .osd-ic{animation:osdBump .3s cubic-bezier(.2,1.6,.4,1)}
+@keyframes osdBump{50%{transform:scale(1.18)}}
+.gdlg{position:fixed; inset:0; z-index:60; pointer-events:none; visibility:hidden}
+.gdlg.on{visibility:visible}
+.gdlg::before{content:""; position:absolute; inset:0; background:radial-gradient(70% 60% at var(--cx, 50%) var(--cy, 45%), rgba(0,0,0,.28), transparent 75%); opacity:0; transition:opacity .4s}
+.gdlg.on::before{opacity:1}
+.gd-in{position:absolute; left:0; top:0; width:272px; padding:22px 18px 16px; border-radius:26px; color:#fff; text-align:center; --tint:rgba(30,30,36,.42);
+  display:flex; flex-direction:column; align-items:center; opacity:0; transform:scale(1.12); filter:blur(6px); pointer-events:none}
+.gdlg.on .gd-in{pointer-events:auto; opacity:1; transform:none; filter:none; transition:opacity .22s, transform .55s cubic-bezier(.2,1.25,.32,1), filter .3s}
+.gdlg.out .gd-in{opacity:0; transform:scale(.9); filter:blur(4px); transition:opacity .2s, transform .28s cubic-bezier(.5,0,.75,0), filter .2s}
+.gd-ic{width:54px; height:54px; margin-bottom:12px; object-fit:contain; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}
+.gd-ic:not([src]), .gd-ic[src=""]{display:none}
+.gdlg.on .gd-ic{animation:gdIc .7s cubic-bezier(.2,1.5,.35,1) .08s backwards}
+@keyframes gdIc{from{transform:scale(.4) translateY(8px); opacity:0}}
+.gd-t{font-size:14px; font-weight:700; line-height:1.3; margin-bottom:6px; overflow-wrap:anywhere}
+.gd-x{margin:0 0 16px; font-size:12px; line-height:1.45; color:rgba(255,255,255,.78); white-space:pre-line; max-height:220px; overflow:auto; overflow-wrap:anywhere}
+.gdlg.on .gd-t, .gdlg.on .gd-x{animation:rowIn .45s var(--glide) .12s backwards} .gdlg.on .gd-x{animation-delay:.17s}
+.gd-bs{display:flex; gap:8px; width:100%}
+.gd-bs.many{flex-direction:column}
+.gd-b{flex:1; min-width:0; height:32px; padding:0 10px; border:0; border-radius:16px; font:inherit; font-size:12.5px; font-weight:600; color:#fff; cursor:pointer;
+  background:rgba(255,255,255,.13); box-shadow:inset 0 .8px 0 rgba(255,255,255,.18); transition:transform .25s var(--spring), background .2s, filter .2s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gd-b:hover{background:rgba(255,255,255,.2)} .gd-b:active{transform:scale(.94)}
+.gd-b.def{background:linear-gradient(180deg, #3d8bff, #2a6fe6); box-shadow:inset 0 .8px 0 rgba(255,255,255,.35), 0 4px 14px rgba(42,111,230,.4)}
+.gd-b.def:hover{filter:brightness(1.1)}
+.gd-b:focus-visible{outline:2px solid rgba(160,200,255,.9); outline-offset:2px}
+.gdlg.on .gd-b{animation:rowIn .45s var(--glide) backwards; animation-delay:calc(.2s + var(--i) * .05s)}
+/* the agent alert card */
+.agc{position:fixed; z-index:46; left:50%; top:calc(var(--bar) + 12px); width:min(420px, 92vw); margin-left:calc(min(420px, 92vw) / -2); pointer-events:none; visibility:hidden;
+  --c:#9cc4ff; --c2:rgba(156,196,255,.35)}
+.agc[data-m="perm"]{--c:#c7a6ff; --c2:rgba(199,166,255,.38)} .agc[data-m="alert"]{--c:#ff8a7a; --c2:rgba(255,138,122,.4)}
+.agc[data-m="limit"]{--c:#ffc86a; --c2:rgba(255,200,106,.38)} .agc[data-m="done"]{--c:#7fe0a8; --c2:rgba(127,224,168,.35)}
+.agc.on, .agc.off{visibility:visible}
+.agc.on{pointer-events:auto}
+.agc-in{position:relative; display:flex; align-items:center; gap:12px; padding:12px 12px 12px 14px; border-radius:20px; color:#fff;
+  background:linear-gradient(180deg, rgba(34,34,40,.96), rgba(20,20,24,.97)); box-shadow:0 0 0 1px var(--c2), 0 18px 44px rgba(0,0,0,.5), 0 0 30px -6px var(--c2);
+  transform-origin:50% 0; opacity:0; transform:translateY(-26px) scale(.86)}
+.agc.on .agc-in{animation:agcIn .7s cubic-bezier(.2,1.35,.32,1) forwards}
+.agc.off .agc-in{animation:agcOut .4s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes agcIn{to{opacity:1; transform:none}}
+@keyframes agcOut{from{opacity:1; transform:none} to{opacity:0; transform:translateY(-20px) scale(.9)}}
+.agc-glow{position:absolute; inset:-6px; border-radius:26px; background:radial-gradient(60% 90% at 30% 50%, var(--c2), transparent 70%); filter:blur(14px); opacity:0}
+.agc.on .agc-glow{animation:agcGlow 2.4s ease-in-out .5s infinite}
+@keyframes agcGlow{0%, 100%{opacity:.35} 50%{opacity:.85}}
+.agc-ic{flex:none; width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-weight:800; font-size:17px; color:#14141a; background:var(--c);
+  box-shadow:0 0 0 4px var(--c2), 0 4px 14px rgba(0,0,0,.35)}
+.agc.on .agc-ic{animation:agcIc .8s cubic-bezier(.2,1.6,.35,1) .15s backwards}
+@keyframes agcIc{from{transform:scale(.2) rotate(-40deg); opacity:0}}
+.agc[data-m="alert"].on .agc-ic, .agc[data-m="perm"].on .agc-ic{animation:agcIc .8s cubic-bezier(.2,1.6,.35,1) .15s backwards, agcShake 2.6s ease-in-out 1.2s infinite}
+@keyframes agcShake{0%, 86%, 100%{transform:none} 89%{transform:rotate(-12deg)} 92%{transform:rotate(10deg)} 95%{transform:rotate(-6deg)}}
+.agc-tx{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.agc-tx b{font-size:13.5px; font-weight:700; color:var(--c); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.agc-tx span{font-size:12px; color:rgba(255,255,255,.78); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.agc.on .agc-tx > *{animation:rowIn .5s var(--glide) .2s backwards} .agc.on .agc-tx span{animation-delay:.28s}
+.agc-go{flex:none; height:30px; padding:0 13px; border:0; border-radius:15px; background:var(--c); color:#14141a; font:inherit; font-size:12px; font-weight:700; cursor:pointer; transition:transform .25s var(--spring), filter .2s}
+.agc-go:hover{filter:brightness(1.08)} .agc-go:active{transform:scale(.92)}
+.agc-x{flex:none; width:26px; height:26px; padding:0; border:0; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.08); cursor:pointer}
+.agc-x svg{width:11px; height:11px; fill:none; stroke:rgba(255,255,255,.75); stroke-width:2.4; stroke-linecap:round}
+.agc-ring{position:absolute; right:8px; top:8px; width:12px; height:12px; transform:rotate(-90deg)}
+.agc-ring circle{fill:none; stroke:var(--c); stroke-width:3.2; stroke-dasharray:63; stroke-dashoffset:0; opacity:.8}
+.agc.on .agc-ring circle{animation:agcRing var(--life, 8000ms) linear forwards}
+@keyframes agcRing{to{stroke-dashoffset:63}}
 .ag-go{flex:none; font-style:normal; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:10px; background:rgba(12,12,14,.07); transition:background .2s}
 .ag-nb:hover .ag-go{background:rgba(12,12,14,.13)}
 
@@ -3372,6 +3628,7 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 /* the pieces said: the mark held back at a pause shows faint until the next piece sets it or carries the sentence on;
    a piece taken back blurs away; the brain's tidier version takes a piece's place word for word */
 .wpiece{white-space:pre-wrap}
+.ks-seg{flex-wrap:wrap; justify-content:flex-end; max-width:340px}
 /* the phone link's row: phones found, then the code */
 .ph-pick{display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:2px 12px 10px}
 .ph-o{border:0; border-radius:99px; padding:6px 12px; background:rgba(255,255,255,.12); color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer; animation:rowIn .4s var(--glide) backwards; animation-delay:calc(var(--i, 0) * 50ms); transition:background .2s}
@@ -3561,7 +3818,7 @@ html.vision .wc-in{border-radius:16px}
   </div>
 </div>
 <div class="lock" id="lock" aria-label="Lock screen"><img class="lk-bg" id="lkBg" alt=""><div class="lk-dim"></div>
-  <div class="lk-mid"><div class="lk-time" id="lkTime"></div><div class="lk-glass lk-date" id="lkDate"></div></div>
+  <div class="lk-mid"><div class="lk-time" id="lkTime"></div><div class="lk-glass lk-date" id="lkDate"></div><div class="lk-wid" id="lkWidgets"></div></div>
   <div class="lk-ask"><div class="lk-glass lk-code" id="lkBox"><span class="lk-dots" id="lkDots"></span><span class="lk-ph">Passcode</span></div><div class="lk-say" id="lkSay"></div><button class="lk-win" id="lkWin">Use Windows sign-in instead</button></div>
   <div class="lk-glass lk-hint" id="lkHint">Click, or press any key</div>
 </div>
@@ -3606,6 +3863,7 @@ html.vision .wc-in{border-radius:16px}
   <i class="gw"></i>
   <nav class="sw-nav">
     <div class="mac-tl"><button data-tl="close" aria-label="Close settings"></button><button data-tl="min" aria-label="Close settings"></button><button data-tl="zoom" aria-label="Make the window bigger"></button></div><label class="mac-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="macQ" placeholder="Search" spellcheck="false" autocomplete="off" aria-label="Search settings"></label><div class="sw-brand"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13.5" rx="9" ry="6.5" fill="#fff"/><circle cx="9.3" cy="12.6" r="1.25" fill="#111"/><circle cx="14.7" cy="12.6" r="1.25" fill="#111"/></svg><span class="sb-n">Settings</span><span class="mac-acct"><b>ULTRON</b><small>Runs on this PC</small></span></div>
+    <label class="sw-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="swQ" placeholder="Search settings" spellcheck="false" autocomplete="off" aria-label="Search settings"></label>
     <i class="sw-hl" id="swHl"></i>
     <button data-sec="voice"><svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg><span>Voice</span></button>
     <button data-sec="dictation"><svg viewBox="0 0 24 24"><path d="M4 9.5v5M7.5 6.5v11M11 9.5v5"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h3.5"/></svg><span>Dictation</span></button>
@@ -3623,7 +3881,7 @@ html.vision .wc-in{border-radius:16px}
   <div class="sw-main">
     <div class="mac-tb"><button class="mac-nav" data-mn="back" aria-label="Back" disabled><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button class="mac-nav" data-mn="fwd" aria-label="Forward" disabled><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button><b id="macTitle"></b></div>
     <button class="sw-x" id="swClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
-    <section class="sw-sec" data-sec="voice"><h2>Voice</h2><p class="sw-sub">How ULTRON sounds when it talks back.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Speak replies<small>Answers out loud as the words appear</small></span><button class="tg" role="switch" data-set="speak" aria-label="speak"></button></div><div class="sw-row"><span class="sw-l">Voice<small>Both run on this PC</small></span><span class="seg" data-set="voiceName" role="radiogroup"><button data-v="lessac" role="radio">Woman</button><button data-v="ryan" role="radio">Man</button></span></div><div class="sw-row"><span class="sw-l">Sound<small>As the voice is, or ULTRON’s own: deeper, with a soft synthetic sheen</small></span><span class="seg" data-set="voiceStyle" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="ultron" role="radio">ULTRON</button><button data-v="windows" role="radio">Windows</button></span></div><div class="sw-row"><span class="sw-l">Speaking speed</span><input class="rng" type="range" min="0.85" max="1.2" step="0.01" data-set="voiceRate" aria-label="voiceRate"></div><div class="sw-row"><span class="sw-l">Volume</span><input class="rng" type="range" min="0.2" max="1" step="0.01" data-set="voiceVol" aria-label="voiceVol"></div><div class="sw-row"><span class="sw-l">Hear it<small>A short sample with these settings</small></span><button class="chipb" data-sx="testvoice">Play sample</button></div></div></section>
+    <section class="sw-sec" data-sec="voice"><h2>Voice</h2><p class="sw-sub">How ULTRON sounds when it talks back.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Language<small id="langNote">What you talk and dictate in, and what ULTRON answers in</small></span><select class="cv-sel lang-sel" id="langSel" aria-label="Language"><option value="en">English</option><option value="auto">Any (it works out which)</option><option value="hi">हिन्दी Hindi</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="pt">Português</option><option value="it">Italiano</option><option value="ar">العربية Arabic</option><option value="ru">Русский</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ko">한국어</option><option value="ur">اردو Urdu</option><option value="bn">বাংলা Bengali</option><option value="mr">मराठी Marathi</option><option value="tr">Türkçe</option><option value="id">Bahasa Indonesia</option></select></div><div class="sw-row"><span class="sw-l">Speak replies<small>Answers out loud as the words appear</small></span><button class="tg" role="switch" data-set="speak" aria-label="speak"></button></div><div class="sw-row"><span class="sw-l">Voice<small>Both run on this PC</small></span><span class="seg" data-set="voiceName" role="radiogroup"><button data-v="lessac" role="radio">Woman</button><button data-v="ryan" role="radio">Man</button></span></div><div class="sw-row"><span class="sw-l">Sound<small>As the voice is, or ULTRON’s own: deeper, with a soft synthetic sheen</small></span><span class="seg" data-set="voiceStyle" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="ultron" role="radio">ULTRON</button><button data-v="windows" role="radio">Windows</button></span></div><div class="sw-row"><span class="sw-l">Speaking speed</span><input class="rng" type="range" min="0.85" max="1.2" step="0.01" data-set="voiceRate" aria-label="voiceRate"></div><div class="sw-row"><span class="sw-l">Volume</span><input class="rng" type="range" min="0.2" max="1" step="0.01" data-set="voiceVol" aria-label="voiceVol"></div><div class="sw-row"><span class="sw-l">Hear it<small>A short sample with these settings</small></span><button class="chipb" data-sx="testvoice">Play sample</button></div></div></section>
     <section class="sw-sec on" data-sec="listen"><h2>Listening</h2><p class="sw-sub">When and how well ULTRON hears you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Wake word<small>When closed, only respond to “Ultron …”</small></span><button class="tg" role="switch" data-set="wake" aria-label="wake"></button></div><div class="sw-row"><span class="sw-l">Mute the microphone<small>ULTRON stops listening until you turn it back on</small></span><button class="tg" role="switch" data-set="muted" aria-label="muted"></button></div><div class="sw-row"><span class="sw-l">Voice sensitivity<small>Raise it if you have to repeat yourself</small></span><input class="rng" type="range" min="0.4" max="1.8" step="0.01" data-set="sens" aria-label="sens"></div><div class="sw-row"><span class="sw-l">Hear songs<small>Lines lyrics up with videos, and writes down words when there are no lyrics online</small></span><button class="tg" role="switch" data-set="hearSongs" aria-label="hearSongs"></button></div></div></section>
     <section class="sw-sec" data-sec="dictation"><h2>Dictation</h2><p class="sw-sub">Speak wherever you can type. Your words are tidied as they come, on this PC.</p>
       <div class="dt-stage"><div class="dt-card" id="dtCard"><div class="dt-top"><i class="wc-mic" aria-hidden="true"><i></i><i></i><i></i><i></i></i><span class="dt-say" id="dtSay">Press Try it and talk</span><button class="dt-go" id="dtGo" type="button">Try it</button></div><div class="dt-text" id="dtText" aria-live="polite"></div><div class="dt-raw" id="dtRaw"></div></div><button class="dt-demo" id="dtDemo" type="button">See an example</button></div>
@@ -3635,10 +3893,10 @@ html.vision .wc-in{border-radius:16px}
       <h3 class="dt-h">Say it</h3>
       <div class="dt-cmds"><div class="dt-cmd"><b>new line</b><span>Line break</span></div><div class="dt-cmd"><b>new paragraph</b><span>Blank line</span></div><div class="dt-cmd"><b>comma, period</b><span>, .</span></div><div class="dt-cmd"><b>question mark</b><span>?</span></div><div class="dt-cmd"><b>open quote … close quote</b><span>“ ”</span></div><div class="dt-cmd"><b>bullet point</b><span>•</span></div><div class="dt-cmd"><b>scratch that</b><span>Takes back the last thing said</span></div><div class="dt-cmd"><b>pause dictation</b><span>Then “resume dictation”</span></div><div class="dt-cmd"><b>stop dictation</b><span>Done</span></div></div>
     </section>
-    <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="gem" role="radio" class="soon" disabled aria-disabled="true" title="Cloud is under development"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Cloud<small>Under development</small></span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Uplink<small>Questions about the world are looked up on Google, boiled down, and answered in a sentence or two</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
+    <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="gem" role="radio" class="soon" disabled aria-disabled="true" title="Cloud is under development"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><span>Cloud<small>Under development</small></span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while ULTRON runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="keepAI"></button></div><div class="sw-row"><span class="sw-l">Web answers<small>Questions about the world are looked up on Google, boiled down, and answered</small></span><button class="tg" role="switch" data-set="web" aria-label="web"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How ULTRON works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>ULTRON writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things ULTRON does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">How ULTRON looks, and the character in the notch.</p><div class="ui-pick" id="uiPick" role="radiogroup" aria-label="Look"><button data-ui="ultron" role="radio"><span class="ui-pv pv-u"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-glint"></i></span><span class="ui-nm"><b>ULTRON</b><small>Liquid glass</small></span></button><button data-ui="vision" role="radio"><span class="ui-pv pv-v"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-fab"></i></span><span class="ui-nm"><b>VISION</b><small>Solid and quick, for lighter PCs</small></span></button></div><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Pointer motion blur<small>A soft streak trails the pointer when it moves fast</small></span><button class="tg" role="switch" data-set="cursorBlur" aria-label="cursorBlur"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only"><span class="sw-l">Only ULTRON’s lock screen<small id="lkWinSay">When the PC wakes, Windows won’t ask for its own sign-in first: ULTRON’s comes up instead. Restarts and Win L still use Windows’ sign-in.</small></span><button class="tg" role="switch" data-set="lkWin" aria-label="Only ULTRON’s lock screen"></button></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
-    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">How ULTRON looks, and the character in the notch.</p><div class="ui-pick" id="uiPick" role="radiogroup" aria-label="Look"><button data-ui="ultron" role="radio"><span class="ui-pv pv-u"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-glint"></i></span><span class="ui-nm"><b>ULTRON</b><small>Liquid glass</small></span></button><button data-ui="vision" role="radio"><span class="ui-pv pv-v"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-fab"></i></span><span class="ui-nm"><b>VISION</b><small>Solid and quick, for lighter PCs</small></span></button></div><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="follow"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="blink"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="eye"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="label"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: ULTRON’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">ULTRON</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Glass dialogs<small>Windows’ message boxes (“Save changes?”) appear as ULTRON’s own glass ones</small></span><button class="tg" role="switch" data-set="glassDlg" aria-label="Glass dialogs"></button></div><div class="sw-row"><span class="sw-l">ULTRON’s volume and brightness<small>Shown under the notch instead of Windows’ own box when you press the volume keys</small></span><button class="tg" role="switch" data-set="osd" aria-label="ULTRON’s volume and brightness"></button></div><div class="sw-row"><span class="sw-l">ULTRON’s Alt+Tab<small>Your open windows as glass cards, each showing what’s in it. Full-screen games keep Windows’ own.</small></span><button class="tg" role="switch" data-set="altTab" aria-label="ULTRON’s Alt+Tab"></button></div><div class="sw-row"><span class="sw-l">Desktop switch<small>Moving to another of Windows’ desktops, or making a new one, shows which one you’re on</small></span><button class="tg" role="switch" data-set="deskHud" aria-label="Desktop switch"></button></div><div class="sw-row"><span class="sw-l">Key sounds<small>A soft sound for every key you press, like a keyboard with creamy switches</small></span><button class="tg" role="switch" data-set="keySounds" aria-label="Key sounds"></button></div><div class="sw-row"><span class="sw-l">Click sounds<small>A light tick for each click</small></span><button class="tg" role="switch" data-set="clickSounds" aria-label="Click sounds"></button></div><div class="sw-row"><span class="sw-l">Switches<small>How the keys sound. Pick one to hear it</small></span><span class="seg ks-seg" data-set="keyPack" role="radiogroup"><button data-v="creamy" role="radio">Creamy</button><button data-v="thock" role="radio">Thocky</button><button data-v="clicky" role="radio">Clicky</button><button data-v="typewriter" role="radio">Typewriter</button><button data-v="bubble" role="radio">Bubble</button><button data-v="marble" role="radio">Marble</button></span></div><div class="sw-row"><span class="sw-l">Sound volume</span><input class="rng" type="range" min="0.1" max="1" step="0.01" data-set="keyVol" aria-label="Key sound volume"></div><div class="sw-row"><span class="sw-l">Pointer motion blur<small>A soft streak trails the pointer when it moves fast</small></span><button class="tg" role="switch" data-set="cursorBlur" aria-label="cursorBlur"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>ULTRON’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the ULTRON menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row lk-only lkp-row"><div class="lkp" id="lkPrev"><div class="lkp-in"><div class="lk-date" id="lkpDate"></div><div class="lk-time" id="lkpTime"></div></div></div></div><div class="sw-row lk-only"><span class="sw-l">Clock<small>Glass shows your wallpaper through the figures</small></span><span class="seg" data-set="lkClock" role="radiogroup"><button data-v="glass" role="radio">Glass</button><button data-v="solid" role="radio">Solid</button></span></div><div class="sw-row lk-only"><span class="sw-l">Clock weight</span><span class="seg" data-set="lkWeight" role="radiogroup"><button data-v="thin" role="radio">Thin</button><button data-v="regular" role="radio">Regular</button><button data-v="bold" role="radio">Bold</button></span></div><div class="sw-row lk-only"><span class="sw-l">Clock colour</span><span class="seg" data-set="lkTint" role="radiogroup"><button data-v="white" role="radio">White</button><button data-v="warm" role="radio">Warm</button><button data-v="ice" role="radio">Ice</button><button data-v="rose" role="radio">Rose</button></span></div><div class="sw-row lk-only"><span class="sw-l">Battery and weather<small>Under the clock, in small pieces of glass</small></span><button class="tg" role="switch" data-set="lkWid" aria-label="Battery and weather on the lock screen"></button></div><div class="sw-row lk-only"><span class="sw-l">Only ULTRON’s lock screen<small id="lkWinSay">When the PC wakes, Windows won’t ask for its own sign-in first: ULTRON’s comes up instead. Restarts and Win L still use Windows’ sign-in.</small></span><button class="tg" role="switch" data-set="lkWin" aria-label="Only ULTRON’s lock screen"></button></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on ULTRON’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows ULTRON’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="reduceMotion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="liveGlass"></button></div></div></section>
+    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">ULTRON’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or ULTRON closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>ULTRON’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens ULTRON’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="dkPins"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="dkGap"></div><div class="sw-row"><span class="sw-l">Drop Shelf edge<small>Where it comes out: rest the pointer on that edge, or drag a file to it</small></span><span class="seg" data-set="dsSide" role="radiogroup"><button data-v="bottom" role="radio">Bottom</button><button data-v="left" role="radio">Left</button><button data-v="right" role="radio">Right</button></span></div><div class="sw-row"><span class="sw-l">Drop Shelf size</span><span class="seg" data-set="dsSize" role="radiogroup"><button data-v="compact" role="radio">Compact</button><button data-v="normal" role="radio">Normal</button><button data-v="large" role="radio">Large</button></span></div><div class="sw-row"><span class="sw-l">Names under items</span><button class="tg" role="switch" data-set="dsNames" aria-label="Names under items"></button></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>ULTRON’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or ULTRON closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">ULTRON</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="nfQuiet"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="nfSound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">ULTRON and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small id="loginSay">Opens ULTRON as soon as you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="autostart"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit ULTRON<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="cleaner"><h2>Cleaner</h2><p class="sw-sub">Clears the junk Windows and your apps leave behind. Your files, sign-ins, passwords and settings aren’t touched.</p><div class="cl-stage" id="clStage"><div class="cl-head"><b id="clNum">…</b><span id="clCap">Looking for junk…</span></div><div class="cl-fall" id="clFall"></div><div class="cl-mach"><i class="cl-slot"></i><div class="cl-teeth"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i></div><i class="cl-light"></i></div><div class="cl-out" id="clOut"></div><div class="cl-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></div></div><div class="cl-rows" id="clRows"></div><div class="cl-acts"><button class="cl-go" id="clGo" type="button" data-clx="go" disabled><span>Clear</span></button><button class="chipb" type="button" data-clx="scan">Look again</button></div><div class="pr" id="prBox"><div class="pr-hd"><span class="sw-l">Running in the background<small>Apps of yours with no window open, still holding memory. Choose the ones you don’t need and end them. Windows’ own parts aren’t listed.</small></span><button class="chipb" type="button" data-prx="scan">Look again</button></div><div class="pr-list" id="prList"></div><div class="pr-acts"><button class="cl-go" id="prEnd" type="button" data-prx="end" disabled><span>End</span></button><span class="pr-sum" id="prSum"></span></div></div></section>
@@ -3856,11 +4114,11 @@ const $ = id => document.getElementById(id);
 
 /* ---------- settings (persisted per viewer) ---------- */
 const DEFAULTS = {setSkin:'ultron', follow:true, blink:true, eye:1, speed:1, sens:1, label:true, tint:'#ffffff', liveGlass:true, wake:true, speak:true, muted:false,
-  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, dictFill:true, dictFix:true, dictSmart:true, dictAI:false, dictWords:[], wear:null, agentWatch:false, agentNotes:false, agentAll:false};
+  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, dictFill:true, dictFix:true, dictSmart:true, dictAI:false, dictWords:[], dsSide:'bottom', dsSize:'normal', dsNames:true, altTab:false, deskHud:true, lkClock:'glass', lkWeight:'thin', lkTint:'white', lkWid:true, glassDlg:false, osd:false, lang:'en', keySounds:false, clickSounds:false, keyPack:'creamy', keyVol:.6, wear:null, agentWatch:false, agentNotes:false, agentAll:false};
 let S = {...DEFAULTS};
 const TALL = Math.round(screen.height || 864) - 2;     // (ULTRON's window's height: see winH)
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
-// (Uplink, answers by way of Gemini, is gone; Cloud will take its place, and isn't ready yet: answers come from this PC)
+// (the old web-answer option, answers by way of Gemini, is gone; Cloud will take its place, and isn't ready yet: answers come from this PC)
 if (S.gemini){ S.gemini = false; try { localStorage.setItem('ultron-notch', JSON.stringify(S)); } catch(_){} }
 // ULTRON speaks again (14 Oct 2026), with a woman's voice to start with, as it is (not made deeper). Once; after that
 // what's chosen in Settings, Voice stays as chosen.
@@ -4129,7 +4387,7 @@ setInterval(() => {
   const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
   // (the Drop Shelf too: it wasn't on this list, so its glass got a picture only every 8 seconds and never caught up)
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), $('qs'), notch].some(el => el && el.classList.contains('open'));
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), $('qs'), notch].some(el => el && el.classList.contains('open')) || $('gdlg').classList.contains('on') || $('atb').classList.contains('on');
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -4482,6 +4740,13 @@ function pushAI(){ invoke('ai_config', {cfg:{brain:S.brain, gpu:S.gpu, keep:!!S.
 function applySetting(k){
   if (AI_KEYS.includes(k)) pushAI();
   if (k === 'autostart') invoke('set_autostart', {on:!!S.autostart});
+  if (k === 'glassDlg') invoke('dialogs_set', {on:!!S.glassDlg});
+  if (k === 'altTab') invoke('alttab_set', {on:!!S.altTab});
+  if (k === 'lkClock' || k === 'lkWeight' || k === 'lkTint' || k === 'lkWid') lkStyle();
+  if (k === 'osd'){ invoke('osd_set', {on:!!S.osd}); if (S.osd) invoke('qs_state').then(q => q && osdShow('vol', q.vol, !!q.mute)); }
+  if (k === 'keySounds' || k === 'clickSounds'){ ksSync(); if (S[k]) ksPlay(k === 'keySounds' ? 0 : 4); }
+  if ((k === 'dsSide' || k === 'dsSize' || k === 'dsNames') && window.DS){ dsLay(); if (DS.on) syncHit(); else { dsShow('open', true); setTimeout(() => { if (DS.sticky) dsHide(); }, 1600); } }
+  if (k === 'keyPack'){ KS.bufs = null; ksPlay(0); setTimeout(() => ksPlay(1), 160); setTimeout(() => ksPlay(2), 330); }
   if (k === 'lkWin' || (k === 'lock' && S.lock !== 'ultron' && S.lkWin)){ if (k === 'lock') S.lkWin = false; save(); lkWinApply(); }
   if (k === 'cursorBlur') invoke('cursor_blur', {on:!!S.cursorBlur});
   if (k === 'reduceMotion') document.body.classList.toggle('calm', !!S.reduceMotion);
@@ -5647,14 +5912,14 @@ function paintKey(moved){
     if (moved && k.dataset.v !== side){ k.classList.remove('go'); void k.offsetWidth; k.classList.add('go'); }
     k.dataset.v = side; k.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', b.dataset.kw === side));
   });
-  const say = $('kwSay'), text = S.gemini ? 'Answers come through Uplink, with no key. Your questions go to Google\'s Gemini, privately from this PC; your screen, files and email don\'t.' : KW.on ? `Answers come from ${KW.name} · ${KW.model}, with your key.` : KW.want ? 'Add a key below to switch over. Until then, everything is answered on this PC.' : 'Everything is answered on this PC.';
+  const say = $('kwSay'), text = S.gemini ? 'Answers come from the web, with no key. Your questions go to Google, privately from this PC; your screen, files and email don\'t.' : KW.on ? `Answers come from ${KW.name} · ${KW.model}, with your key.` : KW.want ? 'Add a key below to switch over. Until then, everything is answered on this PC.' : 'Everything is answered on this PC.';
   const cls = 'kw-say' + (S.gemini || KW.on ? ' key' : KW.want ? ' wait' : '');
   if (say.lastChild.textContent !== text){
     say.classList.add('swap');
     setTimeout(() => { say.className = cls + ' swap'; say.lastChild.textContent = text; void say.offsetWidth; say.classList.remove('swap'); }, say.lastChild.textContent ? 170 : 0);
   }
-  $('kwnSay').textContent = S.gemini ? 'Uplink' : KW.on ? `${KW.name} · ${KW.model.replace(/^models\//, '')}` : KW.want ? 'This PC, until you add a key' : 'This PC';
-  $('swBrainSub').textContent = S.gemini ? 'Answers come through Uplink, no key needed. Your screen, files and email never leave this PC.' : KW.on ? `Answers and translations come from ${KW.name}, with your key. Your screen, files and email never leave this PC.` : 'The AI that runs on this PC. Nothing you say leaves it.';
+  $('kwnSay').textContent = S.gemini ? 'Web' : KW.on ? `${KW.name} · ${KW.model.replace(/^models\//, '')}` : KW.want ? 'This PC, until you add a key' : 'This PC';
+  $('swBrainSub').textContent = S.gemini ? 'Answers come from the web, no key needed. Your screen, files and email never leave this PC.' : KW.on ? `Answers and translations come from ${KW.name}, with your key. Your screen, files and email never leave this PC.` : 'The AI that runs on this PC. Nothing you say leaves it.';
   $('kwForm').classList.toggle('open', side === 'key');
   const prov = $('kwProv');
   if (prov.children.length !== KW.providers.length) prov.innerHTML = KW.providers.map(x => `<button type="button" data-prov="${x.id}">${esc(x.name)}</button>`).join('');
@@ -5971,7 +6236,7 @@ async function loadMail(refresh){
   if (ML.busy || !ML.on) return;
   ML.busy = true; mailw.classList.add('busy'); let err = '';
   if (!ML.list.length) paintMailList();
-  try { ML.list = (await invokeLoud('mail_list', {refresh})) || []; ML.at = Date.now(); } catch(e){ err = String(e); }
+  try { ML.list = (await invokeLoud('mail_list', {refresh})) || []; ML.at = Date.now(); ML.list.slice(0, 25).forEach(m => dictLearn(m.from)); } catch(e){ err = String(e); }
   ML.busy = false; mailw.classList.remove('busy');
   if (!ML.on) return;
   paintMailList();
@@ -6487,11 +6752,24 @@ const DICT_PAUSE = /^(?:ultron[\s,.!]*)?(?:pause|hold)\s+(?:the\s+)?dictat(?:ion
 const DICT_RESUME = /^(?:ultron[\s,.!]*)?(?:resume|continue|unpause|restart)\s+(?:the\s+)?dictat(?:ion|ing)\b/i;
 // (a correction said aloud: the brain, when it's up, makes more of these than the rules can)
 const DICT_CUE = /(?:^|[,.]\s*)no\b|\bno,? wait\b|\bwait,? no\b|\bI mean\b|\bactually\b|\bsorry\b|\bor rather\b|\bmake that\b/i;
-function dictOpts(){ return {fillers:!!S.dictFill, fixes:!!S.dictFix, smart:!!S.dictSmart, words:S.dictWords || []}; }
+function dictOpts(){ return {fillers:!!S.dictFill, fixes:!!S.dictFix, smart:!!S.dictSmart, words:S.dictWords || [], names:S.dictLearned || []}; }
+/* Names dictation should know: the people who write to you (email, chat messages) are learned as they come, so "Aarav"
+   isn't typed "Arav". Kept on this PC, the 80 most recent. (Companies and robots, "Amazon Alerts", aren't names.) */
+function dictLearn(raw){
+  const name = String(raw || '').replace(/<[^>]*>|\([^)]*\)|["“”]/g, '').split(/[,@|]/)[0].trim();
+  if (name.length > 32 || !/^\p{Lu}[\p{Ll}'’.-]+( \p{Lu}[\p{Ll}'’.-]+){0,2}$/u.test(name)) return;
+  if (/\b(team|alerts?|notifications?|news|newsletter|support|service|updates?|info|store|digest|account|security|community|jobs?|bank|offers?|deals?)\b/i.test(name)) return;
+  const l = S.dictLearned || [];
+  if (l.includes(name)) return;
+  S.dictLearned = [...l, name].slice(-80); save();
+}
 // (what the recognizer is told to expect: your words, and the last things said, written as writing is)
 function dictPrompt(){
-  const w = (S.dictWords || []).join(', '), tail = DICT.before.replace(/\s+/g, ' ').trim().slice(-200);
-  return ((w ? w + '. ' : '') + (tail || 'Hi, how are you? I’m fine, thanks. Let’s meet at 4 PM.')).slice(-240);
+  // (the names go first and are never cut: the whole used to be cut to its last 240 letters, which dropped the names
+  //  you'd listed as soon as there was much said before)
+  const w = [...new Set([...(S.dictWords || []), ...(S.dictLearned || []).slice(-30).reverse()])].join(', ').slice(0, 320);
+  const tail = DICT.before.replace(/\s+/g, ' ').trim().slice(-200);
+  return (w ? w + '. ' : '') + (tail || (S.lang && S.lang !== 'en' ? '' : 'Hi, how are you? I’m fine, thanks. Let’s meet at 4 PM.'));
 }
 function dictIdle(){ clearTimeout(DICT.idleT); DICT.idleT = setTimeout(() => dictOff('Dictation ended after a minute of quiet.'), 60000); }
 function dictBoard(){ return DICT.mode === 'card' ? WC.board : DICT.mode === 'try' ? DT.board : null; }
@@ -6682,6 +6960,149 @@ listen('link-command', async c => {
   let r; try { r = await invoke('assist', {text:c.text}); } catch(x){ r = {ok:false, reply:String(x)}; }
   invoke('link_answer', {id:c.id, ok:!!(r && r.ok), text:(r && r.reply) || ''});
 });
+/* ---------- key and click sounds (sounds.rs tells what kind of press; the sound is made here) ----------
+   Each pack is made, not recorded: a short burst of filtered noise for the switch, a damped tone for the case under
+   it, an envelope each. Space is deeper, Enter fuller, Backspace a touch higher; each press is a hair different in
+   pitch, as real keys are. */
+var KS = {ctx:null, bufs:null, gain:null};
+const KS_PACKS = {
+  creamy:{body:170, bodyDecay:.045, noise:1700, q:1.2, noiseDecay:.018, mix:.55, up:.35},
+  thock:{body:115, bodyDecay:.06, noise:850, q:1, noiseDecay:.022, mix:.65, up:.28},
+  clicky:{body:320, bodyDecay:.018, noise:4200, q:2.2, noiseDecay:.009, mix:.25, up:.55, click:true},
+  typewriter:{body:260, bodyDecay:.03, noise:2600, q:1.6, noiseDecay:.03, mix:.35, up:.2, ping:3200},
+  bubble:{bubble:true, up:.0},
+  marble:{body:240, bodyDecay:.03, noise:3300, q:2.5, noiseDecay:.014, mix:.4, up:.4},
+};
+/* The language you talk, dictate and are answered in. Any but English needs the speech model that knows them all
+   (about 190 MB, fetched once, the first time) and, to be spoken back, that language's voice (about 60 MB). Japanese,
+   Korean, Urdu, Bengali and Marathi have no voice yet: their answers are written only. */
+const LANG_SPOKEN = ['en', 'auto', 'hi', 'es', 'fr', 'de', 'pt', 'it', 'ar', 'ru', 'zh', 'tr', 'id'];
+function langApply(first){
+  const l = S.lang || 'en';
+  invoke('voice_config', {lang:l}); invoke('tts_lang', {lang:l});
+  const sel = $('langSel'); if (sel) sel.value = l;
+  const note = $('langNote');
+  if (note) note.textContent = l === 'en' ? 'What you talk and dictate in, and what ULTRON answers in'
+    : (first ? '' : 'Getting what it needs for this language, once (about 250 MB). ') + (LANG_SPOKEN.includes(l) ? 'Answers are spoken in it too.' : 'Answers are written in it; there’s no voice for it yet.');
+}
+$('langSel')?.addEventListener('change', e => { S.lang = e.target.value; save(); langApply(false); pushPrompt(); });
+if (TAURI) setTimeout(() => langApply(true), 1500);
+/* ULTRON's Alt+Tab (alttab.rs): Alt held, Tab comes here. A quick Alt+Tab goes straight to the last window, without
+   showing anything, as Windows' own does; held a moment, the cards come up. */
+const AT = {on:false, wins:[], i:0, shown:false, t:0, seq:0, loading:false, pickLater:false};
+let atbEl = null;   // (its markup comes in later, with the battery panel's)
+function atMove(d){ if (!AT.wins.length) return; AT.i = (AT.i + d + AT.wins.length) % AT.wins.length; atPaintSel(); }
+function atPaintSel(){
+  const cards = $('atbRow').querySelectorAll('.atb-c');
+  cards.forEach((c, i) => c.classList.toggle('sel', i === AT.i));
+  const c = cards[AT.i]; if (c) $('atbSel').style.transform = `translateX(${c.offsetLeft}px)`;
+}
+function atShow(seq){
+  if (seq !== AT.seq || !AT.on || AT.shown || !AT.wins.length) return;
+  AT.shown = true; atbEl = $('atb');
+  const n = AT.wins.length, cw = Math.max(120, Math.min(196, Math.floor((innerWidth * .9 - 28 - (n - 1) * 8) / n)));
+  atbEl.style.setProperty('--cw', cw + 'px');
+  $('atbRow').innerHTML = '<i class="atb-sel" id="atbSel"></i>' + AT.wins.map((w, i) => `<button class="atb-c" style="--i:${i}" data-i="${i}"><span class="atb-p"><img class="shot" alt=""><img class="big" alt="" src="${esc(iconCache.get(w.launch) || '')}"></span><span class="atb-t"><span>${esc(w.title || w.name)}</span></span></button>`).join('');
+  atbEl.classList.remove('off'); atbEl.classList.add('on');
+  $('atbSel').style.transition = 'none'; atPaintSel(); void $('atbSel').offsetWidth; $('atbSel').style.transition = '';
+  placeGlass($('atbIn')); glassAim(); syncHit();
+  // the icons it hasn't got yet, then each window's picture, one after another
+  const need = AT.wins.map(w => w.launch).filter(l => l && !iconCache.has(l));
+  if (need.length) invoke('app_icons', {sources:need}).then(urls => { (urls || []).forEach((u, i) => { if (u) iconCache.set(need[i], u); });
+    $('atbRow').querySelectorAll('.atb-c').forEach((c, i) => { const u = iconCache.get(AT.wins[i] && AT.wins[i].launch); if (u) c.querySelector('img.big').src = u; }); });
+  (async () => { for (let i = 0; i < AT.wins.length; i++){ if (seq !== AT.seq) return; const pic = await invoke('dock_peek', {id:AT.wins[i].id}); const im = seq === AT.seq && $('atbRow').querySelectorAll('img.shot')[i];
+    if (pic && im){ im.onload = () => im.classList.add('in'); im.src = pic; } } })();
+}
+function atHide(go){
+  clearTimeout(AT.t); AT.on = false; AT.seq++;
+  const w = go && AT.wins[AT.i];
+  if (w) invoke('dock_act', {id:w.id, what:'focus'});
+  if (!AT.shown) return;
+  atbEl = $('atb'); AT.shown = false; atbEl.classList.replace('on', 'off');
+  setTimeout(() => { if (!AT.on){ atbEl.classList.remove('off'); $('atbRow').querySelectorAll('img.shot').forEach(m => m.removeAttribute('src')); syncHit(); } }, 320);
+}
+listen('alttab', async what => {
+  if (what === 'open' || what === 'open-back'){
+    const seq = ++AT.seq; AT.on = true; AT.shown = false; AT.loading = true; AT.pickLater = false;
+    AT.wins = ((await invoke('alttab_list')) || []).filter(w => w.title).slice(0, 9); AT.loading = false;
+    if (seq !== AT.seq) return;
+    AT.i = AT.wins.length < 2 ? 0 : what === 'open-back' ? AT.wins.length - 1 : 1;
+    if (AT.pickLater){ atHide(true); return; }
+    clearTimeout(AT.t); AT.t = setTimeout(() => atShow(seq), 120);
+    return;
+  }
+  if (!AT.on) return;
+  if (what === 'next' || what === 'prev'){ atMove(what === 'next' ? 1 : -1); atShow(AT.seq); return; }
+  if (what === 'pick'){ if (AT.loading){ AT.pickLater = true; return; } atHide(true); return; }
+  if (what === 'cancel') atHide(false);
+});
+document.addEventListener('click', e => { const c = e.target.closest && e.target.closest('.atb-c'); if (!c) return; AT.i = +c.dataset.i; atHide(true); });
+document.addEventListener('pointerover', e => { const c = e.target.closest && e.target.closest('.atb-c'); if (c && AT.shown && +c.dataset.i !== AT.i){ AT.i = +c.dataset.i; atPaintSel(); } });
+if (TAURI && S.altTab) setTimeout(() => invoke('alttab_set', {on:true}), 2500);
+/* Desktop switch (desks.rs) */
+const DKH = {t:0, i:-1};
+listen('desk', d => {
+  if (!S.deskHud) return;
+  const el = $('dkh'), dots = $('dkhDots');
+  $('dkhName').textContent = d.new ? 'New desktop' : (d.name || 'Desktop ' + (d.i + 1));
+  dots.innerHTML = Array.from({length:d.n}, (_, k) => `<i${d.new && k === d.n - 1 ? ' class="new"' : ''}></i>`).join('') + '<em></em>';
+  const em = dots.querySelector('em'), from = DKH.i >= 0 && DKH.i < d.n && el.classList.contains('on') ? DKH.i : (d.new ? Math.max(0, d.i - 1) : DKH.i >= 0 && DKH.i < d.n ? DKH.i : d.i);
+  em.style.transition = 'none'; em.style.transform = `translateX(${from * 16}px)`; void em.offsetWidth; em.style.transition = '';
+  el.classList.add('on'); requestAnimationFrame(() => { em.style.transform = `translateX(${d.i * 16}px)`; });
+  DKH.i = d.i; clearTimeout(DKH.t); DKH.t = setTimeout(() => el.classList.remove('on'), 1500);
+});
+/* ULTRON's volume and brightness (osd.rs): the volume keys come here, not to Windows */
+const OSD = {t:0};
+function osdShow(kind, level, muted){
+  const el = $('osd'), v = Math.max(0, Math.min(1, level || 0)), pc = Math.round(v * 100);
+  const waves = muted ? '<path d="M16 9.5l5 5M21 9.5l-5 5"/>' : (pc > 0 ? '<path d="M15.5 9a4 4 0 0 1 0 6"/>' : '') + (pc > 50 ? '<path d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/>' : '');
+  el.querySelector('.osd-ic').innerHTML = kind === 'bright'
+    ? '<circle cx="12" cy="12" r="4" class="f"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'
+    : '<path class="f" d="M3.5 9.5h3.5l4.5-4v13l-4.5-4H3.5z"/>' + waves;
+  el.querySelector('.osd-bar i').style.transform = `scaleX(${v})`;
+  el.querySelector('b').textContent = pc;
+  el.classList.toggle('mute', !!muted);
+  if (el.classList.contains('on')){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  el.classList.add('on');
+  clearTimeout(OSD.t); OSD.t = setTimeout(() => el.classList.remove('on', 'bump'), 1500);
+}
+listen('osd', d => { if (S.osd) osdShow(d.kind, d.level, d.muted); });
+listen('bright', v => { if (S.osd) osdShow('bright', v / 100); });
+if (TAURI && S.osd) setTimeout(() => invoke('osd_set', {on:true}), 2500);
+function ksSync(){ invoke('sounds_set', {keys:!!S.keySounds, clicks:!!S.clickSounds}); }
+// (one press's sound as samples: kind 0 key, 1 space, 2 enter, 3 backspace, 4 click, 5 key up, 6 click up)
+function ksMake(ctx, pk, kind){
+  const sr = ctx.sampleRate, up = kind === 5 || kind === 6, len = Math.round(sr * .14), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0);
+  const f = kind === 1 ? .72 : kind === 2 ? .85 : kind === 3 ? 1.12 : kind === 4 || kind === 6 ? 1.9 : 1, loud = (kind === 2 ? 1.15 : kind === 1 ? 1.1 : 1) * (up ? pk.up : 1);
+  if (pk.bubble){
+    let ph = 0;
+    for (let i = 0; i < len; i++){ const t = i / sr, fr = (up ? 900 : 620) * f * Math.exp(-t * 18) + 180; ph += 2 * Math.PI * fr / sr; d[i] = Math.sin(ph) * Math.exp(-t * 55) * .55 * (up ? .35 : 1); }
+    return b;
+  }
+  // a band-pass filter (two poles) for the noise
+  const w = 2 * Math.PI * pk.noise * f / sr, al = Math.sin(w) / (2 * pk.q), a0 = 1 + al, b0 = al / a0, b2 = -al / a0, a1 = -2 * Math.cos(w) / a0, a2 = (1 - al) / a0;
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0, ph = 0, pp = 0;
+  for (let i = 0; i < len; i++){
+    const t = i / sr, x = Math.random() * 2 - 1, y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = x; y2 = y1; y1 = y;
+    ph += 2 * Math.PI * pk.body * f * (up ? 1.4 : 1) / sr;
+    let s = y * Math.exp(-t / (pk.noiseDecay * (up ? .7 : 1))) * 1.6 + Math.sin(ph) * Math.exp(-t / (pk.bodyDecay * (up ? .6 : 1))) * pk.mix;
+    if (pk.click && t < .002) s += (Math.random() * 2 - 1) * .6;
+    if (pk.ping && !up){ pp += 2 * Math.PI * (kind === 2 ? 4200 : pk.ping) / sr; s += Math.sin(pp) * Math.exp(-t / (kind === 2 ? .12 : .02)) * (kind === 2 ? .25 : .06); }
+    d[i] = s * loud * .5;
+  }
+  return b;
+}
+function ksPlay(kind){
+  if (!KS.ctx){ KS.ctx = new AudioContext({latencyHint:'interactive'}); KS.gain = KS.ctx.createGain(); KS.gain.connect(KS.ctx.destination); }
+  if (KS.ctx.state === 'suspended') KS.ctx.resume();
+  if (!KS.bufs){ const pk = KS_PACKS[S.keyPack] || KS_PACKS.creamy; KS.bufs = [0, 1, 2, 3, 4, 5, 6].map(k => ksMake(KS.ctx, pk, k)); }
+  const src = KS.ctx.createBufferSource(); src.buffer = KS.bufs[kind] || KS.bufs[0];
+  src.playbackRate.value = .96 + Math.random() * .08;
+  KS.gain.gain.value = S.keyVol ?? .6;
+  src.connect(KS.gain); src.start();
+}
+listen('tick', k => { if ((k <= 3 || k === 5) ? S.keySounds : S.clickSounds) ksPlay(k); });
+if (TAURI && (S.keySounds || S.clickSounds)) setTimeout(ksSync, 2500);
 // "scratch that": the last piece taken back (off the card, or rubbed out where it was typed)
 async function dictUndo(){
   const p = DICT.pieces.pop(); if (!p) return;
@@ -6994,7 +7415,7 @@ setInterval(() => {
 async function pushPrompt(){
   if (window.DICT && DICT.on) return;                   // (dictating: the words just typed are what it listens with)
   const names = (await invoke('app_names')) || [];
-  const base = 'Ultron, open Spotify. Ultron, set the volume to 40 percent. Play the next song. Search for the weather in Mumbai. Type hello, how are you? Open YouTube.';
+  const base = S.lang && S.lang !== 'en' ? 'Ultron. ' : 'Ultron, open Spotify. Ultron, set the volume to 40 percent. Play the next song. Search for the weather in Mumbai. Type hello, how are you? Open YouTube.';
   const extra = names.length ? ' Apps: ' + names.slice(0, 24).join(', ') + '.' : '';
   invoke('voice_config', {prompt:base + extra, sens:S.sens, paused:micPaused()});
 }
@@ -7132,7 +7553,7 @@ addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.qs
 const dd = $('dd'), mbar = $('mbar');
 let fullscreen = false, ddFor = null, appName = 'Ultron';
 const MENUS = {
-  ultron:[['About ULTRON','about'],['What can ULTRON do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],['Drop Shelf','shelf'],'-',['Lock Screen','lock','Win L'],'-',['Quit ULTRON','quit']],
+  ultron:[['About ULTRON','about'],['What can ULTRON do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],['Drop Shelf','shelf'],'-',['Start with Windows','autostart'],['Lock Screen','lock','Win L'],'-',['Quit ULTRON','quit']],
   app:[['Show Desktop','desktop','Win D'],['Task View','task-view','Win Tab'],'-',['Quit {app}','quit-app','Alt F4']],
   music:'rich', clip:'rich', wall:'rich', notes:'rich', focus:'rich', system:'rich', calc:'rich', convert:'rich', world:'rich', lang:'rich', news:'rich',
 };
@@ -7145,7 +7566,7 @@ function movePill(btn, instant){
 }
 const ddItems = btn => MENUS[btn.dataset.menu] === 'rich' ? `<div class="rp rp-${btn.dataset.menu}">${RICH[btn.dataset.menu]()}</div>` :
   MENUS[btn.dataset.menu].map(i => i === '-' ? '<hr>' :
-  `<button data-act="${i[1]}"><span>${esc(i[0].replace('{app}', appName))}</span>${i[2] ? `<kbd>${i[2]}</kbd>` : ''}</button>`).join('');
+  `<button data-act="${i[1]}"><span>${esc(i[0].replace('{app}', appName))}</span>${i[2] ? `<kbd>${i[2]}</kbd>` : ''}${i[1] === 'autostart' ? `<i class="dd-tg${S.autostart ? ' on' : ''}"></i>` : ''}</button>`).join('');
 function openDD(btn){
   if (!MENUS[btn.dataset.menu]) return;
   if (winH < TALL){ winH = TALL; invoke('set_window_height', {h:TALL}); }
@@ -7245,6 +7666,8 @@ function doAction(act){
   if (act === 'quit'){ invoke('quit_app'); return; }
   if (act === 'lock' && S.lock === 'ultron'){ lockShow(); return; }
   if (act === 'shelf'){ closeDD(); setTimeout(() => dsShow('open', true), 160); return; }
+  // (Start with Windows, right in ULTRON's menu: the switch flips where it is, and the menu stays open)
+  if (act === 'autostart'){ S.autostart = !S.autostart; save(); paintSettings(); applySetting('autostart'); dd.querySelector('.dd-tg')?.classList.toggle('on', !!S.autostart); return; }
   if (act === 'talk'){ startTalk(); return; }
   if (act === 'browser'){ setOpen(true); selectTab('browser'); return; }
   invoke('menu_action', {action:act});
@@ -8288,6 +8711,14 @@ function showView(v){
   smView = v;
   const ids = {home:'smHome', all:'smAll', search:'smRes'};
   Object.entries(ids).forEach(([k, id]) => { const el = $(id); el.classList.toggle('on', k === v); el.classList.toggle('left', k !== v && v === 'all' && k === 'home'); });
+  smFit();
+}
+// (the home page is as tall as what's on it: on a PC with few apps pinned, a fixed height left a band of empty glass)
+function smFit(){
+  const box = startEl.querySelector('.sm-views'), home = $('smHome'); if (!box || !home) return;
+  let h = 376;
+  if (smView === 'home'){ const kids = [...home.children].filter(c => c.offsetParent); h = kids.length ? Math.max(...kids.map(c => c.offsetTop + c.offsetHeight)) + 14 : 220; }
+  box.style.height = Math.max(200, Math.min(376, Math.round(h))) + 'px';
 }
 let toastT = 0;
 function toast(t){ const el = $('smToast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1600); }
@@ -8297,7 +8728,7 @@ async function openStart(){
   if (!startApps){ startApps = (await invoke('start_apps')) || []; }
   const h = new Date().getHours();
   $('smHello').textContent = (h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + (userName ? ', ' + userName : '');
-  smQ.value = ''; showView('home'); renderPins();
+  smQ.value = ''; showView('home'); renderPins(); requestAnimationFrame(smFit);
   $('smPins').classList.remove('settled'); clearTimeout(openStart.t); openStart.t = setTimeout(() => $('smPins').classList.add('settled'), 900);
   startEl.classList.toggle('low', !!(window.DK && DK.low)); if (window.DK) DK.low = false;   // (asked for from the taskbar: it rises from there)
   placeGlass(startEl);
@@ -8358,7 +8789,7 @@ let savedName = ''; try { savedName = localStorage.getItem('ultron-name') || '';
 if (savedName) setUserName(savedName);
 else invoke('user_name').then(n => { if (n) setUserName(n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()); });
 
-function closePanels(){ closeQS(); closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeNotes(); closeRec(); closeFiles(); whClose(); closeSpot(true); }
+function closePanels(){ if (window.BAT) batClose(); closeQS(); closeWifi(); closeStart(); closeCal(); closeSettings(); closeAI(); closeMail(); closeNotes(); closeRec(); closeFiles(); whClose(); closeSpot(true); }
 
 /* ---------- settings window ---------- */
 const setEl = $('setw'), swHl = $('swHl');
@@ -8513,6 +8944,28 @@ setEl.querySelector('.mac-tl').addEventListener('click', e => {
   if (b.dataset.tl === 'zoom'){ setEl.classList.toggle('zoom'); setTimeout(() => { placeGlass(setEl); syncHit(); }, 520); }
   else closeSettings();
 });
+$('swQ').addEventListener('input', () => {
+  const q = $('swQ').value.trim().toLowerCase(); let first = null;
+  setEl.querySelectorAll('.sw-nav button[data-sec]').forEach(b => {
+    const sec = setEl.querySelector(`.sw-sec[data-sec="${b.dataset.sec}"]`);
+    const has = !q || (b.textContent + ' ' + (sec ? sec.textContent : '')).toLowerCase().includes(q);
+    b.classList.toggle('dim', !has); if (q && has && !first) first = b.dataset.sec;
+  });
+  clearTimeout(swQGo.t); if (first && q.length >= 2) swQGo.t = setTimeout(() => swQGo(first, q), 260);
+  requestAnimationFrame(moveHl);
+});
+// (the page with the words opens, and the rows that have them light up, the first scrolled into view)
+function swQGo(k, q){
+  showSec(k);
+  const rows = [...setEl.querySelectorAll(`.sw-sec[data-sec="${k}"] .sw-row`)].filter(r => r.textContent.toLowerCase().includes(q));
+  rows.forEach(r => { r.classList.remove('hit'); void r.offsetWidth; r.classList.add('hit'); });
+  if (rows[0]) setTimeout(() => rows[0].scrollIntoView({block:'center', behavior:'smooth'}), 120);
+}
+$('swQ').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter'){ const b = setEl.querySelector('.sw-nav button[data-sec]:not(.dim)'); if (b) swQGo(b.dataset.sec, $('swQ').value.trim().toLowerCase()); }
+  if (e.key === 'Escape'){ $('swQ').value = ''; $('swQ').dispatchEvent(new Event('input')); }
+});
 $('macQ').addEventListener('input', () => {
   const q = $('macQ').value.trim().toLowerCase();
   setEl.querySelectorAll('.sw-nav button').forEach(b => {
@@ -8598,6 +9051,7 @@ $('swMem').addEventListener('click', e => {
   b.parentElement.classList.add('gone'); setTimeout(paintMemory, 380);
 });
 function openSettings(sec){
+  setTimeout(() => window.lkStyle && lkStyle(), 0);
   paintMemory(); paintRoutines();
   closeDD(); closeWifi(); closeStart(); closeCal();
   if (sec) showSec(sec);
@@ -8861,13 +9315,131 @@ function tick(){
 }
 tick();
 navigator.getBattery?.().then(b => {
+  BAT.b = b;
   const paint = () => {
     $('batSt').hidden = false;
     $('batPct').textContent = Math.round(b.level * 100) + '%';
     $('batFill').setAttribute('width', Math.max(1.5, 17 * b.level));
+    if (BAT.open) batPaint();
   };
-  paint(); b.addEventListener('levelchange', paint); b.addEventListener('chargingchange', paint);
+  paint(); b.addEventListener('levelchange', paint);
+  b.addEventListener('chargingchange', () => { paint(); if (b.charging) batPlugged(); });
 }).catch(() => {});
+/* ---------- the battery: its panel, and the moment it's plugged in ----------
+   Clicked, the battery opens a panel: a ring of liquid filling to the charge (the number counting up with it), what
+   it's doing (charging, and till when; or how long it lasts), and two or three things that would help the battery,
+   picked for now, coming in one after another. Plugged in: a capsule drops from the notch, a bolt pops into it and
+   green fills it to the charge, while a glow runs along the bar. */
+var BAT = {b:null, open:false};
+document.body.insertAdjacentHTML('beforeend', `<div class="atb" id="atb"><div class="atb-in glass panel-glass" id="atbIn"><i class="gw"></i><div class="atb-row" id="atbRow"><i class="atb-sel" id="atbSel"></i></div></div></div>
+<div class="dkh" id="dkh" aria-live="polite"><div class="dkh-in"><b id="dkhName"></b><span class="dkh-dots" id="dkhDots"></span></div></div>
+<div class="osd" id="osd" aria-live="polite"><svg viewBox="0 0 24 24" class="osd-ic"></svg><span class="osd-bar"><i></i></span><b>0</b></div>
+<div class="gdlg" id="gdlg" role="alertdialog" aria-modal="true"><div class="gd-in glass panel-glass" id="gdIn"><i class="gw"></i><img class="gd-ic" alt=""><b class="gd-t"></b><p class="gd-x"></p><div class="gd-bs"></div></div></div>
+<div class="batw" id="batw" role="dialog" aria-label="Battery"><div class="bw-ring"><svg viewBox="0 0 120 120"><circle class="bw-track" cx="60" cy="60" r="50"/><circle class="bw-fill" id="bwFill" cx="60" cy="60" r="50"/></svg><div class="bw-mid"><b id="bwPct">0%</b><span id="bwState"></span></div></div><div class="bw-tips" id="bwTips"></div><button class="bw-go" type="button">Battery settings</button></div><div class="plugfx" id="plugfx" aria-live="polite"><div class="pf-in"><i class="pf-ring"></i><svg class="pf-bat" viewBox="0 0 54 28"><defs><clipPath id="pfClip"><rect x="3" y="3" width="42" height="22" rx="5.5"/></clipPath></defs><rect class="pf-shell" x="1" y="1" width="46" height="26" rx="8"/><rect class="pf-cap" x="49" y="9.5" width="3.6" height="9" rx="1.8"/><g clip-path="url(#pfClip)"><g class="pf-liq" id="pfFill"><path class="pf-wave" d="M-44 -14H45q3.4 3.5 0 7t0 7t0 7t0 7t0 7t0 7t0 7t0 7H-44z"/></g></g><path class="pf-bolt" d="M25.6 5.2 16.4 15.6h6.4l-1.9 7.6 9.6-10.6h-6.5z"/></svg><span class="pf-tx"><em>Charging</em><b id="pfPct">0%</b></span></div></div><i class="barglow" id="barglow"></i>`);
+const batw = $('batw');
+/* Glass dialogs (dialogs.rs): Windows says a plain message box has come up, and has made it see-through; this one is
+   shown where it is, and a button pressed here presses the same button there. Enter and Esc still go to the real one
+   (it keeps the keyboard), and when it's answered either way this one goes. */
+const GD = {hwnd:0, buttons:[], t:0};
+const gdEl = $('gdlg'), gdIn = $('gdIn');
+listen('dialog', async d => {
+  if (!S.glassDlg || fullscreen || (window.LK && LK.on)){ invoke('dialog_pass', {hwnd:d.hwnd}); return; }
+  clearTimeout(GD.t); GD.hwnd = d.hwnd; GD.buttons = d.buttons;
+  const dpr = devicePixelRatio || 1, title = d.title || 'Message';
+  const lines = d.text.split('\n\n'), head = lines.length > 1 && lines[0].length < 90 ? lines.shift() : title;
+  gdIn.querySelector('.gd-t').textContent = head;
+  gdIn.querySelector('.gd-x').textContent = lines.join('\n\n');
+  const bs = gdIn.querySelector('.gd-bs');
+  bs.classList.toggle('many', d.buttons.length > 2 || d.buttons.some(b => b.label.length > 12));
+  bs.innerHTML = d.buttons.map((b, i) => `<button class="gd-b${b.def ? ' def' : ''}" style="--i:${i}" data-id="${b.id}">${esc(b.label)}</button>`).join('');
+  const ic = gdIn.querySelector('.gd-ic'); ic.removeAttribute('src');
+  if (d.exe) invoke('app_icons', {sources:[d.exe]}).then(r => { if (GD.hwnd === d.hwnd && r && r[0]) ic.src = r[0]; });
+  gdEl.classList.remove('out'); gdEl.classList.add('on');
+  // (where the real one was, its middle; kept on the screen)
+  const w = gdIn.offsetWidth, h = gdIn.offsetHeight;
+  const cx = (d.x + d.w / 2) / dpr, cy = (d.y + d.h / 2) / dpr;
+  const x = Math.round(Math.max(12, Math.min(innerWidth - w - 12, cx - w / 2))), y = Math.round(Math.max(40, Math.min(innerHeight - h - 12, cy - h / 2)));
+  gdIn.style.left = x + 'px'; gdIn.style.top = y + 'px';
+  gdEl.style.setProperty('--cx', (x + w / 2) + 'px'); gdEl.style.setProperty('--cy', (y + h / 2) + 'px');
+  placeGlass(gdIn); glassAim(); syncHit();
+  invoke('dialog_shown', {hwnd:d.hwnd});
+});
+function gdClose(){
+  if (!gdEl.classList.contains('on')) return;
+  gdEl.classList.add('out'); GD.hwnd = 0;
+  clearTimeout(GD.t); GD.t = setTimeout(() => { gdEl.classList.remove('on', 'out'); syncHit(); }, 300);
+}
+listen('dialog-gone', h => { if (h === GD.hwnd) gdClose(); });
+gdIn.addEventListener('click', e => {
+  const b = e.target.closest('.gd-b'); if (!b || !GD.hwnd) return;
+  invoke('dialog_press', {hwnd:GD.hwnd, id:+b.dataset.id}); gdClose();
+});
+// (pressed here, ULTRON has the keyboard: Enter is the filled button, Esc is Cancel or No)
+addEventListener('keydown', e => {
+  if (!GD.hwnd || !gdEl.classList.contains('on')) return;
+  const by = id => GD.buttons.find(b => b.id === id);
+  const b = e.key === 'Enter' ? GD.buttons.find(b => b.def) || GD.buttons[0] : e.key === 'Escape' ? by(2) || by(7) : null;   // (2 Cancel, 7 No)
+  if (!b) return;
+  e.preventDefault(); invoke('dialog_press', {hwnd:GD.hwnd, id:b.id}); gdClose();
+}, true);
+if (TAURI && S.glassDlg) setTimeout(() => invoke('dialogs_set', {on:true}), 2500);
+function batTime(s){ if (!isFinite(s) || s <= 0) return ''; const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? `${h} h ${m} min` : `${m} min`; }
+function batTips(){
+  const b = BAT.b, pct = Math.round(b.level * 100), out = [];
+  if (b.charging && pct >= 80) out.push(['Unplug at around 80%', 'Sitting at full charge wears a battery fastest. Your laptop maker’s app (MyASUS, Lenovo Vantage…) can stop charging at 80% for you.']);
+  if (!b.charging && pct <= 25) out.push(['Turn on Battery saver now', 'It dims the screen and quiets background apps, stretching what’s left.']);
+  if (!b.charging && pct > 25) out.push(['Lower the brightness a little', 'The screen is the biggest drain: a notch or two down buys real time.']);
+  out.push(['Keep it between 20% and 80%', 'Shallow top-ups age a battery far slower than running it flat and charging to full.']);
+  out.push(['Keep it cool', 'Heat ages batteries: keep the vents clear, and don’t charge on a bed or under a blanket.']);
+  out.push(['Close heavy apps you’re not using', 'Games and dozens of browser tabs keep the processor busy, and draining, in the background.']);
+  return out.slice(0, 3);
+}
+function batPaint(){
+  const b = BAT.b; if (!b) return;
+  const pct = Math.round(b.level * 100);
+  $('bwFill').style.strokeDashoffset = (314 * (1 - b.level)).toFixed(1);
+  batw.classList.toggle('low', pct <= 20 && !b.charging); batw.classList.toggle('chg', b.charging);
+  $('bwState').textContent = b.charging ? (pct >= 100 ? 'Fully charged' : batTime(b.chargingTime) ? `Charging · full in ${batTime(b.chargingTime)}` : 'Charging') : batTime(b.dischargingTime) ? `${batTime(b.dischargingTime)} left` : 'On battery';
+  const from = +($('bwPct').dataset.v || 0), t0 = performance.now();
+  (function count(t){ const k = Math.min(1, (t - t0) / 700), v = Math.round(from + (pct - from) * (1 - Math.pow(1 - k, 3))); $('bwPct').textContent = v + '%'; if (k < 1) requestAnimationFrame(count); else $('bwPct').dataset.v = pct; })(t0);
+}
+function batOpen(){
+  if (!BAT.b) return;
+  if (BAT.open) return batClose();
+  closePanels(); BAT.open = true;
+  const r = $('batSt').getBoundingClientRect();
+  batw.style.left = Math.max(12, Math.min(innerWidth - 312, r.left + r.width / 2 - 150)) + 'px';
+  $('bwPct').dataset.v = 0; $('bwFill').style.strokeDashoffset = 314;
+  $('bwTips').innerHTML = batTips().map(([h, s], i) => `<div class="bw-tip" style="--i:${i}"><b>${esc(h)}</b><span>${esc(s)}</span></div>`).join('');
+  batw.classList.remove('open'); void batw.offsetWidth; batw.classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(batPaint));
+  syncHit(); setTimeout(syncHit, 500);
+}
+function batClose(){ if (!BAT.open) return; BAT.open = false; batw.classList.remove('open'); setTimeout(syncHit, 400); }
+$('batSt').addEventListener('click', e => { e.stopPropagation(); batOpen(); });
+batw.addEventListener('click', e => { e.stopPropagation(); if (e.target.closest('.bw-go')){ invoke('launch', {target:'ms-settings:batterysaver'}); batClose(); } });
+addEventListener('pointerdown', e => { if (BAT.open && !e.target.closest('#batw, #batSt')) batClose(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && BAT.open) batClose(); });
+function batPlugged(){
+  const b = BAT.b; if (!b) return;
+  const pct = Math.round(b.level * 100), fx = $('plugfx'), glow = $('barglow'), fill = $('pfFill'), num = $('pfPct');
+  clearTimeout(batPlugged.t); clearTimeout(batPlugged.t2); cancelAnimationFrame(batPlugged.raf);
+  // (low, it starts amber and turns green as it begins to charge)
+  fx.classList.remove('on', 'off'); fx.classList.toggle('low', pct <= 20); glow.classList.remove('on');
+  fill.style.transition = 'none'; fill.style.transform = 'translateX(-46px)'; num.textContent = '0%';
+  void fx.offsetWidth; fill.style.transition = '';
+  fx.classList.add('on'); glow.classList.add('on');
+  fill.style.transform = `translateX(${(-46 + 44 * Math.max(.06, b.level)).toFixed(1)}px)`;
+  setTimeout(() => fx.classList.remove('low'), 900);
+  // the number counts up with the liquid
+  const t0 = performance.now() + 300, step = t => {
+    const k = Math.max(0, Math.min(1, (t - t0) / 1250)), e = 1 - Math.pow(1 - k, 3);
+    num.textContent = Math.round(pct * e) + '%';
+    if (k < 1) batPlugged.raf = requestAnimationFrame(step);
+  };
+  batPlugged.raf = requestAnimationFrame(step);
+  batPlugged.t = setTimeout(() => { fx.classList.replace('on', 'off'); glow.classList.remove('on'); batPlugged.t2 = setTimeout(() => fx.classList.remove('off'), 480); }, 3400);
+}
 
 /* ---------- desktop bridge (Tauri) ---------- */
 let hitKey = '', hovering = false;
@@ -8906,6 +9478,10 @@ function syncHit(){
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
+  if (window.BAT && BAT.open){ const r = batw.getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
+  if (window.AT && AT.shown){ const r = $('atbIn').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
+  if (window.gdEl && gdEl.classList.contains('on') && !gdEl.classList.contains('out')){ const r = gdIn; rects.push({x:r.offsetLeft - 6, y:r.offsetTop - 6, w:r.offsetWidth + 12, h:r.offsetHeight + 12}); }
+  if (window.agcEl && agcEl.classList.contains('on')){ const r = agcEl.querySelector('.agc-in').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
   if (window.WC && WC.on){ const r = $('wcard').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 8), y:Math.floor(r.top - 8), w:Math.ceil(r.width + 16), h:Math.ceil(r.height + 16)}); }
   // (dragging the floating player: the whole screen is ULTRON's until it's let go. Its own outline was a step behind a
   //  quick drag, and the pointer slipped off onto whatever was under it)
@@ -8995,7 +9571,7 @@ if (TAURI){
   let notchWas = false;
   new MutationObserver(() => {
     const o = notch.classList.contains('open');
-    if (o && !notchWas){ if (glassOn()) invoke('backdrop_now'); }   // (a fresh picture of what's under it as it opens)
+    if (o && !notchWas){ if (glassOn()) invoke('backdrop_now'); if (S.web) invoke('web_warm'); }   // (a fresh picture of what's under it as it opens)
     notchWas = o;
   }).observe(notch, {attributes:true, attributeFilter:['class']});
   listen('intro-start', () => { document.body.classList.add('intro'); setOpen(false); closeDD(); closePanels(); });
@@ -9026,7 +9602,11 @@ if (TAURI){
   listen('front-app', glassLookSoon);
   listen('front-colour', barTint);
   listen('dyn-max', m => document.body.classList.toggle('dynmax', !!m && !!S.dynWin));
-  listen('fullscreen', on => { fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); if (on && notch.classList.contains('open')){ openedAt = 0; setOpen(false); } syncHit(); });
+  listen('fullscreen', on => {
+    // (a game or a video going full screen: ULTRON bows out, the notch up into the bar and the bar away; back from it,
+    //  the bar drops in with a little give and the notch springs out of it)
+    if (fullscreen && !on){ document.body.classList.add('unfull'); clearTimeout(window.unfullT); window.unfullT = setTimeout(() => document.body.classList.remove('unfull'), 1000); }
+    fullscreen = on; document.body.classList.toggle('fullscreen', on); closeDD(); closePanels(); if (on && notch.classList.contains('open')){ openedAt = 0; setOpen(false); } syncHit(); });
   invoke('voice_status').then(st => { if (st){ lastVoice = st; setVoice(st); } });
   invoke('media_state').then(m => m && applyMedia(m));
   pushPrompt(); setInterval(pushPrompt, 60000);
@@ -10316,6 +10896,7 @@ listen('note', n => nfCome(n));
 listen('note-gone', ids => nfGone(ids || []));
 
 function nfCome(n){
+  if (n && NF_CHAT.test((n.app || '') + ' ' + (n.aumid || ''))) dictLearn(n.title);
   if (!nfOn() || !n) return;
   NF.list = [n, ...NF.list.filter(x => x.id !== n.id)];
   if (n.call) return;                                                 // (a ringing call is the notch's to show)
@@ -10401,7 +10982,7 @@ async function nfPress(card, id, which, typed){
   const err = card.querySelector(':scope > .nf-err, :scope > p.nf-err') || card.querySelector('.nf-err');
   card.classList.add('busy'); if (err) err.hidden = true;
   try {
-    await invoke('notes_press', {id, which, typed:typed || []});
+    await invokeLoud('notes_press', {id, which, typed:typed || []});
     // (done: it goes now, once, rather than when Windows gets round to saying so)
     if (card.classList.contains('nf-item')){ if (!card.classList.contains('going')) nfCollapse(card); } else nfLift(id);
   }
@@ -10413,7 +10994,7 @@ async function nfQuick(card, id, text){
   const err = card.querySelector('.nf-err');
   card.classList.add('busy'); if (err) err.hidden = true;
   try {
-    await invoke('notes_reply', {id, text});
+    await invokeLoud('notes_reply', {id, text});   // (its errors shown: with the quiet invoke a reply that failed looked sent)
     if (card.classList.contains('nf-item')){ if (!card.classList.contains('going')) nfCollapse(card); } else nfLift(id);
   } catch(e){ if (err){ err.textContent = String(e); err.hidden = false; } }
   card.classList.remove('busy');
@@ -10778,8 +11359,30 @@ async function lkHash(salt, code){
 }
 function lkClock(){
   const d = new Date(), hm = d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-  if (LK.hm !== hm){ LK.hm = hm; $('lkTime').innerHTML = [...hm].map((c, i) => `<span style="--i:${i}">${c}</span>`).join(''); }
+  if (LK.hm !== hm){
+    const t = $('lkTime'), old = LK.hm; LK.hm = hm;
+    // (a minute on: only the figures that changed roll in)
+    if (!old || t.children.length !== hm.length) t.innerHTML = [...hm].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('');
+    else [...hm].forEach((c, i) => { const s = t.children[i]; if (s.textContent !== c){ s.textContent = c; s.classList.remove('tick'); void s.offsetWidth; s.classList.add('tick'); } });
+  }
   $('lkDate').textContent = d.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+}
+/* how the lock screen looks (Settings > Look & feel), on it and on its preview */
+function lkStyle(){
+  for (const el of [lockEl, $('lkPrev')]) if (el){
+    el.classList.toggle('gl', S.lkClock !== 'solid'); el.dataset.w = S.lkWeight || 'thin'; el.dataset.tint = S.lkTint || 'white';
+    el.classList.toggle('nowid', S.lkWid === false);
+  }
+  const d = new Date(), hm = d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  if ($('lkpTime')){ $('lkpTime').innerHTML = [...hm].map(c => `<span>${c}</span>`).join(''); $('lkpDate').textContent = d.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'}); }
+}
+// battery and weather, under the clock
+function lkWidgets(){
+  const b = window.BAT && BAT.b, out = [];
+  if (b){ const v = Math.max(.04, b.level), pc = Math.round(b.level * 100);
+    out.push(`<span class="lk-glass" style="--i:0"><svg viewBox="0 0 24 14"><rect x=".8" y=".8" width="19.4" height="12.4" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".7"/><rect x="2.7" y="2.7" width="${(15.6 * v).toFixed(1)}" height="8.6" rx="1.9" fill="${b.charging ? '#6fe3a2' : pc <= 20 ? '#ff8a7a' : 'currentColor'}"/><rect x="21.4" y="4.6" width="2" height="4.8" rx="1" fill="currentColor" opacity=".7"/></svg>${pc}%</span>`); }
+  if (window.TD && TD.wx){ const [t, sky] = TD.wx; out.push(`<span class="lk-glass" style="--i:1">${esc(t)} ${esc(sky)}</span>`); }
+  $('lkWidgets').innerHTML = out.join('');
 }
 function lkDots(){
   const d = $('lkDots'), n = [...LK.typed].length;
@@ -10800,8 +11403,10 @@ async function lockShow(){
     closeDD(); closePanels(); openedAt = 0; setOpen(false);
     const pic = await invoke('wall_picture', {w:Math.round(screen.width * devicePixelRatio), h:Math.round(screen.height * devicePixelRatio)});
     if (pic) $('lkBg').src = pic; else $('lkBg').removeAttribute('src');
+    if (pic) lockEl.style.setProperty('--lkw', `url("${pic}")`); else lockEl.style.removeProperty('--lkw');
+    lkStyle(); lkWidgets();
     LK.hm = ''; lkClock(); LK.full = fullscreen; LK.tries = 0; lkAsk(false);
-    $('lkHint').textContent = lkCode() ? 'Click, or press a key, to unlock' : 'Click, or press any key';
+    $('lkHint').innerHTML = `<span>${lkCode() ? 'Click, or press a key, to unlock' : 'Click, or press any key'}</span>`;
     winH = Math.round(screen.height); await invoke('set_window_height', {h:winH}); await dkWait(160);
     LK.on = true; LK.at = performance.now(); lockEl.classList.remove('bye'); void lockEl.offsetWidth; lockEl.classList.add('on');
     invoke('focus_main'); syncHit(); setTimeout(syncHit, 400);
@@ -10815,7 +11420,7 @@ function lockHide(win){
   LK.on = false; clearInterval(LK.t); clearTimeout(LK.askT); LK.typed = ''; lockEl.classList.add('bye');
   if (win) invoke('power', {action:'lock'});                 // (Windows' own sign-in comes up over it before it has gone)
   setTimeout(() => {
-    lockEl.classList.remove('on', 'bye', 'ask'); lkDots(); winH = TALL; invoke('set_window_height', {h:TALL}); syncHit(); setTimeout(syncHit, 400);
+    lockEl.classList.remove('on', 'bye', 'ask'); lockEl.style.removeProperty('--lkw'); lkDots(); winH = TALL; invoke('set_window_height', {h:TALL}); syncHit(); setTimeout(syncHit, 400);
     if (!win) invoke('focus_back');
     // (the bar stood down while the window filled the screen; if Windows doesn't say that's over, it's brought back anyway)
     if (!LK.full) setTimeout(() => { if (!LK.on && fullscreen){ fullscreen = false; document.body.classList.remove('fullscreen'); syncHit(); } }, 900);
@@ -10884,7 +11489,7 @@ function dsWatch(x, y, down, drag){
     if (DS.out) return;
     // Asked for from ULTRON's menu or the wheel, or just after Done: it stays where it is whatever the pointer does,
     // until you click somewhere else (pressed and let go away from it; a file dragged over to it doesn't count)
-    const b = DS.box, inTray = !!b && x >= b.x - 14 && x <= b.x + b.w + 14 && y >= b.y - 14;
+    const b = DS.box, inTray = !!b && x >= b.x - 14 && x <= b.x + b.w + 14 && y >= b.y - 14 && (S.dsSide === 'bottom' || !S.dsSide ? true : y <= b.y + b.h + 14);
     if (DS.sticky || DS.stay){
       if (DS.stay && inTray) DS.stay = false;
       if (down && !DS.wasDown) DS.pressOut = !inTray;
@@ -10893,7 +11498,8 @@ function dsWatch(x, y, down, drag){
       DS.wasDown = down; return;
     }
     DS.wasDown = down;
-    if (!down && y < (DS.box ? DS.box.y : innerHeight - 168) - 70){ if (!DS.leaveT) DS.leaveT = setTimeout(() => { DS.leaveT = 0; dsHide(); }, 260); }
+    const gone = !DS.box ? false : S.dsSide === 'left' ? x > DS.box.x + DS.box.w + 70 : S.dsSide === 'right' ? x < DS.box.x - 70 : y < DS.box.y - 70;
+    if (!down && gone){ if (!DS.leaveT) DS.leaveT = setTimeout(() => { DS.leaveT = 0; dsHide(); }, 260); }
     else if (DS.leaveT){ clearTimeout(DS.leaveT); DS.leaveT = 0; }
     // (opened for a drag that was let go somewhere else: it goes again)
     if (DS.mode === 'drop' && !down && !DS.over){ clearTimeout(DS.hideT); DS.hideT = setTimeout(() => { if (DS.on && DS.mode === 'drop' && !DS.over) dsHide(); }, 900); }
@@ -10904,7 +11510,8 @@ function dsWatch(x, y, down, drag){
   // the moment the pointer touched the last row, or a button was held there: passing by on the way to a corner, a
   // scroll or a selection down a page, pulling a window's edge. It seemed to come out of nowhere.)
   const W = screen.width || innerWidth;
-  const kind = !DK.on || !dsCan() ? '' : down ? (drag && y >= H - 6 ? 'drop' : '') : (y >= H - 1 && x > 40 && x < W - 40 ? 'open' : '');
+  const sd = S.dsSide, atEdge = m => sd === 'left' ? x <= m - 1 && y > 80 && y < H - 80 : sd === 'right' ? x >= W - m && y > 80 && y < H - 80 : y >= H - m && x > 40 && x < W - 40;
+  const kind = !DK.on || !dsCan() ? '' : down ? (drag && atEdge(6) ? 'drop' : '') : (atEdge(1) ? 'open' : '');
   if (kind === DS.arm) return;
   clearTimeout(DS.armT); DS.arm = kind;
   // (the window is made tall while the pointer rests, so it's ready by the time the shelf comes: made tall as it came,
@@ -10957,13 +11564,23 @@ function dsHide(){
 }
 // the tray's width follows what's on it; its glass lines up with the screen behind it
 function dsLay(){
-  const fit = Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * 88), w = Math.max(DS.apps ? 560 : 360, fit), h = DS.apps ? 366 : 152;
+  const side = S.dsSide === 'left' || S.dsSide === 'right' ? S.dsSide : '', k = {compact:.82, large:1.18}[S.dsSize] || 1;
+  dsEl.classList.toggle('side', !!side); dsEl.classList.toggle('right', side === 'right');
+  dsEl.classList.toggle('sm', S.dsSize === 'compact'); dsEl.classList.toggle('lg', S.dsSize === 'large'); dsEl.classList.toggle('nonames', !S.dsNames);
+  if (side && !DS.apps){
+    // (a column at the edge: as tall as what's on it, at most most of the screen)
+    const w = Math.round(124 * k), h = Math.min(Math.round(innerHeight * .78), 58 + Math.max(1, DS.items.length) * Math.round(104 * k));
+    dsTray.style.setProperty('--dsW', w + 'px'); dsTray.style.setProperty('--dsH', h + 'px'); dsTray.style.setProperty('--dsWa', '560px');
+    DS.box = {x:side === 'left' ? 16 : innerWidth - 16 - w, y:Math.round(innerHeight / 2 - h / 2), w, h};
+    return;
+  }
+  const fit = Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * Math.round(88 * k)), w = Math.max(DS.apps ? 560 : 360, fit), h = DS.apps ? 366 : Math.round(152 * (k > 1 ? 1.12 : k < 1 ? .9 : 1));
   dsTray.style.setProperty('--dsW', w + 'px'); dsTray.style.setProperty('--dsH', h + 'px');
   // (the apps panel keeps its apps-mode width all the time: following the tray's, its 160 apps were laid out afresh at
   //  each switch, 50 ms, mid-animation)
   dsTray.style.setProperty('--dsWa', Math.max(560, fit) + 'px');
   // (the glass's picture is placed by the styles, from the tray's own size as it changes)
-  const left = Math.round(innerWidth / 2 - w / 2), top = innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
+  const left = side === 'left' ? 16 : side === 'right' ? innerWidth - 16 - w : Math.round(innerWidth / 2 - w / 2), top = side ? Math.round(innerHeight / 2 - h / 2) : innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
   DS.box = {x:left, y:top, w, h};
 }
@@ -10994,10 +11611,13 @@ function dsPaint(first, fresh, x, y){
 // as it goes, not after a pause), and the tray narrows to fit at the same time: one motion. (It used to vanish, sit as a
 // gap, and then jump shut.) The shelf's list has already lost it.
 function dsGo(el, then){
-  el.style.width = el.offsetWidth + 'px'; void el.offsetWidth;
+  const col = dsEl.classList.contains('side') && !DS.apps;
+  if (col){ el.style.height = el.offsetHeight + 'px'; void el.offsetHeight; }
+  else { el.style.width = el.offsetWidth + 'px'; void el.offsetWidth; }
   el.classList.add('out');
-  el.style.transition = 'width .36s cubic-bezier(.3,.7,.2,1) .08s, margin .36s cubic-bezier(.3,.7,.2,1) .08s, padding .36s .08s';
-  el.style.width = '0px'; el.style.marginRight = '-8px'; el.style.paddingLeft = el.style.paddingRight = '0px';
+  el.style.transition = 'width .36s cubic-bezier(.3,.7,.2,1) .08s, height .36s cubic-bezier(.3,.7,.2,1) .08s, margin .36s cubic-bezier(.3,.7,.2,1) .08s, padding .36s .08s';
+  if (col){ el.style.height = '0px'; el.style.marginBottom = '-8px'; el.style.paddingTop = '0px'; }
+  else { el.style.width = '0px'; el.style.marginRight = '-8px'; el.style.paddingLeft = el.style.paddingRight = '0px'; }
   setTimeout(() => { if (DS.on) dsLay(); }, 80);
   setTimeout(() => { el.remove(); then && then(); }, 460);
 }
@@ -11576,12 +12196,14 @@ wdPaint();
    it hops now and then while it waits, and a bubble under the notch says what it is. Click it to go to that window.
    It hears of these only in the ways allowed in the card below the switch (Settings in the notch). */
 var AG = {cur:null, t:0, nudge:0};
-const AG_TINT = {ask:'#ffd27a', alert:'#ff9d8f', done:'#a9e5c3', note:'#b9cfff'};
+const AG_TINT = {ask:'#9cc4ff', perm:'#c7a6ff', alert:'#ff9d8f', limit:'#ffcf7a', done:'#a9e5c3', note:'#b9cfff'};
 function agMood(n){
   if (n.mood) return n.mood;
-  if (n.kind === 'hook') return n.event === 'Stop' ? 'done' : 'ask';
+  const s = `${n.title || ''} ${n.text || ''}`.toLowerCase();
+  if (/usage limit|rate limit|token limit|limit (reached|hit)|out of (tokens|credits)|quota|credits? (ran|run) out|context (window|limit)/.test(s)) return 'limit';
+  if (n.kind === 'hook') return n.event === 'Stop' ? 'done' : /permission|approv|allow/.test(s) ? 'perm' : 'ask';
   if (!n.agent) return 'note';
-  const s = `${n.title} ${n.text}`.toLowerCase();
+  if (/permission|approv|allow|confirm/.test(s)) return 'perm';
   if (/\b(error|failed|failure|crash(ed)?|exception)\b|couldn.?t|can.?t /.test(s)) return 'alert';
   if (/permission|approv|allow|confirm|waiting|needs? (your|you)|input|question|\?|review|respond|reply|attention/.test(s)) return 'ask';
   if (/\b(done|finished|complete(d)?|ready|success(ful)?|succeeded|all set)\b/.test(s)) return 'done';
@@ -11597,7 +12219,7 @@ function agCome(n){
     clearTimeout(AG.t); AG.t = setTimeout(agClear, 1700); return;
   }
   const who = n.kind === 'hook' ? 'Claude Code' : n.app || 'Your agent';
-  const head = mood === 'ask' ? `${who} needs you` : mood === 'alert' ? `${who} ran into a problem` : `${who} is done`;
+  const head = {ask:`${who} has a question`, perm:`${who} needs your permission`, alert:`${who} ran into a problem`, limit:`${who} reached its limit`, done:`${who} is done`}[mood];
   const folder = (n.cwd || '').split(/[\\/]/).filter(Boolean).pop();
   const text = (n.text || n.title || (mood === 'done' ? (folder ? `Finished in ${folder}. Your turn.` : 'Finished. Your turn.') : 'Waiting for you')).replace(/\s+/g, ' ').trim().slice(0, 160);
   // (its app's name, to know it when you go to it yourself: "Windows Terminal", "Visual Studio Code"…)
@@ -11605,19 +12227,44 @@ function agCome(n){
   AG.cur = {mood, who, head, text, hwnd:n.hwnd || 0, key:n.kind === 'demo' ? '' : key};
   tintTo(AG_TINT[mood]); hop = Math.max(hop, 1); wake();
   agBubble();
-  clearTimeout(AG.t); AG.t = setTimeout(agClear, n.kind === 'demo' ? 3600 : mood === 'done' ? 8000 : 180000);
+  const life = n.kind === 'demo' ? 3600 : mood === 'done' ? 8000 : 180000;
+  agCard(life);
+  clearTimeout(AG.t); AG.t = setTimeout(agClear, life);
   clearInterval(AG.nudge);
   if (mood !== 'done' && n.kind !== 'demo') AG.nudge = setInterval(() => { if (AG.cur){ hop = Math.max(hop, .7); wake(); } }, 4500);
 }
+/* The alert itself: a card that drops out of the notch in the kind's colour (a question blue, permission violet, a
+   problem red, a limit amber, done green), its sign bouncing in, a glow breathing round it and a ring counting down
+   until it goes. Show brings the agent's window up; the cross puts it away. (The bubble beside the notch was easy to
+   miss: it showed only in one of the notch's sizes.) */
+document.body.insertAdjacentHTML('beforeend', '<div class="agc" id="agc" role="alert"><i class="agc-glow"></i><div class="agc-in"><i class="agc-ic"></i><div class="agc-tx"><b></b><span></span></div><button class="agc-go" type="button">Show</button><button class="agc-x" type="button" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button><svg class="agc-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div></div>');
+const agcEl = $('agc');
+function agCard(life){
+  const c = AG.cur; if (!c || !c.head) return;
+  agcEl.dataset.m = c.mood;
+  agcEl.querySelector('.agc-ic').textContent = {ask:'?', perm:'!', alert:'!', limit:'∞', done:'✓'}[c.mood] || '•';
+  agcEl.querySelector('b').textContent = c.head; agcEl.querySelector('span').textContent = c.text;
+  agcEl.querySelector('.agc-go').hidden = !c.hwnd;
+  agcEl.style.setProperty('--life', life + 'ms');
+  agcEl.classList.remove('on', 'off'); void agcEl.offsetWidth; agcEl.classList.add('on');
+  syncHit(); setTimeout(syncHit, 600);
+}
+function agCardOff(){ if (!agcEl.classList.contains('on')) return; agcEl.classList.add('off'); agcEl.classList.remove('on'); setTimeout(() => { agcEl.classList.remove('off'); syncHit(); }, 420); }
+agcEl.addEventListener('click', e => {
+  e.stopPropagation();
+  if (e.target.closest('.agc-x')) return agClear();
+  if (AG.cur && AG.cur.hwnd) invoke('dock_act', {id:String(AG.cur.hwnd), what:'focus'});
+  agClear();
+});
 function agBubble(){
-  const c = AG.cur; if (!c || !c.head || !nbCompact()) return;
+  const c = AG.cur; if (!c || !c.head || !nbCompact() || agcEl.classList.contains('on')) return;
   nbShow(`<div class="ag-nb" data-m="${c.mood}"><i class="ag-dot">${{ask:'?', alert:'!', done:'✓'}[c.mood]}</i><div class="ag-tx"><b>${esc(c.head)}</b><span>${esc(c.text)}</span></div>${c.hwnd ? '<em class="ag-go">Show</em>' : ''}</div>`,
     c.mood === 'done' ? 7000 : 0);
 }
 function agClear(){
   clearTimeout(AG.t); clearInterval(AG.nudge);
   if (!AG.cur) return;
-  AG.cur = null; tintTo(S.tint); wake();
+  AG.cur = null; tintTo(S.tint); wake(); agCardOff();
   if (nbOn && nbIn.querySelector('.ag-nb')) nbHide();
 }
 nbIn.addEventListener('click', e => {

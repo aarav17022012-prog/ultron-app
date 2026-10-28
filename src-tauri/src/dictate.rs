@@ -134,6 +134,9 @@ pub struct Opts {
     /// names and words spelled your way
     #[serde(default)]
     pub words: Vec<String>,
+    /// people's names ULTRON has seen (who writes to you): a near miss on one is put right, as for your own words
+    #[serde(default)]
+    pub names: Vec<String>,
 }
 
 /// A heard piece, ready to go after what's already there.
@@ -301,6 +304,99 @@ fn respell(text: &str, words: &[String]) -> String {
     out
 }
 
+/// How a word sounds, roughly: its first sound, then its consonants, with the ones that are easily heard one for the
+/// other made the same ("Danish" and "Denish", "Aarav" and "Arav", "Kristen" and "Christen" sound alike).
+fn sound(w: &str) -> String {
+    let mut out = String::new();
+    for c in w.to_lowercase().chars() {
+        let k = match c {
+            'a' | 'e' | 'i' | 'o' | 'u' | 'y' => {
+                if out.is_empty() { 'a' } else { continue }
+            }
+            'h' | 'w' => continue,
+            'c' | 'k' | 'q' | 'g' => 'k',
+            's' | 'z' | 'x' => 's',
+            'b' | 'p' => 'p',
+            'd' | 't' => 't',
+            'f' | 'v' => 'f',
+            'm' | 'n' => 'n',
+            c if c.is_alphabetic() => c,
+            _ => continue,
+        };
+        if !out.ends_with(k) {
+            out.push(k);
+        }
+    }
+    out
+}
+
+fn edits(a: &str, b: &str) -> usize {
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    let mut row: Vec<usize> = (0..=b.len()).collect();
+    for i in 1..=a.len() {
+        let mut prev = row[0];
+        row[0] = i;
+        for j in 1..=b.len() {
+            let was = row[j];
+            row[j] = (row[j] + 1).min(row[j - 1] + 1).min(prev + usize::from(a[i - 1] != b[j - 1]));
+            prev = was;
+        }
+    }
+    row[b.len()]
+}
+
+/// A name heard close but not right ("Denish" for "Danish") put right: one the recognizer took for a name (it gave it
+/// a capital, and not just for starting a sentence), that sounds the same as a name you've listed or ULTRON has seen,
+/// and is spelled nearly the same. An ordinary word is never changed into a name.
+fn names_fix<'a>(text: &str, names: impl Iterator<Item = &'a String>, mut start: bool) -> String {
+    const COMMON: &[&str] = &[
+        "the", "and", "but", "can", "could", "would", "should", "will", "what", "when", "where", "why", "how", "who", "this", "that", "there", "then",
+        "they", "these", "those", "yes", "yeah", "okay", "also", "just", "please", "thanks", "thank", "hello", "hey", "well", "sure", "maybe", "let",
+        "have", "has", "had", "did", "does", "not", "now", "our", "your", "you", "she", "her", "his", "him", "its", "all", "any", "some", "one", "two",
+        "for", "from", "with", "about", "after", "before", "because", "since", "while", "today", "tomorrow", "tonight", "sorry", "great", "good",
+        "nice", "cool", "right", "see", "love", "hope", "need", "want", "make", "take", "send", "call", "tell", "ask", "get", "got", "give", "keep",
+        "come", "going", "are", "was", "were", "may", "might", "must", "here", "once", "each", "every", "both", "many", "more", "most", "much", "very",
+        "really", "actually", "anyway", "alright", "dear", "meet", "said", "say", "think", "know", "met", "met", "done", "next", "last", "first",
+    ];
+    let pool: Vec<&str> = names
+        .flat_map(|n| n.split_whitespace())
+        .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()))
+        .filter(|w| w.chars().count() >= 3 && w.chars().next().is_some_and(|c| c.is_uppercase()) && w.chars().all(|c| c.is_alphabetic()))
+        .collect();
+    if pool.is_empty() {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len() + 8);
+    for (i, piece) in text.split(' ').enumerate() {
+        if i > 0 {
+            out.push(' ');
+        }
+        let core = piece.trim_matches(|c: char| !c.is_alphanumeric());
+        let low = core.to_lowercase();
+        let named = core.chars().count() >= 3
+            && core.chars().next().is_some_and(|c| c.is_uppercase())
+            && core.chars().all(|c| c.is_alphabetic())
+            && core.chars().skip(1).any(|c| c.is_lowercase())
+            && (!start || piece.ends_with(',') || !COMMON.contains(&low.as_str()))
+            && !pool.iter().any(|n| n.to_lowercase() == low);
+        let key = if named { sound(core) } else { String::new() };
+        let best = pool
+            .iter()
+            .filter(|n| named && sound(n) == key)
+            .map(|n| (edits(&low, &n.to_lowercase()), *n))
+            .filter(|(d, n)| *d <= (n.chars().count() / 3).max(1))
+            .min_by_key(|(d, _)| *d);
+        match best {
+            Some((_, n)) => out.push_str(&piece.replacen(core, n, 1)),
+            None => out.push_str(piece),
+        }
+        if !piece.is_empty() {
+            start = piece.ends_with(['.', '?', '!']);
+        }
+    }
+    out
+}
+
 /// Each sentence inside a piece that asks ends with a question mark, not the recognizer's full stop.
 fn questions(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -399,6 +495,7 @@ pub fn shape(heard: &str, before: &str, held: &str, o: &Opts) -> Shaped {
         text = questions(&text);
     }
     text = respell(&text, &o.words);
+    text = names_fix(&text, o.words.iter().chain(o.names.iter()), after.map_or(true, |c| matches!(c, '.' | '?' | '!' | '\n')));
     let mut lead = String::new();
     if !held.is_empty() && !carries {
         lead.push_str(held);
@@ -455,7 +552,7 @@ mod tests {
     use super::*;
 
     fn on() -> Opts {
-        Opts { fillers: true, fixes: true, smart: true, words: vec!["ULTRON".into(), "Tauri".into()] }
+        Opts { fillers: true, fixes: true, smart: true, words: vec!["ULTRON".into(), "Tauri".into()], names: vec!["Danish Tillu".into(), "Aarav".into()] }
     }
 
     #[test]
@@ -528,5 +625,16 @@ mod tests {
         assert!(shape("Scratch that.", "x", "", &o).undo);
         let g = shape("That's the end period", "", "", &o);
         assert_eq!((g.text.as_str(), g.held.as_str()), ("That's the end.", ""));
+    }
+
+    #[test]
+    fn names_put_right() {
+        let names = [String::from("Danish Tillu"), String::from("Aarav"), String::from("Kristen")];
+        assert_eq!(names_fix("I met Denish and Arav today.", names.iter(), true), "I met Danish and Aarav today.");
+        assert_eq!(names_fix("Ask Christen about it.", names.iter(), true), "Ask Kristen about it.");
+        // (ordinary words, and a sentence's own capital, are left alone)
+        assert_eq!(names_fix("Can you see the dish there?", names.iter(), true), "Can you see the dish there?");
+        assert_eq!(names_fix("Are you there?", names.iter(), true), "Are you there?");
+        assert_eq!(names_fix("Arav, are you coming?", names.iter(), true), "Aarav, are you coming?");
     }
 }

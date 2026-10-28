@@ -17,6 +17,9 @@ use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextPar
 
 const MODEL_FILE: &str = "ggml-small.en-q5_1.bin";
 const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en-q5_1.bin";
+/// The same size of model, for every other language (fetched the first time one is chosen, about 190 MB)
+const MULTI_FILE: &str = "ggml-small-q5_1.bin";
+const MULTI_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin";
 const RATE: usize = 16_000;
 const FRAME: usize = 320; // 20 ms at 16 kHz
 const NN: usize = nnnoiseless::DenoiseState::FRAME_SIZE; // 10 ms at 48 kHz
@@ -37,6 +40,9 @@ pub struct Voice {
     pub patient: AtomicBool,
     sens: AtomicU32, // f32 bits
     prompt: Mutex<String>,
+    /// The language you talk in ("en", "hi", ..., or "auto"), and that it has just changed (the model is swapped)
+    pub lang: Mutex<String>,
+    pub reload: AtomicBool,
     status: Mutex<VoiceStatus>,
     seg_tx: Mutex<Option<SyncSender<Vec<f32>>>>,
     /// Dictating: what's been said so far of what's still being said, to be heard quickly ("heard-partial")
@@ -52,6 +58,8 @@ impl Default for Voice {
             patient: AtomicBool::new(false),
             sens: AtomicU32::new(1.0f32.to_bits()),
             prompt: Mutex::new(String::new()),
+            lang: Mutex::new("en".into()),
+            reload: AtomicBool::new(false),
             status: Mutex::new(VoiceStatus { state: "loading".into(), ..Default::default() }),
             seg_tx: Mutex::new(None),
             part_tx: Mutex::new(None),
@@ -96,20 +104,20 @@ fn data_dir(app: &AppHandle) -> PathBuf {
 }
 
 /// The model ships inside the app; otherwise a downloaded copy.
-fn bundled(app: &AppHandle) -> Option<PathBuf> {
+fn bundled(app: &AppHandle, file: &str) -> Option<PathBuf> {
     let mut c = Vec::new();
     if let Ok(r) = app.path().resource_dir() {
-        c.push(r.join("resources").join("models").join(MODEL_FILE));
-        c.push(r.join("models").join(MODEL_FILE));
+        c.push(r.join("resources").join("models").join(file));
+        c.push(r.join("models").join(file));
     }
-    c.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("models").join(MODEL_FILE));
-    c.push(data_dir(app).join(MODEL_FILE));
+    c.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("models").join(file));
+    c.push(data_dir(app).join(file));
     c.into_iter().find(|p| p.exists())
 }
 
-fn download(app: &AppHandle, path: &PathBuf) -> Result<(), String> {
+fn download(app: &AppHandle, path: &PathBuf, url: &str) -> Result<(), String> {
     let part = path.with_extension("part");
-    let resp = ureq::get(MODEL_URL).timeout(Duration::from_secs(60 * 60)).call().map_err(|e| e.to_string())?;
+    let resp = ureq::get(url).timeout(Duration::from_secs(60 * 60)).call().map_err(|e| e.to_string())?;
     let total: f64 = resp.header("Content-Length").and_then(|v| v.parse().ok()).unwrap_or(190_000_000.0);
     let mut reader = resp.into_reader();
     let mut file = std::fs::File::create(&part).map_err(|e| e.to_string())?;
@@ -136,12 +144,13 @@ fn download(app: &AppHandle, path: &PathBuf) -> Result<(), String> {
     std::fs::rename(&part, path).map_err(|e| e.to_string())
 }
 
-fn model_path(app: &AppHandle) -> Result<PathBuf, String> {
-    if let Some(p) = bundled(app) {
+fn model_path(app: &AppHandle, lang: &str) -> Result<PathBuf, String> {
+    let (file, url) = if lang == "en" { (MODEL_FILE, MODEL_URL) } else { (MULTI_FILE, MULTI_URL) };
+    if let Some(p) = bundled(app, file) {
         return Ok(p);
     }
-    let target = data_dir(app).join(MODEL_FILE);
-    download(app, &target).map(|_| target)
+    let target = data_dir(app).join(file);
+    download(app, &target, url).map(|_| target)
 }
 
 /* ---------------- audio helpers ---------------- */
@@ -268,17 +277,17 @@ pub fn prepare(seg: &[f32]) -> Vec<f32> {
 
 /// Decoding settings: a small beam search (more careful than greedy) and an
 /// encoder window sized to the clip (far faster than always reading 30 s).
-pub fn params<'a>(prompt: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
-    shaped(FullParams::new(SamplingStrategy::BeamSearch { beam_size: 4, patience: -1.0 }), prompt, threads, samples)
+pub fn params<'a>(prompt: &'a str, lang: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
+    shaped(FullParams::new(SamplingStrategy::BeamSearch { beam_size: 4, patience: -1.0 }), prompt, lang, threads, samples)
 }
 
 /// The same, decoded in one pass (dictation's finished pieces).
-fn quick_params<'a>(prompt: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
-    shaped(FullParams::new(SamplingStrategy::Greedy { best_of: 1 }), prompt, threads, samples)
+fn quick_params<'a>(prompt: &'a str, lang: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
+    shaped(FullParams::new(SamplingStrategy::Greedy { best_of: 1 }), prompt, lang, threads, samples)
 }
 
-fn shaped<'a>(mut p: FullParams<'a, 'a>, prompt: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
-    p.set_language(Some("en"));
+fn shaped<'a>(mut p: FullParams<'a, 'a>, prompt: &'a str, lang: &'a str, threads: i32, samples: usize) -> FullParams<'a, 'a> {
+    p.set_language(Some(lang));
     p.set_n_threads(threads);
     p.set_translate(false);
     p.set_no_context(true);
@@ -308,13 +317,15 @@ fn has_wake(text: &str) -> bool {
     squashed.contains("ultron")
         || l.split(|c: char| !c.is_alphanumeric()).any(|w| ["ultra", "altron", "ultran", "ultrum", "ultrom", "alltron"].contains(&w) || tronish(w))
         || l.split_whitespace().map(|w| w.chars().filter(|c| c.is_alphanumeric()).collect::<String>()).any(|w| tronish(&w))
+        // (written in the language you talk in)
+        || ["ultrón", "ультрон", "альтрон", "अल्ट्रॉन", "अल्ट्रोन", "अल्ट्रान", "उल्ट्रॉन", "ウルトロン", "ألترون", "الترون", "울트론", "奥创", "奧創"].iter().any(|w| l.contains(w))
 }
 
 /// What's been said so far, heard quickly (one pass, no second guesses) while you're still saying it.
-fn partial(state: &mut whisper_rs::WhisperState, audio: &[f32], prompt: &str, threads: i32) -> String {
+fn partial(state: &mut whisper_rs::WhisperState, audio: &[f32], prompt: &str, lang: &str, threads: i32) -> String {
     let audio = prepare(audio);
     let mut p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    p.set_language(Some("en"));
+    p.set_language(Some(lang));
     p.set_n_threads(threads);
     p.set_no_context(true);
     p.set_single_segment(true);
@@ -342,7 +353,9 @@ fn partial(state: &mut whisper_rs::WhisperState, audio: &[f32], prompt: &str, th
 }
 
 fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>) {
-    let path = match model_path(&app) {
+    // (a language whose model can't be had yet: English, until it can)
+    let lang0 = app.state::<Voice>().lang.lock().unwrap().clone();
+    let mut path = match model_path(&app, &lang0).or_else(|_| model_path(&app, "en")) {
         Ok(p) => p,
         Err(e) => {
             set_status(&app, "error", &format!("Couldn't get the voice model: {e}"), 0.0);
@@ -378,6 +391,21 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
     let mut held = Some(state);
     let mut last = std::time::Instant::now();
     loop {
+        // another language chosen: its model is fetched if need be, and used from the next thing heard
+        if voice.reload.swap(false, Ordering::SeqCst) {
+            let lang = voice.lang.lock().unwrap().clone();
+            match model_path(&app, &lang) {
+                Ok(p) => {
+                    if p != path {
+                        held = None;
+                        path = p;
+                    }
+                    crate::log_line(&format!("voice: listening in {lang}"));
+                }
+                Err(e) => crate::log_line(&format!("voice: no model for {lang} ({e})")),
+            }
+            set_status(&app, if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" }, "", 0.0);
+        }
         // (what's finished comes first; meanwhile, while dictating, what's still being said is heard as it grows)
         let got = match rx.try_recv() {
             Ok(s) => Ok(s),
@@ -389,7 +417,8 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
                         }
                         if let Some(state) = held.as_mut() {
                             let prompt = voice.prompt.lock().unwrap().clone();
-                            let text = partial(state, &so_far, &prompt, threads);
+                            let lang = voice.lang.lock().unwrap().clone();
+                            let text = partial(state, &so_far, &prompt, &lang, threads);
                             if !text.is_empty() && !is_noise(&text) {
                                 let _ = app.emit_to("main", "heard-partial", &text);
                             }
@@ -427,11 +456,12 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         // So while something plays and only "Ultron ..." would be acted on, just the first second and a half (where
         // the name has to be) is heard first, the quick way; the careful pass is kept for when the name is there.
         let prompt = voice.prompt.lock().unwrap().clone();
+        let lang = voice.lang.lock().unwrap().clone();
         if music && voice.wake.load(Ordering::SeqCst) {
             let t0 = std::time::Instant::now();
             let head = prepare(&seg[..seg.len().min(RATE * 8 / 5)]);
             let mut q = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-            q.set_language(Some("en"));
+            q.set_language(Some(&lang));
             q.set_n_threads(threads.min(4));
             q.set_no_context(true);
             q.set_single_segment(true);
@@ -464,14 +494,14 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let wake_only = music && seg.len() == RATE * 5;
         set_status(&app, "transcribing", "", 0.0);
         let audio = prepare(&seg);
-        let mut p = params(&prompt, threads, audio.len());
+        let mut p = params(&prompt, &lang, threads, audio.len());
         // (dictating: one quick pass, two or three times faster; what you said already showed as you said it)
         if voice.patient.load(Ordering::SeqCst) {
-            p = quick_params(&prompt, threads, audio.len());
+            p = quick_params(&prompt, &lang, threads, audio.len());
         }
         if wake_only {
             p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-            p.set_language(Some("en"));
+            p.set_language(Some(&lang));
             p.set_n_threads(threads);
             p.set_no_context(true);
             p.set_single_segment(true);

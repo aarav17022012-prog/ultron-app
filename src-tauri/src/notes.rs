@@ -506,6 +506,10 @@ pub fn press(app: &AppHandle, id: u32, which: Option<usize>, typed: Vec<(String,
 
 /// Reply to a message whose notification has no box of its own: the notification is opened (Windows opens the
 /// chat it's from), and once that app is in front the reply is typed into it and sent with Enter.
+fn note_app(_app: &AppHandle, id: u32) -> String {
+    ST.lock().unwrap().notes.get(&id).map(|n| n.app.clone()).unwrap_or_else(|| "its app".into())
+}
+
 pub fn reply(app: &AppHandle, id: u32, text: &str) -> Result<(), String> {
     use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
     let text = text.trim();
@@ -523,13 +527,19 @@ pub fn reply(app: &AppHandle, id: u32, text: &str) -> Result<(), String> {
             break;
         }
     }
-    if !changed {
+    // (the app may have been in front already, its chat opening in place: then nothing changes. Only when ULTRON itself
+    //  still has the keyboard has the app not come)
+    let main = app.get_webview_window("main").and_then(|w| crate::hit::hwnd_of(&w)).map(|h| h.0 as isize).unwrap_or(0);
+    let now = unsafe { GetForegroundWindow() }.0 as isize;
+    if !changed && now == main {
         return Err("The app didn't open, so the reply wasn't sent.".into());
     }
-    std::thread::sleep(std::time::Duration::from_millis(900));
+    // (time for the chat to open and its message box to take the keys: WhatsApp takes the best part of two seconds)
+    std::thread::sleep(std::time::Duration::from_millis(1700));
     crate::dictate::type_out(text);
-    std::thread::sleep(std::time::Duration::from_millis(120));
+    std::thread::sleep(std::time::Duration::from_millis(150));
     crate::apps::send_keys(&[windows::Win32::UI::Input::KeyboardAndMouse::VK_RETURN]);
+    crate::log_line(&format!("notes: reply typed and sent in {} ({} characters)", note_app(app, id), text.chars().count()));
     Ok(())
 }
 

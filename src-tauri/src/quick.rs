@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter, Manager};
 
-const NO_WINDOW: u32 = 0x0800_0000;
+const NO_WINDOW: u32 = 0x0000_0008; // DETACHED_PROCESS: no console (and no Console Window Host beside it)
 const BELOW_NORMAL: u32 = 0x0000_4000;
 /// Qwen3 1.7B when it's been downloaded (sharper), else the bundled Qwen2.5 1.5B
 const FILES: [&str; 2] = ["Qwen3-1.7B-Q4_K_M.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf"];

@@ -20,7 +20,7 @@ use tauri::{AppHandle, Manager};
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
-const NO_WINDOW: u32 = 0x0800_0000;
+const NO_WINDOW: u32 = 0x0000_0008; // DETACHED_PROCESS: no console (and no Console Window Host beside it)
 const BELOW_NORMAL: u32 = 0x0000_4000;
 const IDLE: Duration = Duration::from_secs(4 * 60);
 
