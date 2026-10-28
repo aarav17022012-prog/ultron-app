@@ -3675,18 +3675,15 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 .start > :not(.gw){transition:transform .55s var(--glide) .04s}
 .start:not(.open) > :not(.gw){transform:translateY(-18px); transition:transform .32s cubic-bezier(.45,0,.6,.3)}
 
-/* ---------- the Drop Shelf: a solid tray, not live glass. The screen behind it was fetched and drawn twenty times a
-   second while it was up, and it lagged. Now: smoked graphite, lit softly from above, with a fine grain and a deep
-   shadow, and nothing behind it to keep up with ---------- */
-.ds-tray > .gw{display:none !important}
+/* ---------- the Drop Shelf, a pane of clear glass ----------
+   What's behind it shows through (only new pictures are sent, so it no longer lags), with the same lit rim and soft,
+   wide shadow as every other piece of ULTRON's glass, and a faint sheen from above. */
 .ds-tray.glass::before{background:
-  radial-gradient(120% 75% at 50% -28%, rgba(255,255,255,.12), rgba(255,255,255,0) 62%),
-  radial-gradient(60% 90% at 0% 100%, rgba(120,140,255,.06), rgba(120,140,255,0) 70%),
-  radial-gradient(60% 90% at 100% 100%, rgba(255,170,120,.05), rgba(255,170,120,0) 70%),
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-  linear-gradient(180deg, rgba(42,43,50,.97), rgba(25,26,31,.98) 55%, rgba(19,20,24,.985))}
-.ds-tray.glass.panel-glass{box-shadow:inset 0 1px 0 rgba(255,255,255,.13), inset 0 0 0 .8px rgba(255,255,255,.06), 0 0 0 .8px rgba(0,0,0,.55), 0 26px 64px rgba(0,0,0,.5), 0 4px 14px rgba(0,0,0,.3)}
-.dshelf.over .ds-tray.glass.panel-glass{box-shadow:inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(255,255,255,.5), 0 0 0 .8px rgba(0,0,0,.55), 0 26px 64px rgba(0,0,0,.5), 0 4px 14px rgba(0,0,0,.3)}
+  radial-gradient(130% 70% at 50% -20%, rgba(255,255,255,.2), rgba(255,255,255,0) 60%),
+  linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02) 45%, rgba(255,255,255,.05)) !important}
+.ds-tray.glass.panel-glass{box-shadow:0 0 0 .5px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.1), 0 12px 32px -6px rgba(0,0,0,.3), 0 34px 80px -20px rgba(0,0,0,.4)}
+.dshelf.over .ds-tray.glass.panel-glass{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.28), 0 12px 32px -6px rgba(0,0,0,.3), 0 34px 80px -20px rgba(0,0,0,.4)}
+.ds-p{background:rgba(255,255,255,.1); box-shadow:inset 0 .5px 0 rgba(255,255,255,.25)}
 
 /* ---------- the Drop Shelf's apps: a pinned one shows a cross under the pointer, and a press takes it off again ---------- */
 .ds-ap.on:hover::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b0b0d' stroke-width='3.4' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E"); transform:rotate(90deg)}
@@ -3844,7 +3841,6 @@ html.vision .wc-in{border-radius:16px}
   radial-gradient(130% 55% at 50% -12%, rgba(255,255,255,.17), transparent 62%),
   radial-gradient(160px 70px at var(--hx,30%) var(--hy,0%), rgba(255,255,255,calc(.1 * var(--hs, 1))), transparent 70%),
   linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 40%, rgba(255,255,255,.035)),
-  linear-gradient(rgb(12 12 16 / calc(var(--lum, .25) * .52)), rgb(12 12 16 / calc(var(--lum, .25) * .52))),
   var(--tint, rgba(20,20,26,.3))}
 
 /* ---------- the battery, a module of glass ----------
@@ -3878,6 +3874,13 @@ html.vision .wc-in{border-radius:16px}
 @keyframes bwTip{to{opacity:1; transform:none}}
 .bw-go{display:block; width:100%; height:32px; margin-bottom:4px; padding:0 8px; border:0; border-radius:9px; background:none; color:rgba(255,255,255,.9); font:inherit; font-size:12.5px; text-align:left; cursor:default; transition:background .15s}
 .bw-go:hover{background:rgba(255,255,255,.1)}
+
+/* ---------- clear glass: no tint, anywhere ----------
+   Every surface of glass is clear: what's behind it, softened, with only the faintest frost, the lit rim and the soft
+   shadow. (They had a dark tint, from forty to sixty in a hundred: it made them look smoked.) White words carry a fine
+   shadow so they read over a bright page as well as a dark one. */
+html:not(.vision) .glass:not(.notch):not(.ears){--tint:rgba(255,255,255,.055) !important}
+html:not(.vision) .glass.panel-glass, html:not(.vision) .glass.panel-glass *, html:not(.vision) .dd, html:not(.vision) .dd *, html:not(.vision) .ds-tray *{text-shadow:0 .5px 1.5px rgba(0,0,0,.45) !important}
 </style>
 </head>
 <body>
@@ -4486,7 +4489,6 @@ function glassLum(g){
 }
 function glassDraw(g, a){
   if (!glassBmp) return;
-  glassLum(g);
   let c = g._c, blank = false;
   if (!c){ c = g._c = document.createElement('canvas'); c.className = 'gwc'; g.appendChild(c); g._x = c.getContext('2d', {alpha:false}); blank = true; }
   if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; blank = true; }
@@ -12013,6 +12015,7 @@ function dsLay(){
     const w = Math.round(124 * k), h = Math.min(Math.round(innerHeight * .78), 58 + Math.max(1, DS.items.length) * Math.round(104 * k));
     dsTray.style.setProperty('--dsW', w + 'px'); dsTray.style.setProperty('--dsH', h + 'px'); dsTray.style.setProperty('--dsWa', '560px');
     DS.box = {x:side === 'left' ? 16 : innerWidth - 16 - w, y:Math.round(innerHeight / 2 - h / 2), w, h};
+    dsGlass();
     return;
   }
   const fit = Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * Math.round(88 * k)), w = Math.max(DS.apps ? 560 : 360, fit), h = DS.apps ? 366 : Math.round(152 * (k > 1 ? 1.12 : k < 1 ? .9 : 1));
@@ -12024,6 +12027,7 @@ function dsLay(){
   const left = side === 'left' ? 16 : side === 'right' ? innerWidth - 16 - w : Math.round(innerWidth / 2 - w / 2), top = side ? Math.round(innerHeight / 2 - h / 2) : innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
   DS.box = {x:left, y:top, w, h};
+  dsGlass();
 }
 function dsItem(it, k, cls){
   if (it.app) return `<div class="ds-i app${cls}" data-p="${esc(it.path)}" data-app="1" style="--k:${k}" title="${esc(it.name)}"><span class="ds-p app">${iconHtml({name:it.name, launch:it.path}, 'ds-ic')}</span>`
@@ -12051,6 +12055,13 @@ function dsPaint(first, fresh, x, y){
 // Taking one off: it sinks and fades as it shrinks away, while the ones after it close up behind it (its space closes
 // as it goes, not after a pause), and the tray narrows to fit at the same time: one motion. (It used to vanish, sit as a
 // gap, and then jump shut.) The shelf's list has already lost it.
+// (the tray's glass lined up with the screen: what's drawn in it is what's behind it, on whichever edge it sits)
+function dsGlass(){
+  const gw = dsTray.querySelector(':scope > .gw'); if (!gw || !DS.box) return;
+  gw.style.setProperty('left', -DS.box.x + 'px', 'important'); gw.style.setProperty('top', -DS.box.y + 'px', 'important');
+  gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px';
+  glassDraw(gw);
+}
 function dsGo(el, then){
   const col = dsEl.classList.contains('side') && !DS.apps;
   if (col){ el.style.height = el.offsetHeight + 'px'; void el.offsetHeight; }
