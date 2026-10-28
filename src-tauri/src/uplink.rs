@@ -279,8 +279,23 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
             if ["he", "she", "it", "they", "this", "these", "those", "his", "her", "its", "their", "that", "there"].contains(&first) {
                 continue;
             }
+            // (a site's blurb about itself: "Learn about the history, powers and duties of ...")
+            if ["learn", "find", "discover", "read", "explore", "see", "get", "check", "click", "watch", "browse", "visit", "shop", "search", "view", "sign", "join",
+                "download", "subscribe", "welcome", "here"].contains(&first) {
+                continue;
+            }
             if n > 180 {
                 score -= 0.5;
+            }
+            // ("who is the president of France": "Emmanuel Macron is ...", not "The president of France is the co-prince
+            //  of Andorra")
+            if ql.starts_with("who ") {
+                let ws: Vec<&str> = s.split_whitespace().take(2).collect();
+                let named = ws.len() == 2 && ws.iter().all(|w| w.starts_with(|c: char| c.is_uppercase())) && !["The", "A", "An", "In", "On", "This", "As", "It"].contains(&ws[0]);
+                if !named {
+                    continue;
+                }
+                score += 1.0;
             }
             if best.as_ref().map_or(true, |b| score > b.0) {
                 best = Some((score, s.to_string()));

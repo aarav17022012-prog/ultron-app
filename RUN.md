@@ -26,7 +26,7 @@ These are other projects' binaries and models, too big for git (see `.gitignore`
 | Folder | What goes there |
 |---|---|
 | `src-tauri/resources/llama/` | llama.cpp's `llama-server.exe` (build b11136) and all its DLLs (`ggml-*.dll`, `llama.dll`, ...) |
-| `src-tauri/resources/models/` | `ggml-small.en-q5_1.bin`, `ggml-small-q5_1.bin` (Whisper), `qwen2.5-1.5b-instruct-q4_k_m.gguf`, `Kim_Vocal_2.onnx` |
+| `src-tauri/resources/models/` | `ggml-small.en-q5_1.bin` (Whisper), `Kim_Vocal_2.onnx` (the brains, other languages' speech model, the most accurate dictation model and the depth model are fetched by ULTRON when first needed) |
 | `src-tauri/resources/voices/` | `en_US-lessac-high.onnx` (+ `.onnx.json`), `en_US-ryan-high.onnx` (+ `.onnx.json`) |
 | `src-tauri/resources/piper/` | `piper.exe`, its DLLs and the `espeak-ng-data` folder |
 | `src-tauri/resources/screen/` | `omni-icon-detect.onnx` (OmniParser v2 icon detector, AGPL-3.0) |

@@ -20,6 +20,10 @@ const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/ma
 /// The same size of model, for every other language (fetched the first time one is chosen, about 190 MB)
 const MULTI_FILE: &str = "ggml-small-q5_1.bin";
 const MULTI_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin";
+/// For dictation, when "Most accurate dictation" is on: Whisper large-v3 turbo (about 550 MB, fetched once when it's
+/// turned on). Held only while you dictate, and put away a minute after.
+pub const BEST_FILE: &str = "ggml-large-v3-turbo-q5_0.bin";
+const BEST_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin";
 const RATE: usize = 16_000;
 const FRAME: usize = 320; // 20 ms at 16 kHz
 const NN: usize = nnnoiseless::DenoiseState::FRAME_SIZE; // 10 ms at 48 kHz
@@ -48,6 +52,8 @@ pub struct Voice {
     /// The language you talk in ("en", "hi", ..., or "auto"), and that it has just changed (the model is swapped)
     pub lang: Mutex<String>,
     pub reload: AtomicBool,
+    /// Dictation uses the most accurate model (BEST_FILE) when it's here
+    pub best: AtomicBool,
     status: Mutex<VoiceStatus>,
     seg_tx: Mutex<Option<SyncSender<Vec<f32>>>>,
     /// Dictating: what's been said so far of what's still being said, to be heard quickly ("heard-partial")
@@ -67,6 +73,7 @@ impl Default for Voice {
             prompt: Mutex::new(String::new()),
             lang: Mutex::new("en".into()),
             reload: AtomicBool::new(false),
+            best: AtomicBool::new(false),
             status: Mutex::new(VoiceStatus { state: "loading".into(), ..Default::default() }),
             seg_tx: Mutex::new(None),
             part_tx: Mutex::new(None),
@@ -149,6 +156,25 @@ fn download(app: &AppHandle, path: &PathBuf, url: &str) -> Result<(), String> {
         return Err("download incomplete".into());
     }
     std::fs::rename(&part, path).map_err(|e| e.to_string())
+}
+
+/// The most accurate model's file (None: not fetched yet)
+pub fn best_path(app: &AppHandle) -> Option<PathBuf> {
+    Some(data_dir(app).join(BEST_FILE)).filter(|p| p.exists())
+}
+/// Fetched in the background, the first time it's turned on
+pub fn fetch_best(app: &AppHandle) {
+    if best_path(app).is_some() {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let target = data_dir(&app).join(BEST_FILE);
+        match download(&app, &target, BEST_URL) {
+            Ok(()) => crate::log_line("voice: the most accurate dictation model is ready"),
+            Err(e) => crate::log_line(&format!("voice: couldn't fetch the most accurate model ({e})")),
+        }
+    });
 }
 
 fn model_path(app: &AppHandle, lang: &str) -> Result<PathBuf, String> {
@@ -403,6 +429,9 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
     const QUIET: std::time::Duration = std::time::Duration::from_secs(120);
     let mut held = Some(state);
     let mut last = std::time::Instant::now();
+    // (the most accurate model, while dictating with it on)
+    let mut best: Option<whisper_rs::WhisperState> = None;
+    let mut best_at = std::time::Instant::now();
     loop {
         // another language chosen: its model is fetched if need be, and used from the next thing heard
         if voice.reload.swap(false, Ordering::SeqCst) {
@@ -451,6 +480,20 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let seg = match got {
             Ok(s) => s,
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                let want_best = voice.patient.load(Ordering::SeqCst) && voice.best.load(Ordering::SeqCst) && *voice.lang.lock().unwrap() == "en";
+                if want_best && best.is_none() {
+                    if let Some(f) = best_path(&app) {
+                        let t0 = std::time::Instant::now();
+                        best = WhisperContext::new_with_params(f.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
+                        best_at = std::time::Instant::now();
+                        crate::log_line(&format!("voice: the most accurate dictation model up in {} ms", t0.elapsed().as_millis()));
+                    }
+                }
+                if best.is_some() && !want_best && best_at.elapsed() > std::time::Duration::from_secs(60) {
+                    best = None;
+                    crate::smooth::trim(std::process::id());
+                    crate::log_line("voice: the most accurate dictation model put away");
+                }
                 if held.is_some() && last.elapsed() > QUIET {
                     held = None;
                     crate::smooth::trim(std::process::id());
@@ -557,6 +600,34 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
             }
             if h.is_finished() { h.join().ok().flatten() } else { None }
         });
+        // (Whisper and Windows' recognizer heard it differently: a hard one. With "Most accurate dictation" on, the
+        //  larger model hears it again, and its words are used. It takes about as long as the speech itself on a
+        //  laptop's processor, so only these few wait for it; the rest are typed at once)
+        let text = match (&win, best.as_mut()) {
+            (Some(h), Some(b)) if voice.patient.load(Ordering::SeqCst) && !voice.live.load(Ordering::SeqCst) && lang == "en" && !wake_only && audio.len() < RATE * 30 => {
+                let key = |w: &str| w.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
+                let ws: Vec<String> = text.split_whitespace().map(key).filter(|w| !w.is_empty()).collect();
+                let agree = if ws.is_empty() { 0.0 } else { ws.iter().filter(|w| h.words.iter().any(|(x, _)| key(x) == **w)).count() as f32 / ws.len() as f32 };
+                if agree < 0.6 && !(h.text.is_empty() && ws.len() <= 2) {
+                    let t1 = std::time::Instant::now();
+                    let mut again = String::new();
+                    if b.full(steady_params(&prompt, &lang, threads, audio.len()), &audio).is_ok() {
+                        for s in b.as_iter() {
+                            if let Ok(t) = s.to_str_lossy() {
+                                again.push_str(&t);
+                            }
+                        }
+                    }
+                    best_at = std::time::Instant::now();
+                    let again = unrepeat(again.trim());
+                    crate::log_line(&format!("voice: heard differently ({:.0}% alike), the most accurate model heard {again:?} in {} ms", agree * 100.0, t1.elapsed().as_millis()));
+                    if again.is_empty() { text } else { again }
+                } else {
+                    text
+                }
+            }
+            _ => text,
+        };
         let noise = no_speech >= 0.6 || is_noise(&text);
         let text = if win.is_some() { crate::winsr::fuse(&text, noise, win.as_ref(), &voice.names.lock().unwrap()) } else { (!noise).then_some(text) };
         if let Some(text) = text.filter(|t| !wake_only || has_wake(t)) {
@@ -772,6 +843,30 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
         while probs.len() > 8 {
             probs.pop_front(); // never drift out of step
         }
+    }
+}
+
+/// (developer mode: how long each dictation model takes on a recording, 16 kHz mono, and what it hears; nothing is
+///  acted on)
+pub fn try_file(app: &AppHandle, path: &str) {
+    let Ok(b) = std::fs::read(path) else { return crate::log_line("try: no such recording") };
+    let Some(at) = b.windows(4).position(|w| w == b"data") else { return };
+    let samples: Vec<f32> = b[at + 8..].chunks_exact(2).map(|c| i16::from_le_bytes([c[0], c[1]]) as f32 / 32768.0).collect();
+    let audio = prepare(&samples);
+    let threads = (std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4) / 2).clamp(2, 8) as i32;
+    for (name, f) in [("standard", model_path(app, "en").ok()), ("most accurate", best_path(app))] {
+        let Some(f) = f else { continue };
+        let Some(mut st) = WhisperContext::new_with_params(f.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok()) else { continue };
+        let t0 = std::time::Instant::now();
+        let mut text = String::new();
+        if st.full(steady_params("", "en", threads, audio.len()), &audio).is_ok() {
+            for s in st.as_iter() {
+                if let Ok(t) = s.to_str_lossy() {
+                    text.push_str(&t);
+                }
+            }
+        }
+        crate::log_line(&format!("try: {name} heard {:.1}s in {} ms: {:?}", samples.len() as f32 / RATE as f32, t0.elapsed().as_millis(), text.trim()));
     }
 }
 

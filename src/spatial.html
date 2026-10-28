@@ -1,0 +1,36 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ULTRON wallpaper</title>
+<style>html, body{margin:0; height:100%; overflow:hidden; background:#000} canvas{display:block; width:100vw; height:100vh; opacity:0; transition:opacity 1.2s ease} canvas.on{opacity:1}</style>
+</head><body><canvas id="c"></canvas>
+<script src="spatial.js"></script>
+<script>
+/* The desktop's spatial wallpaper (spatial.rs puts this window where Windows draws the wallpaper, behind the icons):
+   the wallpaper drawn with depth, leaning toward the pointer. Drawn only while the desktop can be seen. */
+const invoke = window.__TAURI__.core.invoke, listen = window.__TAURI__.event.listen;
+const sp = Spatial(document.getElementById('c'), {strength:.026});
+let shown = false;
+async function load(){
+  try {
+    const pic = await invoke('wall_picture', {w:Math.round(screen.width * devicePixelRatio), h:Math.round(screen.height * devicePixelRatio)});
+    const dep = pic ? await invoke('spatial_depth').catch(e => { invoke('page_log', {msg:'spatial wallpaper: ' + e}); return null; }) : null;
+    if (!pic) return invoke('spatial_wall', {on:false});
+    document.body.style.background = `#000 center / cover no-repeat url("${pic}")`;   // (the plain wallpaper, never black, until the scene is ready)
+    if (!dep || !sp) return;
+    const [i, d] = await Promise.all([spatialPic(pic), spatialPic(dep)]);
+    sp.set(i, d); if (shown) sp.start();
+    document.getElementById('c').classList.add('on');
+  } catch(e){ invoke('page_log', {msg:'spatial wallpaper: ' + e}); }
+}
+load();
+listen('wallpaper', () => setTimeout(load, 1500));
+addEventListener('resize', () => sp && sp.resize());
+// (where the pointer is, a dozen times a second; with a window over the whole desktop, nothing is drawn)
+setInterval(async () => {
+  if (!sp) return;
+  const [x, y, desk] = await invoke('spatial_cursor');
+  sp.aim((x - .5) * 2, (y - .5) * 2);
+  if (desk && !shown){ shown = true; sp.start(); } else if (!desk && shown){ shown = false; sp.stop(); }
+}, 80);
+</script>
+</body></html>

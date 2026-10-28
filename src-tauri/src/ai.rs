@@ -535,12 +535,15 @@ fn pick_brain(app: &AppHandle) -> Option<(String, PathBuf, &'static str)> {
         }
     }
     model_path(app, FAST_FILE).map(|p| ("fast".into(), p, FAST_FILE))
+        // (the installer no longer carries it: any brain that's here does)
+        .or_else(|| crate::router::text_order().into_iter().find_map(|f| model_path(app, f).map(|p| ("smart".into(), p, f))))
 }
 
 /// At launch: make sure a brain is available; fetch the smart one in the background if wanted.
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
-        if model_path(&app, FAST_FILE).is_none() {
+        let have = model_path(&app, FAST_FILE).is_some() || crate::router::text_order().into_iter().any(|f| model_path(&app, f).is_some());
+        if !have {
             let target = data_dir(&app).join("models").join(FAST_FILE);
             set_status(&app, "downloading", 0.0, "");
             if let Err(e) = download(&app, FAST_URL, &target, "", 500_000_000.0) {
@@ -1404,6 +1407,17 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // a sum is worked out exactly, at once
     if let Some(r) = quick_math(user) {
         return Some(Reply { reply: r, action: String::new(), icon: "chat", ok: true });
+    }
+    // (Web mode: the web is asked first, before any brain is waited on. Its answer is usually a sentence from the
+    //  results, said as it is; a brain still loading, for up to half a minute after a start or a wake from sleep, kept
+    //  every question waiting before the web was even asked)
+    if config(app).gemini && !small_talk(user) && !wants_steps(user) && crate::cloud::active(app).is_none() {
+        let t0 = Instant::now();
+        let _ = app.emit_to("main", "ai-phase", "Looking it up…");
+        if let Some(d) = crate::uplink::facts(app, user).and_then(|f| f.direct) {
+            crate::log_line(&format!("web: answered in {} ms, before any brain", t0.elapsed().as_millis()));
+            return Some(Reply { reply: d, action: String::new(), icon: "chat", ok: true });
+        }
     }
     let ai = app.state::<Ai>();
     // everyday chat goes to the quick brain on the graphics card (about a second);

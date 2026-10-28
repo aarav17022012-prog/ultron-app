@@ -4,7 +4,8 @@
   "description": "Permissions for the ULTRON window",
   "windows": [
     "main",
-    "intro"
+    "intro",
+    "spatialwall"
   ],
   "permissions": [
     "core:default"

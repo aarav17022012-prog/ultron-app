@@ -71,6 +71,7 @@ mod hooks;
 mod uplink;
 mod link;
 mod sounds;
+mod spatial;
 mod watchdog;
 mod winsr;
 mod words;
@@ -393,7 +394,13 @@ fn voice_status(voice: State<Voice>) -> voice::VoiceStatus {
 }
 
 #[tauri::command]
-fn voice_config(voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>, lang: Option<String>, live: Option<bool>, names: Option<Vec<String>>) {
+fn voice_config(app: AppHandle, voice: State<Voice>, paused: Option<bool>, sens: Option<f32>, prompt: Option<String>, wake: Option<bool>, patient: Option<bool>, lang: Option<String>, live: Option<bool>, names: Option<Vec<String>>, best: Option<bool>) {
+    if let Some(b) = best {
+        voice.best.store(b, std::sync::atomic::Ordering::SeqCst);
+        if b {
+            voice::fetch_best(&app);
+        }
+    }
     if let Some(n) = names {
         *voice.names.lock().unwrap() = n;
     }
@@ -676,6 +683,10 @@ fn dev_inbox(app: AppHandle) {
                 continue;
             }
             // "!open", "!ask what's 2+2", "!menu clip": drive the interface itself
+            if let Some(f) = text.strip_prefix("@wav ") {
+                voice::try_file(&app, f.trim());
+                continue;
+            }
             if let Some(ui) = text.strip_prefix('!') {
                 let _ = app.emit_to("main", "dev-ui", ui.trim());
                 continue;
@@ -1486,6 +1497,30 @@ fn dock_keep(on: bool) {
     dock::keep(on);
 }
 
+/// Is the most accurate dictation model here already
+#[tauri::command]
+fn dict_best_have(app: AppHandle) -> bool {
+    voice::best_path(&app).is_some()
+}
+
+/// The wallpaper's depth, for the spatial lock screen and desktop (spatial.rs)
+#[tauri::command]
+async fn spatial_depth(app: AppHandle) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || spatial::depth(&app)).await.map_err(|e| e.to_string())?
+}
+
+/// The desktop's spatial wallpaper, on or off (async: a window made from a command that holds the main thread waits
+/// on that same thread forever, and ULTRON froze)
+#[tauri::command]
+async fn spatial_wall(app: AppHandle, on: bool) -> Result<(), String> {
+    spatial::wall(&app, on)
+}
+
+#[tauri::command]
+fn spatial_cursor() -> (f64, f64, bool) {
+    spatial::cursor()
+}
+
 /// The wallpaper that's up, as a picture of a given size (ULTRON's search and its lock screen show it).
 #[tauri::command]
 async fn wall_picture(w: u32, h: u32) -> Option<String> {
@@ -1919,7 +1954,7 @@ fn main() {
         .manage(songs::Songs::default())
         .invoke_handler(tauri::generate_handler![
             set_hit_rects, page_log, dev_mode, quit_app,
-            voice_status, voice_config, run_command, assist, ai_status, ai_warm, app_names,
+            voice_status, voice_config, run_command, assist, ai_status, ai_warm, app_names, dict_best_have, spatial_depth, spatial_wall, spatial_cursor,
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
