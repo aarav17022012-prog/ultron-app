@@ -46,8 +46,10 @@ fn held(vk: i32) -> bool {
 /// switcher is left to it. (Measuring the window in front took some maximized apps with no title bar for full screen
 /// when ULTRON's bar was set to hide away, and Windows' Alt+Tab came up over them.)
 fn full() -> bool {
-    // (and still so now: a notice that it ended can go astray, and Windows' switcher then came up from then on)
-    crate::appbar::FULL.load(SeqCst) && crate::appbar::really_full()
+    // (and still so now: a notice that it ended can go astray, and Windows' switcher then came up from then on. And a
+    //  maximized window isn't full screen, even one with no title bar filling the screen when ULTRON's bar hides away:
+    //  Windows calls those full screen too, and its switcher came up over VS Code, Discord, a browser)
+    crate::appbar::FULL.load(SeqCst) && crate::appbar::really_full() && !unsafe { windows::Win32::UI::WindowsAndMessaging::IsZoomed(GetForegroundWindow()) }.as_bool()
 }
 
 /// A key no program uses, pressed while Alt is held: Alt coming up after it doesn't open the app's menu bar.
@@ -110,6 +112,9 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
                     tell(if k.vkCode == 0x27 { "hop-next" } else { "hop-prev" });
                     return LRESULT(1);
                 }
+                if k.vkCode == 0x09 && down && alt && !held(0x11) && !held(0x5B) && !held(0x5C) && full() {
+                    tell("pass-full");
+                }
                 if k.vkCode == 0x09 && down && alt && !held(0x11) && !held(0x5B) && !held(0x5C) && !full() {
                     UP.store(true, SeqCst);
                     mask();
@@ -163,6 +168,10 @@ pub fn set(app: &AppHandle, on: bool) {
     let app = app.clone();
     std::thread::spawn(move || {
         for what in rx {
+            if what == "pass-full" {
+                crate::log_line("alt+tab: left to Windows (something is full screen)");
+                continue;
+            }
             let _ = app.emit_to("main", "alttab", what);
         }
     });

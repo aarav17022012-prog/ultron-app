@@ -1094,6 +1094,27 @@ pub fn dictation_polish(app: &AppHandle, heard: &str) -> Option<String> {
     Some(out)
 }
 
+/// A correction made into the question it means: "who was the first person on the moon" corrected by "I meant the
+/// second person" is "Who was the second person on the moon?". Asked as it was, the old question's web results
+/// answered again, and the correction was lost.
+pub fn merge_correction(app: &AppHandle, asked: &str, said: &str) -> Option<String> {
+    let port = crate::quick::port()?;
+    let m = |r: &str, c: &str| (r.to_string(), c.to_string());
+    let messages = [
+        m("system", "Someone asked a question, then corrected it. Write the one question they mean now, complete and on its own. Reply with that question only."),
+        m("user", "Asked: what's the weather in paris\nCorrection: no, in london"),
+        m("assistant", "What's the weather in London?"),
+        m("user", "Asked: who wrote harry potter\nCorrection: I meant who directed the first film"),
+        m("assistant", "Who directed the first Harry Potter film?"),
+        m("user", "Asked: how tall is mount everest\nCorrection: in feet please"),
+        m("assistant", "How tall is Mount Everest in feet?"),
+        m("user", &format!("Asked: {asked}\nCorrection: {said}")),
+    ];
+    let out = generate_in(app, &messages, 48, 0.1, None, Some(port), 0, |_| {})?;
+    let out = out.lines().next().unwrap_or("").trim().trim_matches(['"', '“', '”']).trim().to_string();
+    (out.len() > 3 && out.len() < 240).then_some(out)
+}
+
 /// Ready to write: the quick brain is up, or the smart one is loaded.
 fn can_write(app: &AppHandle) -> bool {
     crate::quick::port().is_some() || ready(app)
