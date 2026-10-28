@@ -439,6 +439,44 @@ async fn assist(app: AppHandle, text: String) -> commands::Reply {
         .unwrap_or_else(|_| commands::Reply { reply: "Something went wrong.".into(), action: String::new(), icon: "chat", ok: false })
 }
 
+/// A question for ULTRON to answer, not a job for it: it asks (who, what, how, is..., or ends with a question mark), and
+/// it isn't about this PC ("how much battery do I have" is the PC's to answer) or a polite order ("can you open
+/// Spotify?" is a job).
+fn asking(text: &str) -> bool {
+    const DO: &[&str] = &[
+        "open", "play", "close", "type", "write", "send", "message", "text", "email", "set", "turn", "search", "find", "make", "create", "delete", "remove", "move", "copy",
+        "rename", "click", "start", "stop", "pause", "resume", "show", "take", "record", "call", "remind", "add", "switch", "mute", "unmute", "lock", "shut", "restart",
+        "install", "download", "translate", "summarize", "summarise", "rewrite", "read", "organize", "organise", "clean", "compress", "zip", "go", "put", "save", "print",
+        "schedule", "book", "order", "navigate", "scroll", "press", "select", "choose", "minimize", "maximize", "enable", "disable", "connect", "learn", "teach", "run",
+        "repeat", "draft", "reply", "post", "upload", "share", "edit", "change", "update", "fix", "check", "look", "tell",
+    ];
+    let low = text.to_lowercase();
+    let words: Vec<String> = low.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'').to_string()).collect();
+    let w = |i: usize| words.get(i).map(String::as_str).unwrap_or("");
+    let padded = format!(" {} ", low.trim_end_matches(['.', '!', '?']));
+    let about_pc = [" my ", " this pc", " this computer", " this laptop", " the pc", " the computer", " screen", " window", " file", " folder", " app ", " apps", " disk",
+        " drive", " battery", " wifi", " wi-fi", " bluetooth", " volume", " brightness", " ram ", " memory", " cpu", " gpu", " running", " installed", " clipboard",
+        " desktop", " settings", " notification", " email", " inbox", " playing", " song", " timer", " alarm", " reminder", " routine"]
+        .iter()
+        .any(|x| padded.contains(x));
+    if about_pc {
+        return false;
+    }
+    // ("can you open…", "could you please play…", "please send…": asked politely, still a job; "tell me about…" isn't)
+    if ["can", "could", "would", "will", "please"].contains(&w(0)) {
+        let verb = if w(1) == "you" { if w(2) == "please" { w(3) } else { w(2) } } else { w(1) };
+        if DO.contains(&verb) && verb != "tell" {
+            return false;
+        }
+    }
+    let starts = ["who", "whom", "whose", "when", "why", "what", "whats", "what's", "which", "where", "how", "is", "are", "was", "were", "does", "did", "should", "explain",
+        "describe", "define", "tell", "can", "could", "would", "will", "do"]
+        .contains(&w(0));
+    let asks_for = (w(0) == "give" && w(1) == "me" && ["a", "an", "some", "me"].contains(&w(2)) && words.iter().skip(3).any(|x| ["fact", "facts", "idea", "ideas", "tip", "tips", "example", "examples", "reason", "reasons", "joke", "quote", "riddle", "word", "name", "names"].contains(&x.as_str())))
+        || padded.contains(" fun fact") || padded.contains(" meaning of ") || padded.contains(" difference between ");
+    (starts && !(w(0) == "do" && w(1) != "you")) || asks_for || low.trim_end().ends_with('?')
+}
+
 /// Everything ULTRON does with a request, in order.
 pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
     {
@@ -484,13 +522,21 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
             return commands::Reply { reply: said, action: String::new(), icon: "chat", ok: true };
         }
         memory::notice(&app, &text);
+        // A question to be answered ("who invented the light bulb?", "how do I open a PDF?", "give me a fun fact"):
+        // straight to the answer. The task rules below took "open" in "how do I open a PDF" for a job, and now and then
+        // a question was done as one.
+        if asking(&text) {
+            if let Some(a) = ai::ask(&app, &text) {
+                return a;
+            }
+        }
         // "build me ... on Lovable / Bolt / v0 / AI Studio": straight to that builder, with the request
         if let Some(r) = doer::build_online(&app, &text) {
             ai::remember_chat(&app, &text, &r.reply);
             return r;
         }
         // bigger jobs (files, Excel, Word, research): the task agent plans them step by step with tools
-        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && cloud::active(&app).is_some()) {
+        if doer::wants(&text) || doer::wants_build(&text) || (doer::wants_big(&text) && cloud::active(&app).is_some()) || connect::names_linked_app(&text) {
             if let Some(r) = doer::run(&app, &text) {
                 ai::remember_chat(&app, &text, &r.reply);
                 return r;
@@ -1086,6 +1132,12 @@ async fn app_task(app: AppHandle, name: String, text: String) -> Result<String, 
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// The Connect tab's apps and files, for tasks (connect.rs).
+#[tauri::command]
+fn connect_linked(apps: Vec<String>, files: Vec<String>) {
+    connect::set_linked(apps, files);
 }
 
 #[tauri::command]
@@ -1812,7 +1864,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, web_warm, tts_lang, sounds_set, dialogs_set, osd_set, alttab_set, alttab_list, connect_list, connect_set, connect_forget, connect_pick, connect_file_text, app_task, ui_read, ui_do, teach_start, teach_stop, teach_list, teach_play, teach_forget, dialog_shown, dialog_press, dialog_pass, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, dict_typing_ready, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, web_warm, tts_lang, sounds_set, dialogs_set, osd_set, alttab_set, alttab_list, connect_list, connect_set, connect_forget, connect_linked, connect_pick, connect_file_text, app_task, ui_read, ui_do, teach_start, teach_stop, teach_list, teach_play, teach_forget, dialog_shown, dialog_press, dialog_pass, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, dict_typing_ready, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
@@ -1843,6 +1895,17 @@ fn main() {
             clip::watch(handle.clone());
             uam::start();
             quick::start(handle.clone());
+            // (Brave's page is made ready in the background a little after starting: its first load takes ten seconds
+            //  or so, and the first question shouldn't wait for it)
+            {
+                let h = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_secs(25));
+                    if ai::config(&h).web {
+                        uplink::warm(&h);
+                    }
+                });
+            }
             backdrop::start(handle.clone());
             smooth::start();
             dev_inbox(handle.clone());

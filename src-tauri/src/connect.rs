@@ -244,3 +244,37 @@ pub fn file_text(path: &str) -> Result<String, String> {
     let t: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
     Ok(t.chars().take(9000).collect())
 }
+
+/* ---------------- what's connected, for tasks ---------------- */
+
+/// The apps and files connected in the Connect tab (the page says, whenever they change).
+static LINKED: std::sync::Mutex<(Vec<String>, Vec<String>)> = std::sync::Mutex::new((Vec::new(), Vec::new()));
+
+pub fn set_linked(apps: Vec<String>, files: Vec<String>) {
+    *LINKED.lock().unwrap() = (apps, files);
+}
+
+/// A word to the task agent about them: which apps it can work in by name, and which files it's been given.
+pub fn linked_note() -> String {
+    let (apps, files) = LINKED.lock().unwrap().clone();
+    let mut s = String::new();
+    if !apps.is_empty() {
+        s.push_str(&format!(" The user has connected these apps for tasks: {}. In them, work through ui_read (to see what's there, by name) and ui_do (to act on one control by its name): it's exact and quick; switch to or open the app first.", apps.join(", ")));
+    }
+    if !files.is_empty() {
+        s.push_str(&format!(" Files and folders the user has connected: {}.", files.join("; ")));
+    }
+    s
+}
+
+/// The request names a connected app, and asks for more than one thing ("in Excel, ... and then ...").
+pub fn names_linked_app(text: &str) -> bool {
+    let l = format!(" {} ", text.to_lowercase());
+    let apps = LINKED.lock().unwrap().0.clone();
+    let named = apps.iter().any(|a| {
+        let a = a.to_lowercase();
+        let first = a.split_whitespace().next().unwrap_or("").to_string();
+        l.contains(&format!(" {a} ")) || l.contains(&format!(" {a},")) || (first.len() >= 4 && (l.contains(&format!(" {first} ")) || l.contains(&format!(" {first},"))))
+    });
+    named && [" and ", " then ", ", then", "; "].iter().any(|w| l.contains(w))
+}

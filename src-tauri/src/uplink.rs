@@ -1,11 +1,12 @@
-//! Uplink: facts from Google for ULTRON's answers. A question about the world (people, events, prices, "what is",
-//! "how many") is looked up on Google in a hidden window of ULTRON's own (private: nothing kept between runs, nothing
-//! shared with any other window or account), the results page read as text, and only the lines that bear on the
-//! question kept, a few hundred characters, which the brain answers from in a sentence or two.
+//! Web answers: facts from Brave Search for ULTRON's answers. A question about the world (people, events, prices, "what
+//! is", "how many") is looked up on Brave Search from a page of ULTRON's own, hidden and kept ready in the background:
+//! the results are fetched from inside it (Brave answers a real browser's page, not a bare request), read as text, and
+//! only the lines that bear on the question kept, a few hundred characters, which the brain answers from in a sentence
+//! or two. Kept open for five quiet minutes, so a question after another doesn't wait for it to start.
 //!
-//! Nothing is clicked, typed or solved on Google's side: a page asking whether this is a person (its "unusual
-//! traffic" check) or for cookie consent stands Uplink down for half an hour, and Wikipedia, the news and DuckDuckGo
-//! answer meanwhile. The window closes after 45 quiet seconds, and its memory goes with it.
+//! Nothing is clicked, typed or solved there: a check asking whether this is a person stands it down for ten minutes,
+//! and Wikipedia, the news and DuckDuckGo answer meanwhile. With no internet, nothing waits on it: the local brain
+//! answers at once.
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
@@ -20,26 +21,33 @@ static ONE: Mutex<()> = Mutex::new(());
 static LAST: Mutex<Option<Instant>> = Mutex::new(None);
 static BLOCKED: Mutex<Option<Instant>> = Mutex::new(None);
 static TIDY: AtomicBool = AtomicBool::new(false);
+/// What Brave said to each question in the last ten minutes
+static SEEN: std::sync::LazyLock<Mutex<std::collections::HashMap<String, (Instant, String)>>> = std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
 
-/// What the results page says, as text: Google's own answers first (an overview, a quick answer, the side panel),
-/// then each result's title and words. `{ready:false}` until it's the page for this question, fully loaded.
-const READ: &str = r#"(() => {
-  if (location.pathname.startsWith('/sorry') || location.host.startsWith('consent.') || document.querySelector('form#captcha-form, #recaptcha')) return {blocked:true};
-  if (new URLSearchParams(location.search).get('q') !== WANT || document.readyState !== 'complete' || !document.querySelector('#rso, #search')) return {ready:false};
-  const t = el => (el && el.innerText || '').trim(), out = [];
-  let direct = '';
-  const ov = [...document.querySelectorAll('h1, h2, [role="heading"]')].find(h => /^AI Overview/i.test(h.textContent.trim()));
-  if (ov){ let box = ov; for (let k = 0; k < 4 && box.parentElement && t(box).length < 200; k++) box = box.parentElement; const v = t(box).replace(/^AI Overview\s*/i, '').slice(0, 1500); out.push(v); direct = v; }
-  for (const s of ['[data-tts="answers"]', '.Z0LcW', '.hgKElc', '.IZ6rdc', '.LGOjhe', '[data-attrid="wa:/description"]', '.kno-rdesc span', '[data-attrid*="description"]']){
-    const v = t(document.querySelector(s)); if (v && !out.includes(v)){ out.push(v); if (!direct && v.length > 30) direct = v; }
-  }
-  for (const g of [...document.querySelectorAll('#rso .MjjYud, #rso .g')].slice(0, 9)){
-    const h = t(g.querySelector('h3')), s = t(g.querySelector('.VwiC3b, [data-sncf], .ITZIwc'));
-    if (h && s && !out.some(o => o.includes(s))) out.push(h + ': ' + s);
-  }
-  if (out.length < 2) out.push(t(document.querySelector('#rso')).slice(0, 3000));
-  return {ready:true, text:out.join('\n'), direct};
+/// Fetches Brave's results for a question from inside its own page and reads them (titles and the words under each),
+/// leaving what it found in `window.__u`; POLL reads that.
+const START: &str = r#"(() => {
+  window.__u = null;
+  if (location.host !== 'search.brave.com'){ window.__u = {ready:true, text:'', wrong:true}; return 1; }
+  const t = e => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
+  fetch('/search?q=' + encodeURIComponent(WANT) + '&source=web', {credentials:'include'}).then(r => {
+    if (r.status === 429 || r.status === 403) return {blocked:true};
+    return r.text().then(h => {
+      const d = new DOMParser().parseFromString(h, 'text/html'), out = [];
+      if (d.querySelector('#captcha, form[action*="captcha"], .captcha')) return {blocked:true};
+      for (const c of [...d.querySelectorAll('.generic-snippet .content')].slice(0, 8)){
+        let p = c; for (let i = 0; i < 6 && p && !p.querySelector('.title'); i++) p = p.parentElement;
+        const h2 = p ? t(p.querySelector('.title')) : '', s = t(c).replace(/^([A-Z][a-z]+ \d{1,2}, \d{4}|\d+ (minutes?|hours?|days?|weeks?|months?|years?) ago) - /, '');
+        if (s) out.push((h2 ? h2 + ': ' : '') + s);
+      }
+      const ib = d.querySelector('#infobox'); const ibt = ib ? t(ib).slice(0, 600) : '';
+      if (ibt && out.length < 3) out.push(ibt);
+      return {ready:true, text:out.join('\n')};
+    });
+  }).then(v => { window.__u = v; }, () => { window.__u = {ready:true, text:'', offline:true}; });
+  return 1;
 })()"#;
+const POLL: &str = "(() => window.__u)()";
 
 fn enc(s: &str) -> String {
     s.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else if b == b' ' { "+".into() } else { format!("%{b:02X}") }).collect()
@@ -49,14 +57,14 @@ fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
     if let Some(w) = app.get_webview_window(LABEL) {
         return Ok(w);
     }
-    WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External("https://www.google.com/".parse().map_err(|_| "bad address")?))
+    WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External("https://search.brave.com/".parse().map_err(|_| "bad address")?))
         .title("ULTRON")
         .visible(false)
         .focused(false)
         .skip_taskbar(true)
         .decorations(false)
         .shadow(false)
-        .incognito(true)
+        // (not private: Brave keeps its own small cookies between questions, and asks for a check far less often)
         .inner_size(900.0, 800.0)
         .position(-3000.0, -3000.0)
         .additional_browser_args(crate::BROWSER_ARGS) // (the same as every other ULTRON window, or the engine refuses it)
@@ -80,7 +88,7 @@ fn run(w: &WebviewWindow, js: &str) -> Option<Value> {
     serde_json::from_str(&rx.recv_timeout(Duration::from_secs(3)).ok()?).ok()
 }
 
-/// (closed after 45 quiet seconds: its memory, a page's worth, goes back at once)
+/// (closed after twenty quiet minutes: its memory, a page's worth, goes back at once)
 fn keep_tidy(app: &AppHandle) {
     if TIDY.swap(true, SeqCst) {
         return;
@@ -88,7 +96,7 @@ fn keep_tidy(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(15));
-        let quiet = LAST.lock().unwrap().map_or(true, |t| t.elapsed() > Duration::from_secs(45));
+        let quiet = LAST.lock().unwrap().map_or(true, |t| t.elapsed() > Duration::from_secs(1200));
         if quiet {
             if let Some(w) = app.get_webview_window(LABEL) {
                 let _ = w.destroy();
@@ -164,34 +172,57 @@ pub fn warm(app: &AppHandle) {
     }
 }
 
-/// Google's results for a question, boiled down to what bears on it (None: Google is standing it down, the page
-/// didn't come in time, or there was nothing).
+/// Brave's results for a question, boiled down to what bears on it (None: it's standing down, it didn't answer in time,
+/// there's no internet, or there was nothing).
 pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
     if BLOCKED.lock().unwrap().is_some_and(|t| t > Instant::now()) {
         return None;
     }
-    let _one = ONE.try_lock().ok()?; // (one look at a time)
-    let t0 = Instant::now();
-    let w = window(app).ok()?;
-    let _ = w.navigate(format!("https://www.google.com/search?hl=en&num=8&q={}", enc(q.trim())).parse().ok()?);
-    *LAST.lock().unwrap() = Some(Instant::now());
-    keep_tidy(app);
-    let js = READ.replace("WANT", &serde_json::to_string(q.trim()).unwrap_or_default());
-    while t0.elapsed() < Duration::from_millis(4600) {
-        std::thread::sleep(Duration::from_millis(120));
-        let Some(v) = run(&w, &js) else { continue };
-        if v["blocked"] == true {
-            *BLOCKED.lock().unwrap() = Some(Instant::now() + Duration::from_secs(1800));
-            crate::log_line("uplink: Google asked for a check; standing down for half an hour");
-            return None;
-        }
-        if v["ready"] == true {
-            let text = boil(q, v["text"].as_str().unwrap_or(""), 700);
-            let direct = v["direct"].as_str().map(moderate).filter(|d| d.len() > 30);
-            crate::log_line(&format!("web: Google's results for that in {} ms, boiled down to {} characters{}", t0.elapsed().as_millis(), text.len(), if direct.is_some() { ", with its own answer" } else { "" }));
-            return (!text.is_empty() || direct.is_some()).then_some(Facts { text, direct });
+    // (the same question within ten minutes: what Brave said then, at once, and Brave isn't asked again)
+    let key = q.trim().to_lowercase();
+    if let Some((at, text)) = SEEN.lock().unwrap().get(&key) {
+        if at.elapsed() < Duration::from_secs(600) {
+            return Some(Facts { text: text.clone(), direct: None });
         }
     }
-    crate::log_line("uplink: Google's page didn't come in time");
+    let _one = ONE.try_lock().ok()?; // (one look at a time)
+    let t0 = Instant::now();
+    let fresh = app.get_webview_window(LABEL).is_none();
+    let w = window(app).ok()?;
+    *LAST.lock().unwrap() = Some(Instant::now());
+    keep_tidy(app);
+    // (its page still coming in, the first time takes ten seconds or so: this question isn't kept waiting for it; the
+    //  brain answers now, and the next question has Brave)
+    if fresh || run(&w, "(() => location.host === 'search.brave.com' && document.readyState !== 'loading')()") != Some(Value::Bool(true)) {
+        crate::log_line("web: Brave's page is still getting ready; answered without it this time");
+        return None;
+    }
+    let js = START.replace("WANT", &serde_json::to_string(q.trim()).unwrap_or_default());
+    run(&w, &js)?;
+    while t0.elapsed() < Duration::from_millis(3000) {
+        std::thread::sleep(Duration::from_millis(60));
+        let Some(v) = run(&w, POLL) else { continue };
+        if v.is_null() {
+            continue;
+        }
+        if v["blocked"] == true {
+            *BLOCKED.lock().unwrap() = Some(Instant::now() + Duration::from_secs(600));
+            crate::log_line("web: Brave asked for a check; standing down for ten minutes");
+            return None;
+        }
+        if v["wrong"] == true {
+            let _ = w.navigate("https://search.brave.com/".parse().ok()?);
+            return None;
+        }
+        let text = boil(q, v["text"].as_str().unwrap_or(""), 700);
+        crate::log_line(&format!("web: Brave's results for that in {} ms, boiled down to {} characters{}", t0.elapsed().as_millis(), text.len(), if v["offline"] == true { " (no internet)" } else { "" }));
+        if !text.is_empty() {
+            let mut seen = SEEN.lock().unwrap();
+            seen.retain(|_, (at, _)| at.elapsed() < Duration::from_secs(600));
+            seen.insert(key, (Instant::now(), text.clone()));
+        }
+        return (!text.is_empty()).then_some(Facts { text, direct: None });
+    }
+    crate::log_line("web: Brave didn't answer in time");
     None
 }

@@ -314,7 +314,7 @@ fn messages(app: &AppHandle, goal: &str, log: &[(String, String)]) -> Vec<(Strin
     let facts = crate::memory::context(app);
     let mut m = vec![
         ("system".to_string(), system_prompt()),
-        ("user".to_string(), format!("Task: {goal}\n(It is {day} {year}, {time}.{who}{})", if facts.is_empty() { String::new() } else { format!(" {facts}") })),
+        ("user".to_string(), format!("Task: {goal}\n(It is {day} {year}, {time}.{who}{}{})", if facts.is_empty() { String::new() } else { format!(" {facts}") }, crate::connect::linked_note())),
     ];
     // only if a long task outgrows the brain's memory are the oldest results shortened
     let total: usize = log.iter().map(|(c, r)| c.len() + r.len()).sum();

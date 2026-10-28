@@ -958,7 +958,9 @@ fn build_messages(app: &AppHandle, user: &str, web: Option<&str>) -> Vec<(String
     // the details that change every minute go last, so everything above stays cached in the model
     m.push(("system".into(), moment_line(app)));
     if let Some(w) = web {
-        m.push(("system".into(), format!("Fresh web results for the next question (fetched just now). Answer from them:\n{w}")));
+        // (the small brain, asked from results, now and then added a sentence of its own that was wrong: "Canberra
+        //  is the capital... It's also the largest city". Told to say only what the results say, in one sentence)
+        m.push(("system".into(), format!("Fresh web results for the next question (fetched just now):\n{w}\n\nAnswer the question in ONE short sentence, using only what these results say. Add nothing else: no extra facts, no follow-up.")));
     }
     m.push(("user".into(), user.to_string()));
     m
@@ -1393,7 +1395,17 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     let cloud = crate::cloud::active(app);
     // (Uplink chosen: everything goes to it except small talk, answered at once here when the quick brain is up)
     // everything else waits a moment for the quick brain if it's still warming up (just after ULTRON starts)
-    let quick = if thinking { None } else if cloud.is_some() { crate::quick::port() } else { crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30))) };
+    // (on the graphics card the quick brain answers a how-to too, in a second or two rather than ten on the processor;
+    //  and while it's still loading, just after ULTRON starts, the big brain answers if it's ready: a question used to
+    //  wait up to half a minute for the quick one)
+    let fast_card = crate::quick::device() == Some(true);
+    let quick = if thinking && !fast_card {
+        None
+    } else if cloud.is_some() || ready(app) {
+        crate::quick::port()
+    } else {
+        crate::quick::port().or_else(|| crate::quick::wait(Duration::from_secs(30)))
+    };
     if cloud.is_none() && quick.is_none() && !ready(app) {
         return None;
     }
@@ -1425,9 +1437,12 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
             .any(|w| ql.contains(w));
         // (Google is waited on for up to 3.2 s only for what changes; otherwise 1.6 s, and once the other sources are
         //  back, a little more at most: waiting 4.5 s on every question was most of why answers felt slow)
-        let most = Duration::from_millis(if google.is_some() { if fresh { 3200 } else { 1600 } } else { 1500 });
+        // (Brave answers in one to two and a half seconds: waited on that long at most, so with the answer written from it
+        //  the whole takes two to three; the other sources, if they're back first, only after 2 s)
+        let most = Duration::from_millis(if google.is_some() { 2500 } else { 1500 });
+        let _ = fresh;
         while !(looking.is_finished() && google.as_ref().map_or(true, |g| g.is_finished())) && t0.elapsed() < most && !cancelled() {
-            if !fresh && looking.is_finished() && t0.elapsed() > Duration::from_millis(1100) {
+            if looking.is_finished() && t0.elapsed() > Duration::from_millis(2000) {
                 break;
             }
             std::thread::sleep(Duration::from_millis(40));
@@ -1441,7 +1456,8 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     } else {
         None
     };
-    let cap = if many { 0 } else { sentence_cap(app) };
+    // (a fact looked up is said in one sentence: a second one was where the small brain went wrong)
+    let cap = if many { 0 } else if web.is_some() && !thinking { 1 } else { sentence_cap(app) };
     let max = if many { 400 } else { match (cap, thinking) { (0, _) => 320, (1, false) => 50, (1, true) => 80, (_, false) => 90, (_, true) => 140 } };
     // (a service or the graphics card reads it all in a blink; the processor gets the first few sentences)
     let brief_web = web.as_deref().map(|w| if crate::quick::device() == Some(false) && !many { clip(w, 340) } else { w.to_string() });

@@ -7230,7 +7230,9 @@ async function cxMenu(which){
   }
   m.classList.add('on'); fit();
 }
-function cxSave(fresh){ save(); cxPaint(fresh); }
+function cxLinked(){ if (TAURI) invoke('connect_linked', {apps:(S.cxApps || []).map(a => a.name), files:(S.cxFiles || []).map(f => f.path)}); }
+function cxSave(fresh){ save(); cxPaint(fresh); cxLinked(); }
+setTimeout(cxLinked, 2000);
 document.addEventListener('click', async e => {
   const t = e.target.closest ? e.target : null; if (!t) return;
   const dd = t.closest('.cx-dd'); if (dd){ cxMenu(dd.dataset.cx); return; }
@@ -7258,6 +7260,7 @@ async function cxRoute(cmd){
     if (!re.test(cmd)) continue;
     const rest = cmd.replace(re, ' ').trim();
     if (rest && !/^(turn|switch|enable|disable|set|select|choose|pick|click|press|tap|type|write|tick|untick|uncheck|expand|collapse|open|go to|search|scroll|play|pause)\b/i.test(rest)) continue;
+    if (/\s(and|then)\s|,\s*then\b|;/i.test(rest)) continue;   // (more than one thing to do: the task agent plans it)
     const m0 = rest ? `In ${a.name}: ${rest}` : `Bringing up ${a.name}.`;
     reply.classList.remove('bad', 'long', 'steps'); reveal(reply, m0, 45); fit();
     let said = ''; try { said = await invokeLoud('app_task', {name:a.name, text:rest}); } catch(err){ said = String(err).replace(/^Error:\s*/, ''); }
@@ -8061,6 +8064,7 @@ function startTalk(){
   setOpen(true); selectTab('assistant');
   you.classList.add('hint'); you.textContent = 'Go ahead, I\'m listening…'; reply.innerHTML = '';
   invoke('voice_config', {live:true});
+  if (S.web) invoke('web_warm');
   hop = .7;
   clearTimeout(pttT); pttT = setTimeout(endTalk, 12000);
 }
@@ -9926,7 +9930,9 @@ if (TAURI){
   let notchWas = false;
   new MutationObserver(() => {
     const o = notch.classList.contains('open');
-    if (o && !notchWas && glassOn()) invoke('backdrop_now');   // (a fresh picture of what's under it as it opens)
+    if (o && !notchWas && glassOn()) invoke('backdrop_now');
+    // (a moment after it has opened, not during: making the page then made the opening stutter)
+    if (o && !notchWas && S.web){ clearTimeout(window.__ww); window.__ww = setTimeout(() => { if (notch.classList.contains('open')) invoke('web_warm'); }, 1400); }   // (a fresh picture of what's under it as it opens)
     notchWas = o;
   }).observe(notch, {attributes:true, attributeFilter:['class']});
   listen('intro-start', () => { document.body.classList.add('intro'); setOpen(false); closeDD(); closePanels(); });
