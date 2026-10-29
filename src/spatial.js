@@ -22,7 +22,7 @@ function tex(gl, src){
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
   return t;
 }
-window.Spatial = function(canvas, {fg = false, strength = .03, zoom = 1.07} = {}){
+window.Spatial = function(canvas, {fg = false, strength = .03, zoom = 1.07, drift = false} = {}){
   const gl = canvas.getContext('webgl', {premultipliedAlpha:true, alpha:fg, antialias:false, powerPreference:'low-power'});
   if (!gl) return null;
   const sh = (k, s) => { const o = gl.createShader(k); gl.shaderSource(o, s); gl.compileShader(o); return o; };
@@ -43,28 +43,32 @@ window.Spatial = function(canvas, {fg = false, strength = .03, zoom = 1.07} = {}
     S.map = {sx, sy, ox:(1 - sx) / 2, oy:(1 - sy) / 2};
   }
   function frame(t){
+    S.raf = 0;
     if (!S.run) return;
     S.raf = requestAnimationFrame(frame);
     if (t - S.last < 32) return;
     S.last = t;
-    // (eased toward where it's aimed, with a slow drift of its own so it's alive when nothing moves)
-    const dx = Math.sin(t * .00021) * .28, dy = Math.cos(t * .00016) * .18;
-    S.cur[0] += (S.aim[0] + dx - S.cur[0]) * .07; S.cur[1] += (S.aim[1] + dy - S.cur[1]) * .07;
+    // (eased toward where it's aimed; on the lock screen with a slow drift of its own, so it's alive when nothing moves)
+    const dx = drift ? Math.sin(t * .00021) * .28 : 0, dy = drift ? Math.cos(t * .00016) * .18 : 0;
+    const ex = S.aim[0] + dx - S.cur[0], ey = S.aim[1] + dy - S.cur[1];
+    S.cur[0] += ex * .07; S.cur[1] += ey * .07;
     gl.uniform2f(U('off'), S.cur[0] * strength, S.cur[1] * strength * .6);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    if (!drift && Math.abs(ex) < .002 && Math.abs(ey) < .002){ cancelAnimationFrame(S.raf); S.raf = 0; }
   }
+  const kick = () => { if (S.run && S.ready && !S.raf) S.raf = requestAnimationFrame(frame); };
   return {
     S,
     set(img, depth, th){
       S.iw = img.naturalWidth || img.width; S.ih = img.naturalHeight || img.height;
       gl.activeTexture(gl.TEXTURE0); tex(gl, img); gl.activeTexture(gl.TEXTURE1); tex(gl, depth);
       if (th != null){ S.th = th; gl.uniform1f(U('th'), th); }
-      S.ready = true; size();
+      S.ready = true; size(); S.last = 0; kick();
     },
     resize: size,
-    aim(x, y){ S.aim = [Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, y))]; },
-    start(){ if (S.run || !S.ready) return; S.run = true; S.raf = requestAnimationFrame(frame); },
-    stop(){ S.run = false; cancelAnimationFrame(S.raf); },
+    aim(x, y){ const a = [Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, y))]; if (a[0] !== S.aim[0] || a[1] !== S.aim[1]){ S.aim = a; kick(); } },
+    start(){ if (S.run || !S.ready) return; S.run = true; kick(); },
+    stop(){ S.run = false; cancelAnimationFrame(S.raf); S.raf = 0; },
   };
 };
 // (a picture loaded from an address, ready to draw)

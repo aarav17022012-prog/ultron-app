@@ -3713,6 +3713,19 @@ html.vision .qs-ghost{background:var(--g2); box-shadow:0 0 0 1px var(--hair), 0 
 /* (Hazelnut: the shelf deep and vivid like the rest, its white words readable over the brightest page) */
 html.hazel:not(.vision) .ds-tray.glass::before{background:radial-gradient(130% 70% at 50% -20%, rgba(255,255,255,.12), rgba(255,255,255,0) 60%), linear-gradient(180deg, rgba(26,26,34,.42), rgba(10,10,16,.56)) !important}
 .ds-tray.glass.panel-glass{box-shadow:0 0 0 .5px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.1), 0 12px 32px -6px rgba(0,0,0,.3), 0 34px 80px -20px rgba(0,0,0,.4)}
+/* ---------- the Drop Shelf: no glass. A solid tray in your Windows colours, black in dark mode and white in light,
+   easing from one to the other as Windows switches. (With nothing behind it to follow, nothing is captured or redrawn
+   while it's up: the glass made the screen be captured twenty times a second, and flickered as it slid.) ---------- */
+.ds-tray.solid{overflow:hidden; isolation:isolate; box-shadow:inset 0 0 0 .8px rgba(255,255,255,.1), 0 1px 2px rgba(0,0,0,.18), 0 14px 34px -8px rgba(0,0,0,.42), 0 34px 80px -20px rgba(0,0,0,.4)}
+.ds-tray.solid::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit; pointer-events:none; background:#0c0c0f; transition:background-color .6s ease}
+.dshelf.over .ds-tray.solid{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7), 0 12px 32px -6px rgba(0,0,0,.35)}
+@media (prefers-color-scheme: light){
+  .ds-tray.solid::before{background:#fbfbfc}
+  .ds-tray.solid{box-shadow:inset 0 0 0 .8px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.08), 0 14px 34px -8px rgba(0,0,0,.2), 0 34px 80px -20px rgba(0,0,0,.24)}
+  .ds-tray.solid > :not(.ds-drop){filter:invert(1) hue-rotate(180deg)}
+  .ds-tray.solid > :not(.ds-drop) :is(img, video, canvas, picture){filter:invert(1) hue-rotate(180deg)}
+  .dshelf.over .ds-tray.solid{box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.35), 0 12px 32px -6px rgba(0,0,0,.25)}
+}
 .dshelf.over .ds-tray.glass.panel-glass{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.28), 0 12px 32px -6px rgba(0,0,0,.3), 0 34px 80px -20px rgba(0,0,0,.4)}
 .ds-p{background:rgba(255,255,255,.1); box-shadow:inset 0 .5px 0 rgba(255,255,255,.25)}
 
@@ -4010,7 +4023,7 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
   <div class="wc-text" id="wcText" aria-live="polite"></div>
   <div class="wc-foot"><span class="wc-hint"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>Drag the words into any text box</span><button class="wc-b" id="wcType" type="button">Type it</button><button class="wc-b wc-copy" id="wcCopy" type="button">Copy</button></div>
 </div></div>
-<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div><p class="ds-none" id="dsNone" aria-live="polite"></p></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
+<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray solid" id="dsTray"><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div><p class="ds-none" id="dsNone" aria-live="polite"></p></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
   <div class="sp-pic"><img id="spPic" alt=""><div class="sp-when"><b id="spTime"></b><span id="spDate"></span></div></div>
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
@@ -4583,6 +4596,9 @@ const ZL_ON = [{filter:'invert(0) hue-rotate(0deg)'}, {filter:'invert(1) hue-rot
 function glassLum(g){
   const p = g.parentElement, now = performance.now();
   if (!p || !glassBmp || now - (p._lt || 0) < 300 || p.matches('.mbar, .notch, .ears, .wh-disc, .wh-tray')) return;
+  // (Hazelnut: white words read over anything, so nothing is measured; pieces turned under Clear are put back once)
+  if (document.documentElement.classList.contains('hazel')){ if (!p._hz){ p._hz = 1; p.querySelectorAll('.zl').forEach(z => z.classList.remove('zl')); } return; }
+  p._hz = 0;
   p._lt = now;
   const r = p.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
   const sx = glassBmp.width / (screen.width || innerWidth), sy = glassBmp.height / (screen.height || innerHeight);
@@ -4694,7 +4710,7 @@ setInterval(() => {
   const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
   // (the Drop Shelf too: it wasn't on this list, so its glass got a picture only every 8 seconds and never caught up)
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), $('qs'), notch].some(el => el && el.classList.contains('open')) || $('gdlg').classList.contains('on') || $('atb').classList.contains('on') || !!(window.DS && DS.on) || !!(window.BAT && BAT.open);
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), $('qs'), notch].some(el => el && el.classList.contains('open')) || $('gdlg').classList.contains('on') || $('atb').classList.contains('on') || !!(window.BAT && BAT.open);
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -12086,8 +12102,8 @@ async function lkSpatial(pic){
     const dep = await invoke('spatial_depth');
     if (!LK.on || !dep) return;
     const [img, d] = await Promise.all([spatialPic(pic), spatialPic(dep)]);
-    LSP.bg = LSP.bg || Spatial($('lkSp'), {strength:.03});
-    LSP.fg = LSP.fg || Spatial($('lkFg'), {fg:true, strength:.03});
+    LSP.bg = LSP.bg || Spatial($('lkSp'), {strength:.03, drift:true});
+    LSP.fg = LSP.fg || Spatial($('lkFg'), {fg:true, strength:.03, drift:true});
     if (!LSP.bg) return;
     // (what counts as near: the nearest fifth of the picture, never less than two thirds of the way)
     const c = document.createElement('canvas'); c.width = 64; c.height = 64;
@@ -12222,7 +12238,6 @@ const dsTall = () => new Promise(res => {
   addEventListener('resize', f); setTimeout(() => { removeEventListener('resize', f); res(); }, 400);
 });
 async function dsShow(kind, force){
-  if (glassOn()) invoke('backdrop_now');   // (a fresh picture behind it as it comes up, not one from seconds before)
   if (DS.on){ if (kind === 'drop'){ DS.mode = 'drop'; dsEl.classList.add('dragging'); } return; }
   if (!force && !dsCan()) return;
   DS.on = true; DS.mode = kind; clearTimeout(DS.leftT); dsEl.classList.remove('leaving');
@@ -12290,7 +12305,7 @@ function dsLay(){
   dsTray.style.setProperty('--dsWa', Math.max(560, fit) + 'px');
   // (the glass's picture is placed by the styles, from the tray's own size as it changes)
   const left = side === 'left' ? 16 : side === 'right' ? innerWidth - 16 - w : Math.round(innerWidth / 2 - w / 2), top = side ? Math.round(innerHeight / 2 - h / 2) : innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
-  gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw);
+  if (gw){ gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw); }   // (the tray has no glass now)
   DS.box = {x:left, y:top, w, h};
   dsGlass();
 }

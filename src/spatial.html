@@ -26,11 +26,16 @@ load();
 listen('wallpaper', () => setTimeout(load, 1500));
 addEventListener('resize', () => sp && sp.resize());
 // (where the pointer is, a dozen times a second; with a window over the whole desktop, nothing is drawn)
-setInterval(async () => {
-  if (!sp) return;
-  const [x, y, desk] = await invoke('spatial_cursor');
-  sp.aim((x - .5) * 2, (y - .5) * 2);
-  if (desk && !shown){ shown = true; sp.start(); } else if (!desk && shown){ shown = false; sp.stop(); }
-}, 80);
+let still = 0;
+(async function poll(){
+  if (sp){
+    const [x, y, desk] = await invoke('spatial_cursor');
+    const moved = Math.abs(x - (poll.x ?? -1)) + Math.abs(y - (poll.y ?? -1)) > .001; poll.x = x; poll.y = y;
+    still = moved ? 0 : still + 1;
+    if (desk) sp.aim((x - .5) * 2, (y - .5) * 2);
+    if (desk && !shown){ shown = true; sp.start(); } else if (!desk && shown){ shown = false; sp.stop(); }
+  }
+  setTimeout(poll, still > 25 ? 250 : 60);
+})();
 </script>
 </body></html>
