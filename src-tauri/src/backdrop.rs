@@ -422,10 +422,16 @@ pub fn start(app: AppHandle) {
         let (mut shown, mut spent, mut since, mut told) = (0u32, Duration::ZERO, Instant::now(), false);
         let (mut sent, mut sent_at) = (String::new(), Instant::now());
         let mut moving = false;
+        let mut slow_at: Option<Instant> = None;
         loop {
             let every = EVERY.load(Ordering::SeqCst);
             let fast = every > 0 && every <= FAST && !paused();
-            if !fast && feed.take().is_some() {
+            // (the live feed is kept twenty seconds after the last panel closes, idle, not read: opening Windows' screen
+            //  duplication and closing it again froze the whole screen's drawing for about half a second, at every
+            //  panel opened and closed, measured at 550 ms)
+            if fast {
+                slow_at = None;
+            } else if slow_at.get_or_insert_with(Instant::now).elapsed() > Duration::from_secs(20) && feed.take().is_some() {
                 LIVE.store(false, Ordering::SeqCst); // (ULTRON stays out of captures: the slow pictures need that too)
             }
             if every == 0 {

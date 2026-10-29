@@ -4774,7 +4774,10 @@ document.querySelectorAll('select').forEach(fsMake);
 if (TAURI) setTimeout(async () => {
   if (S.dictBest === undefined){ try { S.dictBest = await invoke('dict_best_have'); save(); } catch(_){} }
   invoke('voice_config', {best:!!S.dictBest});
-  if (S.spatial === undefined){ S.spatial = true; save(); }
+  // (a weak PC, four threads or fewer or 4 GB or less: the spatial wallpaper and the bending glass rims start off)
+  const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+  if (S.spatial === undefined){ S.spatial = !weak; save(); }
+  if (weak && !S.weakOnce){ S.weakOnce = true; S.glassLens = false; save(); }
   if (S.spatial) invoke('spatial_wall', {on:true}).catch(e => invoke('page_log', {msg:'spatial: ' + e}));
 }, 6000);
 // Light bent at the rim, as through a thick edge of real glass (Apple's Liquid Glass bends what's behind its edges):
@@ -4990,9 +4993,12 @@ function loopStep(now){
    the web engine's whole frame machinery, drawn or not. Whatever needs it sooner (the notch opening, the pointer
    moving, a voice) wakes it at once. */
 var loopT = 0, waveStill = false;                                              // (var: things earlier in the file call wake() while it loads)
+var frameCost = 0;
 function pump(now){
-  const step = loopStep(now);
-  if (step < 200 && now - lastFrame >= step - 2){ lastFrame = now; frame(now); }
+  // (a device where one picture of the character costs over 5 ms gets at most 30 a second: at its size it looks the
+  //  same, and the open notch stopped stuttering on slow PCs, where it took a third of a second to open)
+  const step = Math.max(loopStep(now), frameCost > 5 ? 33 : 0);
+  if (step < 200 && now - lastFrame >= step - 2){ lastFrame = now; const t = performance.now(); frame(now); frameCost = frameCost * .92 + (performance.now() - t) * .08; }
   if (step < 20) requestAnimationFrame(pump);
   else loopT = setTimeout(() => { loopT = 0; requestAnimationFrame(pump); }, Math.max(4, step - (now - lastFrame) - 5));
 }
