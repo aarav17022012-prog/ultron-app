@@ -4715,6 +4715,7 @@ function glassLum(g){
 // Glass: Hazelnut (warm, frosted, deep enough that white words read over anything) or Clear (Settings › Look & feel)
 for (const [k, v] of Object.entries({glassStyle:'hazel', tbFont:'inter', tbWeight:'regular', tbTint:'white', glassLens:true})) if (S[k] === undefined) S[k] = v;
 function glassStyle(){ document.documentElement.classList.toggle('hazel', S.glassStyle !== 'clear'); }
+if (S.clearOnce && !S.backOnce){ S.backOnce = true; S.glassStyle = 'hazel'; save(); }
 // The taskbar's own type (Settings › Taskbar): its font, weight and colour, on the bar along the top and on the wheel
 function tbStyle(){
   const h = document.documentElement;
@@ -4782,7 +4783,10 @@ if (TAURI) setTimeout(async () => {
 // worked out per pixel, so it costs next to nothing.
 function glassLens(g){
   const p = g.parentElement; if (!p) return;
-  const r = p.getBoundingClientRect(); if (r.width < 40 || r.height < 30) return;
+  // (where it is, looked up a few times a second: at every refresh it made the page lay itself out mid-animation)
+  const now = performance.now();
+  if (!p._lr || now - p._lrt > 250){ p._lr = p.getBoundingClientRect(); p._lrt = now; }
+  const r = p._lr; if (r.width < 40 || r.height < 30) return;
   const k = glassBmp.width / (screen.width || innerWidth), X = g._x;
   const x = r.left * k, y = r.top * k, w = r.width * k, h = r.height * k;
   const b = Math.max(1.4, Math.min(3.2, Math.min(w, h) * .06)), t = b * 2.3;
@@ -5979,6 +5983,10 @@ function setVoice(st){
 }
 let lastVoice = {state:'loading'};
 listen('voice', st => { lastVoice = st; setVoice(st); wake(); });
+// (the microphone giving almost nothing while you dictate or ask: said plainly, with what fixes it)
+listen('mic-quiet', () => {
+  nbShow('<div class="nb-say"><b>ULTRON can barely hear your microphone.</b> If your laptop has a mic-mute key (often F4, with a little light), press it. Or raise <b>Input volume</b> in Windows Settings › System › Sound.</div>', 9000);
+});
 listen('mic-level', l => {
   micTarget = l; if (l > .08) wake();
   // (dictating: the card's bars follow your voice)
@@ -7870,24 +7878,35 @@ listen('osd', d => { if (S.osd) osdShow(d.kind, d.level, d.muted); });
 listen('bright', v => { if (S.osd) osdShow('bright', v / 100); });
 if (TAURI && S.osd) setTimeout(() => invoke('osd_set', {on:true}), 2500);
 function ksSync(){ invoke('sounds_set', {keys:!!S.keySounds, clicks:!!S.keySounds}); if (S.keySounds && !KS.bufs){ ksCtx(); ksLoad(); } }
+// (soft and calm, ASMR: the brightness rounded off above 3 kHz so nothing clicks sharp, a touch lower in pitch, and a
+//  small soft room around each press; a limiter keeps the loudest gentle. The sound engine sleeps two seconds after
+//  the last press: awake, it kept Windows' audio working all day)
 function ksCtx(){
   if (KS.ctx) return;
-  KS.ctx = new AudioContext({latencyHint:'interactive'}); KS.gain = KS.ctx.createDynamicsCompressor();
-  KS.gain.threshold.value = -6; KS.gain.knee.value = 4; KS.gain.ratio.value = 8; KS.gain.attack.value = .001; KS.gain.release.value = .05;
-  KS.gain.connect(KS.ctx.destination);
+  const c = KS.ctx = new AudioContext({latencyHint:'interactive'});
+  const lim = c.createDynamicsCompressor();
+  lim.threshold.value = -10; lim.knee.value = 8; lim.ratio.value = 6; lim.attack.value = .002; lim.release.value = .08;
+  const soft = c.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 3200; soft.Q.value = .5;
+  const warm = c.createBiquadFilter(); warm.type = 'lowshelf'; warm.frequency.value = 220; warm.gain.value = 2.5;
+  const room = c.createConvolver(), n = Math.round(c.sampleRate * .42), ir = c.createBuffer(2, n, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++){ const d = ir.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3.2) * .5; }
+  room.buffer = ir;
+  const wet = c.createGain(); wet.gain.value = .16;
+  KS.gain = warm; warm.connect(soft); soft.connect(lim); soft.connect(room); room.connect(wet); wet.connect(lim); lim.connect(c.destination);
 }
+function ksSleepSoon(){ clearTimeout(KS.sleepT); KS.sleepT = setTimeout(() => { if (KS.ctx && KS.ctx.state === 'running') KS.ctx.suspend(); }, 2000); }
 function ksPlay(kind){
   ksCtx();
   if (KS.ctx.state === 'suspended') KS.ctx.resume();
   if (!KS.bufs){ ksLoad(); return; }
   const set = [KS.bufs.key, KS.bufs.space, KS.bufs.enter, KS.bufs.back, KS.bufs.key, KS.bufs.keyUp, KS.bufs.keyUp][kind] || KS.bufs.key;
   const src = KS.ctx.createBufferSource(); src.buffer = set[(Math.random() * set.length) | 0];
-  src.playbackRate.value = (kind === 4 || kind === 6 ? 1.07 : 1) * (.97 + Math.random() * .06);
+  src.playbackRate.value = (kind === 4 || kind === 6 ? 1.0 : .94) * (.98 + Math.random() * .04);
   // (each sound its own loudness, so quick typing never turns one press's level into the next's; a limiter keeps the
   //  loudest from crackling)
   const g = KS.ctx.createGain();
-  g.gain.value = 1.35 * (S.keyVol ?? .6) * (kind === 4 ? 1.25 : kind === 6 ? .8 : kind === 5 ? .6 : 1) * (.9 + Math.random() * .2);
-  src.connect(g); g.connect(KS.gain); src.start();
+  g.gain.value = 1.15 * (S.keyVol ?? .6) * (kind === 4 ? 1.1 : kind === 6 ? .7 : kind === 5 ? .5 : 1) * (.92 + Math.random() * .16);
+  src.connect(g); g.connect(KS.gain); src.start(); ksSleepSoon();
 }
 listen('tick', k => { if (S.keySounds) ksPlay(k); });
 // (key and click sounds were two switches; now one, Creamy keys: whoever had either on keeps it on)

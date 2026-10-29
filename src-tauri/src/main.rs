@@ -683,6 +683,11 @@ fn dev_inbox(app: AppHandle) {
                 continue;
             }
             // "!open", "!ask what's 2+2", "!menu clip": drive the interface itself
+            if let Some(f) = text.strip_prefix("@mic ") {
+                let (a, f) = (app.clone(), f.trim().to_string());
+                std::thread::spawn(move || voice::feed(&a, &f));
+                continue;
+            }
             if let Some(f) = text.strip_prefix("@wav ") {
                 voice::try_file(&app, f.trim());
                 continue;

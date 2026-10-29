@@ -56,6 +56,8 @@ pub struct Voice {
     pub best: AtomicBool,
     status: Mutex<VoiceStatus>,
     seg_tx: Mutex<Option<SyncSender<Vec<f32>>>>,
+    /// (developer mode: a recording fed in as if the microphone heard it, voice::feed)
+    raw_tx: Mutex<Option<SyncSender<(Vec<f32>, u32)>>>,
     /// Dictating: what's been said so far of what's still being said, to be heard quickly ("heard-partial")
     part_tx: Mutex<Option<SyncSender<Vec<f32>>>>,
 }
@@ -76,6 +78,7 @@ impl Default for Voice {
             best: AtomicBool::new(false),
             status: Mutex::new(VoiceStatus { state: "loading".into(), ..Default::default() }),
             seg_tx: Mutex::new(None),
+            raw_tx: Mutex::new(None),
             part_tx: Mutex::new(None),
         }
     }
@@ -694,7 +697,9 @@ impl Vad {
                 let _ = app.emit_to("main", "mic-level", lvl);
             }
         }
-        let loud = (self.floor * 2.2).max(0.006) / sens;
+        // (how loud a voice has to be: over the room, and never below a floor. That floor was 0.006: a laptop's own
+        //  microphone set low, or quiet, gives a voice of about 0.002, and nothing it heard ever started)
+        let loud = (self.floor * 2.2).max(0.0015) / sens;
         let start_p = (0.6 / sens).clamp(0.3, 0.9);
         if !self.speaking {
             self.floor = if rms < self.floor { self.floor * 0.9 + rms * 0.1 } else { self.floor * 0.997 + rms * 0.003 };
@@ -845,6 +850,8 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
     let mut last_p = 0f32;
     let mut was_paused = false;
     let mut sent = 0usize; // (how much of the stretch being said was last handed over to be heard so far)
+    let (mut dict_loud, mut dict_voice, mut dict_at) = (0f32, 0f32, std::time::Instant::now());
+    let (mut quiet_loud, mut quiet_at, mut quiet_told) = (0f32, std::time::Instant::now(), false);
     for (chunk, rate) in raw_rx {
         if voice.paused.load(Ordering::SeqCst) {
             if !was_paused {
@@ -882,9 +889,42 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
             last_p = b;
             // (how long a pause ends what's said: long while dictating, short when you've tapped the mic to ask)
             let quiet = if voice.patient.load(Ordering::SeqCst) { 60 } else if voice.live.load(Ordering::SeqCst) { 24 } else { 30 };
+            // (dictating or asked: a microphone giving almost nothing for six seconds is said out loud, once: a mic-mute
+            //  key pressed, or the input turned right down, and what you said never reached ULTRON)
+            if voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst) {
+                let rms = (out16[used..used + FRAME].iter().map(|s| s * s).sum::<f32>() / FRAME as f32).sqrt();
+                quiet_loud = quiet_loud.max(rms);
+                if quiet_at.elapsed() > Duration::from_secs(6) {
+                    if quiet_loud < 0.0012 && !quiet_told {
+                        quiet_told = true;
+                        crate::log_line(&format!("voice: the microphone is almost silent (loudest {quiet_loud:.4} in 6 s)"));
+                        let _ = app.emit_to("main", "mic-quiet", quiet_loud);
+                    }
+                    (quiet_loud, quiet_at) = (0.0, std::time::Instant::now());
+                }
+            } else {
+                (quiet_loud, quiet_at, quiet_told) = (0.0, std::time::Instant::now(), false);
+            }
+            if voice.patient.load(Ordering::SeqCst) {
+                // (dictating: how loud it is, and the room under it, told every ten seconds, so a dictation that
+                //  hears nothing says why: too quiet for the microphone, or under music)
+                dict_loud = dict_loud.max((out16[used..used + FRAME].iter().map(|s| s * s).sum::<f32>() / FRAME as f32).sqrt());
+                dict_voice = dict_voice.max(a.max(b));
+                if dict_at.elapsed() > Duration::from_secs(10) {
+                    crate::log_line(&format!("voice: dictating: loudest {dict_loud:.3}, the room {:.3}, most voice-like {dict_voice:.2} (needs {:.2}), speaking {}", vad.floor, (0.6 / sens).clamp(0.3, 0.9), vad.speaking));
+                    (dict_loud, dict_voice, dict_at) = (0.0, 0.0, std::time::Instant::now());
+                }
+            }
             if let Some(seg) = vad.frame(&app, &out16[used..used + FRAME], sens, a.max(b), quiet) {
                 if let Some(tx) = voice.seg_tx.lock().unwrap().as_ref() {
-                    let _ = tx.try_send(seg);
+                    // (dictating or asked: it waits its turn, a second at most; it used to be dropped when the
+                    //  recognizer was still busy, and what you said vanished)
+                    if tx.try_send(seg.clone()).is_err() && (voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst)) {
+                        let tx = tx.clone();
+                        std::thread::spawn(move || {
+                            let _ = tx.send(seg);
+                        });
+                    }
                 }
                 sent = 0;
             } else if vad.speaking && (voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst)) && vad.seg.len() >= RATE / 2 && vad.seg.len() >= sent + RATE * 3 / 5 {
@@ -908,6 +948,25 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
 
 /// (developer mode: how long each dictation model takes on a recording, 16 kHz mono, and what it hears; nothing is
 ///  acted on)
+pub fn feed(app: &AppHandle, path: &str) {
+    let Ok(b) = std::fs::read(path) else { return crate::log_line("feed: no such recording") };
+    let Some(at) = b.windows(4).position(|w| w == b"data") else { return };
+    let rate = u32::from_le_bytes(b[24..28].try_into().unwrap_or([0x80, 0x3e, 0, 0]));
+    let samples: Vec<f32> = b[at + 8..].chunks_exact(2).map(|c| i16::from_le_bytes([c[0], c[1]]) as f32 / 32768.0).collect();
+    let Some(tx) = app.state::<Voice>().raw_tx.lock().unwrap().clone() else { return };
+    crate::log_line(&format!("feed: {:.1}s of {path} into the microphone's stream", samples.len() as f32 / rate as f32));
+    let step = rate as usize / 50;
+    for c in samples.chunks(step) {
+        let _ = tx.send((c.to_vec(), rate));
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    // (then two seconds of quiet, for the pause that ends it)
+    for _ in 0..100 {
+        let _ = tx.send((vec![0.0005; step], rate));
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
 pub fn try_file(app: &AppHandle, path: &str) {
     let Ok(b) = std::fs::read(path) else { return crate::log_line("try: no such recording") };
     let Some(at) = b.windows(4).position(|w| w == b"data") else { return };
@@ -936,6 +995,7 @@ pub fn start(app: AppHandle) {
     let (part_tx, part_rx) = sync_channel::<Vec<f32>>(1);
     *app.state::<Voice>().part_tx.lock().unwrap() = Some(part_tx);
     let (raw_tx, raw_rx) = sync_channel::<(Vec<f32>, u32)>(64);
+    *app.state::<Voice>().raw_tx.lock().unwrap() = Some(raw_tx.clone());
     let a = app.clone();
     std::thread::spawn(move || transcriber(a, seg_rx, part_rx));
     let a = app.clone();

@@ -1522,7 +1522,9 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     let max = if many { 400 } else { match (cap, thinking) { (0, _) => 320, (1, false) => 50, (1, true) => 80, (_, false) => 90, (_, true) => 140 } };
     // (a service or the graphics card reads it all in a blink; the processor gets the first few sentences)
     // (and in Web mode always: fewer words for it to read is most of how fast the answer comes)
-    let brief_web = web.as_deref().map(|w| if (crate::quick::device() == Some(false) || web_mode) && !many { clip(w, if web_mode { 420 } else { 340 }) } else { w.to_string() });
+    // (and in Web mode always: fewer words for it to read is most of how fast the answer comes; on the processor, the
+    //  best three hundred characters of it)
+    let brief_web = web.as_deref().map(|w| if (crate::quick::device() == Some(false) || web_mode) && !many { clip(w, if crate::quick::device() == Some(false) { 300 } else { 420 }) } else { w.to_string() });
     let mut shown = 0usize;
     let mut emit = |full: &str| {
         let v = visible(full);
