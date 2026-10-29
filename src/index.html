@@ -3926,7 +3926,8 @@ html.vision .wc-in{border-radius:16px}
 html:not(.vision) .glass:not(.notch):not(.ears):not(.mbar):not(.wh-disc):not(.wh-tray){--tint:rgba(255,255,255,.055) !important}
 /* Hazelnut: the same glass with a warm roasted tint and a little more frost, deep enough that white words read over
    the brightest page. The taskbar (the bar along the top and the wheel) keeps its own dark smoke either way. */
-html.hazel:not(.vision) .glass:not(.notch):not(.ears):not(.mbar):not(.wh-disc):not(.wh-tray){--tint:radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.07), transparent 60%), linear-gradient(180deg, rgba(26,26,34,.4), rgba(10,10,16,.54)) !important}
+@property --hzA{syntax:'<number>'; inherits:true; initial-value:0}
+html.hazel:not(.vision) .glass:not(.notch):not(.ears):not(.mbar):not(.wh-disc):not(.wh-tray){--tint:radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.07), transparent 60%), linear-gradient(180deg, rgba(26,26,34,calc(.4 + var(--hzA))), rgba(10,10,16,calc(.54 + var(--hzA)))) !important}
 
 html:not(.vision) .glass.panel-glass, html:not(.vision) .glass.panel-glass *, html:not(.vision) .dd, html:not(.vision) .dd *, html:not(.vision) .ds-tray *{text-shadow:0 .5px 1.5px rgba(0,0,0,.45) !important}
 
@@ -4011,6 +4012,32 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
 .atb-c:hover .atb-x{opacity:1; transform:none} .atb-x:hover{background:#e5484d}
 .atb-c.quit{animation:atQuitA .24s cubic-bezier(.5,0,.75,0) forwards; pointer-events:none}
 @keyframes atQuitA{to{opacity:0; transform:scale(.82) translateY(10px)}}
+
+/* ---------- the notch's answer: long ones scroll inside it ---------- */
+.pane[data-pane="assistant"] .reply{max-height:min(38vh, 300px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.22) transparent}
+.acard.word{max-height:min(34vh, 280px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.22) transparent}
+/* ---------- ULTRON's own dropdowns ---------- */
+.fs-native{position:absolute !important; width:1px !important; height:1px !important; opacity:0 !important; pointer-events:none !important; overflow:hidden !important}
+.fs-btn{display:inline-flex; align-items:center; justify-content:space-between; gap:6px; text-align:left; cursor:pointer; padding:0 10px 0 12px; white-space:nowrap; overflow:hidden}
+.fs-btn > span{overflow:hidden; text-overflow:ellipsis}
+.fs-btn svg{width:14px; height:14px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; opacity:.7; transition:transform .3s var(--spring)}
+.fs-btn.on svg{transform:rotate(180deg)}
+.fs-btn:hover{box-shadow:inset 0 0 0 .8px rgba(255,255,255,.3)}
+.fs-menu{position:fixed; z-index:200; padding:5px; border-radius:14px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.2) transparent;
+  background:linear-gradient(180deg, rgba(36,36,44,.97), rgba(17,17,22,.985)); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.07), 0 18px 44px -12px rgba(0,0,0,.65);
+  opacity:0; transform:translateY(-6px); clip-path:inset(0 0 100% 0 round 14px); transition:opacity .16s ease, transform .32s var(--glide), clip-path .34s var(--glide)}
+.fs-menu.up{transform:translateY(6px); clip-path:inset(100% 0 0 0 round 14px)}
+.fs-menu.on{opacity:1; transform:none; clip-path:inset(0 0 0 0 round 14px)}
+.fs-menu.off{opacity:0; transition:opacity .2s ease}
+.fs-o{display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:32px; padding:0 10px 0 11px; border:0; border-radius:9px; background:none; color:rgba(255,255,255,.86);
+  font:inherit; font-size:13px; text-align:left; cursor:pointer; white-space:nowrap; opacity:0; transform:translateY(-5px)}
+.fs-menu.up .fs-o{transform:translateY(5px)}
+.fs-menu.on .fs-o{opacity:1; transform:none; transition:opacity .22s ease calc(var(--i) * 16ms + 40ms), transform .34s var(--glide) calc(var(--i) * 16ms + 40ms), background .12s}
+.fs-o:hover, .fs-o:focus-visible{background:rgba(255,255,255,.09); outline:0}
+.fs-o.on{color:#fff; font-weight:620}
+.fs-o.on i{flex:none; width:7px; height:7px; border-radius:50%; background:#fff; box-shadow:0 0 8px rgba(255,255,255,.7)}
+.fs-o[disabled]{opacity:.35 !important; cursor:default}
+.kw-in .fs-btn{flex:1; min-width:0; height:30px; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:13.5px; padding:0 4px}
 </style>
 </head>
 <body>
@@ -4630,11 +4657,33 @@ function glassZones(p){
   return out;
 }
 const ZL_ON = [{filter:'invert(0) hue-rotate(0deg)'}, {filter:'invert(1) hue-rotate(180deg)'}], ZL_OFF = [ZL_ON[1], ZL_ON[0]];
+// Hazelnut over a bright page: the glass deepens (up to a third darker), easing over half a second, so grey words keep
+// their contrast; back over something dark it lightens again. One 6x6 look at what's behind it, twice a second.
+function hazelDepth(p){
+  const r = p.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
+  const sx = glassBmp.width / (screen.width || innerWidth), sy = glassBmp.height / (screen.height || innerHeight);
+  try {
+    if (GLUM.width !== 6 || GLUM.height !== 6){ GLUM.width = GLUM.height = 6; }
+    GLUMX.drawImage(glassBmp, Math.max(0, r.left * sx), Math.max(0, r.top * sy), Math.max(1, r.width * sx), Math.max(1, r.height * sy), 0, 0, 6, 6);
+    const d = GLUMX.getImageData(0, 0, 6, 6).data; let s = 0;
+    for (let i = 0; i < d.length; i += 4) s += .2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2];
+    const want = Math.round(Math.max(0, Math.min(.3, (s / 36 / 255 - .42) * .55)) * 20) / 20, was = p._hzA || 0;
+    if (Math.abs(want - was) < .05) return;
+    p._hzA = want;
+    const an = p.animate([{'--hzA':was}, {'--hzA':want}], {duration:600, easing:'ease'});
+    an.onfinish = () => an.cancel();
+    p.style.setProperty('--hzA', want);
+  } catch(_){}
+}
 function glassLum(g){
   const p = g.parentElement, now = performance.now();
   if (!p || !glassBmp || now - (p._lt || 0) < 300 || p.matches('.mbar, .notch, .ears, .wh-disc, .wh-tray')) return;
   // (Hazelnut: white words read over anything, so nothing is measured; pieces turned under Clear are put back once)
-  if (document.documentElement.classList.contains('hazel')){ if (!p._hz){ p._hz = 1; p.querySelectorAll('.zl').forEach(z => z.classList.remove('zl')); } return; }
+  if (document.documentElement.classList.contains('hazel')){
+    if (!p._hz){ p._hz = 1; p.querySelectorAll('.zl').forEach(z => z.classList.remove('zl')); }
+    if (now - (p._hzt || 0) > 600){ p._hzt = now; hazelDepth(p); }
+    return;
+  }
   p._hz = 0;
   p._lt = now;
   const r = p.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
@@ -4674,6 +4723,53 @@ function tbStyle(){
   if (S.tbTint && S.tbTint !== 'white') h.dataset.tbt = S.tbTint; else delete h.dataset.tbt;
 }
 glassStyle(); tbStyle();
+/* Dropdowns, ULTRON's own: every list of choices (languages, the model, the converter's units, which app) opens as a
+   list that unrolls from its button, the choices easing in one after another and the one chosen marked, instead of
+   Windows' plain grey list. The real <select> stays underneath, so everything that reads or sets it works as before. */
+var FS = {open:null};
+const fsLabel = s => { const o = s.options[s.selectedIndex]; return o ? o.textContent : ''; };
+const fsPaint = s => { if (s._fs) s._fs.firstChild.textContent = fsLabel(s); };
+for (const k of ['value', 'selectedIndex']){
+  const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, k);
+  Object.defineProperty(HTMLSelectElement.prototype, k, {get(){ return d.get.call(this); }, set(v){ d.set.call(this, v); fsPaint(this); }, configurable:true});
+}
+function fsMake(sel){
+  if (sel._fs) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'fs-btn ' + sel.className; b.setAttribute('aria-haspopup', 'listbox'); b.setAttribute('aria-label', sel.getAttribute('aria-label') || '');
+  b.innerHTML = '<span></span><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg>';
+  b._sel = sel; sel._fs = b; sel.classList.add('fs-native'); sel.after(b); fsPaint(sel);
+  b.addEventListener('click', e => { e.stopPropagation(); FS.open && FS.open.b === b ? fsClose() : fsOpen(b); });
+  sel.addEventListener('change', () => fsPaint(sel));
+  new MutationObserver(() => fsPaint(sel)).observe(sel, {childList:true, subtree:true});
+}
+function fsOpen(b){
+  fsClose(true);
+  const sel = b._sel, r = b.getBoundingClientRect(), m = document.createElement('div');
+  m.className = 'fs-menu'; m.setAttribute('role', 'listbox');
+  m.innerHTML = [...sel.options].map((o, i) => `<button type="button" role="option" class="fs-o${i === sel.selectedIndex ? ' on' : ''}" data-i="${i}" style="--i:${Math.min(i, 12)}"${o.disabled ? ' disabled' : ''}><span>${esc(o.textContent)}</span><i></i></button>`).join('');
+  document.body.appendChild(m);
+  const below = innerHeight - r.bottom - 12, up = below < 200 && r.top > below;
+  m.style.left = Math.max(8, Math.min(innerWidth - Math.max(r.width, 170) - 8, r.left)) + 'px';
+  m.style.minWidth = Math.max(r.width, 170) + 'px';
+  m.style.maxHeight = Math.max(120, Math.min(320, (up ? r.top : below) - 10)) + 'px';
+  if (up){ m.classList.add('up'); m.style.bottom = (innerHeight - r.top + 6) + 'px'; } else m.style.top = (r.bottom + 6) + 'px';
+  FS.open = {b, m}; b.classList.add('on');
+  requestAnimationFrame(() => { m.classList.add('on'); const on = m.querySelector('.fs-o.on'); if (on) on.scrollIntoView({block:'nearest'}); syncHit(); });
+  m.addEventListener('click', e => {
+    e.stopPropagation(); const o = e.target.closest('.fs-o'); if (!o) return;
+    sel.selectedIndex = +o.dataset.i; sel.dispatchEvent(new Event('input', {bubbles:true})); sel.dispatchEvent(new Event('change', {bubbles:true})); fsClose();
+  });
+  m.addEventListener('wheel', e => e.stopPropagation(), {passive:true});
+}
+function fsClose(now){
+  const f = FS.open; if (!f) return;
+  FS.open = null; f.b.classList.remove('on'); f.m.classList.remove('on'); f.m.classList.add('off');
+  setTimeout(() => { f.m.remove(); syncHit(); }, now ? 0 : 220);
+}
+document.addEventListener('pointerdown', e => { if (FS.open && !(e.target.closest && e.target.closest('.fs-menu, .fs-btn'))) fsClose(); }, true);
+addEventListener('keydown', e => { if (FS.open && e.key === 'Escape'){ e.stopPropagation(); fsClose(); } }, true);
+document.querySelectorAll('select').forEach(fsMake);
 if (TAURI) setTimeout(async () => {
   if (S.dictBest === undefined){ try { S.dictBest = await invoke('dict_best_have'); save(); } catch(_){} }
   invoke('voice_config', {best:!!S.dictBest});
@@ -4880,8 +4976,10 @@ function loopStep(now){
   // (open and calm, the pointer still, nothing heard or being answered: 30 a second, and drawn only when it looks
   //  different. Drawn with the screen all the while it was open, it was most of what an open notch cost: 85% of a core)
   const busy = performance.now() < liveUntil || flow.on || tintA || !still || micTarget >= .08 || !!aiStream;
-  if (open_) return busy ? 15.5 : now - lastAim > 6000 ? 66 : 33;   // (still for a while: its slow breathing looks the same at 15)
-  return busy ? 15.5 : window.WH && WH.open ? 32 : tune ? (still ? 80 : 48) : calm ? (now - lastAim > 30000 ? 80 : 48) : 32;   // (calm half a minute: 12 a second; its slow breathing looks the same)
+  if (open_) return busy ? 15.5 : now - lastAim > 6000 ? 80 : 33;   // (still for a while: its slow breathing looks the same at 12)
+  // (collapsed and calm for ten seconds: 8 a second, then 6; the tiny character's slow breathing looks the same. A song
+  //  playing: 10 a second for its little bars. Each picture is a turn of the graphics card, all day long)
+  return busy ? 15.5 : window.WH && WH.open ? 32 : tune ? (still ? 100 : 66) : calm ? (now - lastAim > 30000 ? 160 : now - lastAim > 10000 ? 125 : 48) : 32;   // (calm half a minute: 12 a second; its slow breathing looks the same)
 }
 /* Open (or while something is moving), the loop runs with the screen. Collapsed, it is woken only when the next
    picture is due: on a 144 Hz screen it used to be called 144 times a second to draw 12, and every call is a turn of
@@ -5002,10 +5100,12 @@ function fit(opts = {}){
   const glassRoom = activeTab !== 'assistant' ? 64 : 0;
   // (never taller than the screen: a long pane, Settings above all, scrolls inside the notch instead of running off the
   //  bottom of the screen, out of reach)
-  const cap = Math.min(innerHeight - 28, 760), room = cap - top - 24 - glassRoom;
+  const cap = Math.min(innerHeight - 28, 640), room = cap - top - 24 - glassRoom;
   const long = activeTab !== 'assistant' && pane.scrollHeight > room + 2;
   pane.classList.toggle('scrolls', long); pane.style.maxHeight = long ? room + 'px' : '';
   let h = long ? cap : Math.max(236, top + pane.offsetHeight + 24 + glassRoom);
+  // (an answer still coming in, longer than its room: kept scrolled to its newest words)
+  if (activeTab === 'assistant' && aiStream && reply.scrollHeight > reply.clientHeight + 4) reply.scrollTop = reply.scrollHeight;
   const apply = () => { if (flow.on || (aiStream && aiStream.started)) flowTo(h); else notch.style.height = h + 'px'; shownH = h; layoutBar(h); keepMeasuring(); };
   if (opts.tab && h < shownH) setTimeout(() => fit(), 170); else apply();
   return h;
@@ -8356,6 +8456,7 @@ function ddFit(mutate){
 }
 function closeDD(){
   clearTimeout(ddHoverT); clearTimeout(ddLeaveT); ddLeaveT = 0;
+  if (window.FS && FS.open) fsClose(true);
   if (!ddFor) return;
   if (window.CP && CP.on && CP.anchor && dd.contains(CP.anchor)) cpClose();
   ddFor = null; ddPinned = false; dd.classList.remove('open'); richMount(null);
@@ -8385,7 +8486,7 @@ mbar.querySelectorAll('.mt').forEach(b => {
 function peekWatch(x, y){
   if (!ddFor || ddPinned) return;
   const ml = mbar.querySelector('.ml').getBoundingClientRect();
-  const over = (y < 32 && x >= ml.left - 6 && x <= ml.right + 6) ||
+  const over = !!(window.FS && FS.open) || (y < 32 && x >= ml.left - 6 && x <= ml.right + 6) ||
     (x >= dd.offsetLeft - 10 && x <= dd.offsetLeft + dd.offsetWidth + 10 && y <= dd.offsetTop + dd.offsetHeight + 10);
   if (over){ clearTimeout(ddLeaveT); ddLeaveT = 0; }
   else if (!ddLeaveT) ddLeaveT = setTimeout(() => { ddLeaveT = 0; if (!ddPinned) closeDD(); }, 300);
@@ -8939,6 +9040,7 @@ function paintMusic(){
 }
 function richMount(k){
   clearInterval(richTimer); richTimer = 0;
+  if (k) requestAnimationFrame(() => dd.querySelectorAll('select').forEach(fsMake));
   if (k === 'system'){ paintSystem(); richTimer = setInterval(paintSystem, 1000); }
   if (k === 'music'){ paintMusic(); richTimer = setInterval(paintMusic, 500); }
   if (k === 'focus') paintFocus();
@@ -10218,6 +10320,7 @@ function syncHit(){
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
   { const o = document.getElementById('osd'); if (o && o.classList.contains('on')){ const r = o.getBoundingClientRect(); rects.push({x:Math.floor(r.left - 4), y:Math.floor(r.top - 4), w:Math.ceil(r.width + 8), h:Math.ceil(r.height + 8)}); } }
+  { const fm = document.querySelector('.fs-menu.on'); if (fm){ const r = fm.getBoundingClientRect(); rects.push({x:Math.floor(r.left - 4), y:Math.floor(r.top - 4), w:Math.ceil(r.width + 8), h:Math.ceil(r.height + 8)}); } }
   if (window.BAT && BAT.open){ const r = batw.getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
   if ($('tch') && $('tch').classList.contains('on')){ const r = $('tch').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 4), y:Math.floor(r.top - 4), w:Math.ceil(r.width + 8), h:Math.ceil(r.height + 8)}); }
   if (window.AT && AT.shown){ const r = $('atbIn').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
@@ -13026,13 +13129,20 @@ function agMood(n){
   if (n.mood) return n.mood;
   const s = `${n.title || ''} ${n.text || ''}`.toLowerCase();
   if (/usage limit|rate limit|token limit|limit (reached|hit)|out of (tokens|credits)|quota|credits? (ran|run) out|context (window|limit)/.test(s)) return 'limit';
-  if (n.kind === 'hook') return n.event === 'Stop' ? 'done' : /permission|approv|allow/.test(s) ? 'perm' : 'ask';
+  // (Claude Code's hooks: its own finish, a permission it asks for, or a question in what it says. Its other events
+  //  (the "waiting for your input" reminder after a quiet minute, sub-agents finishing, compacting) were all taken for
+  //  "has a question", over and over)
+  if (n.kind === 'hook'){
+    if (n.event === 'Stop') return 'done';
+    if (/permission|approv|allow/.test(s)) return 'perm';
+    return /\?|question|asks? you|which (one|option)|choose/.test(s) && !/waiting for your input/.test(s) ? 'ask' : '';
+  }
   if (!n.agent) return 'note';
   if (/permission|approv|allow|confirm/.test(s)) return 'perm';
   if (/\b(error|failed|failure|crash(ed)?|exception)\b|couldn.?t|can.?t /.test(s)) return 'alert';
-  if (/permission|approv|allow|confirm|waiting|needs? (your|you)|input|question|\?|review|respond|reply|attention/.test(s)) return 'ask';
+  if (/question|\?|needs? your (answer|reply|input)|respond to|reply to/.test(s) && !/waiting for your input/.test(s)) return 'ask';
   if (/\b(done|finished|complete(d)?|ready|success(ful)?|succeeded|all set)\b/.test(s)) return 'done';
-  return /terminal/i.test(n.app) ? '' : 'ask';            // (a terminal says all sorts: only what reads as an agent's)
+  return '';            // (anything else an agent says isn't a question: it was shown as one)
 }
 function agCome(n){
   if (!n || (!S.agentWatch && n.kind !== 'demo')) return;

@@ -15,7 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 const LABEL: &str = "ghost";
-const SHOW_CURSOR: bool = false;
+const SHOW_CURSOR: bool = true;
 const W: f64 = 280.0; // CSS px: the pointer plus its little status pill
 const H: f64 = 90.0;
 const TIP: (f64, f64) = (8.0, 6.0); // where the pointer's tip sits inside the window
@@ -142,8 +142,7 @@ fn animate(app: AppHandle) {
 
 /// Fly out of the notch.
 pub fn show(app: &AppHandle) {
-    // Retired: people found a second pointer on screen confusing. The notch shows each step instead,
-    // and the character's face shows what ULTRON is doing. (Everything below still works if it's brought back.)
+    // (back: it goes where each click lands, and the click is a real one there; Settings › Brain can turn it off)
     if !SHOW_CURSOR || !crate::ai::config(app).ghost {
         return;
     }

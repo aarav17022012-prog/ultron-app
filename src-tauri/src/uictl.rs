@@ -267,6 +267,10 @@ pub fn act(h: HWND, name: &str, action: &str, value: &str) -> Result<String, Str
         format!("There's nothing called “{name}” there. What is there: {}", near.join(", "))
     })?;
     let el = &c.el;
+    // (ULTRON's cursor goes there first, so you see where it's working; it doesn't wait if it isn't out)
+    if let Some((x, y)) = center(el) {
+        crate::ghost::go_wait(x as f64, y as f64);
+    }
     let label = if c.name.is_empty() { name.to_string() } else { c.name.trim_end_matches([':', ' ']).to_string() };
     unsafe {
         match action {

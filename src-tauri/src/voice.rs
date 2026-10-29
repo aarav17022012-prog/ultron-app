@@ -434,6 +434,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
     let mut best_at = std::time::Instant::now();
     // (loaded on a thread of its own: five seconds of loading held up the first thing dictated)
     let mut best_rx: Option<Receiver<Option<whisper_rs::WhisperState>>> = None;
+    let mut wake_at = std::time::Instant::now() - std::time::Duration::from_secs(10);
     loop {
         // another language chosen: its model is fetched if need be, and used from the next thing heard
         if voice.reload.swap(false, Ordering::SeqCst) {
@@ -531,7 +532,13 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let lang = voice.lang.lock().unwrap().clone();
         // (only when nothing is waiting for plain speech: dictating, or after a tap on the notch's mic, everything said counts)
         let music = music && !voice.patient.load(Ordering::SeqCst) && !voice.live.load(Ordering::SeqCst);
+        // (a song is "speech" all the while it plays: each look for the name took about a second of half the
+        //  processor. Now at most one every four seconds, and never for a scrap shorter than a second)
+        if music && voice.wake.load(Ordering::SeqCst) && (seg.len() < RATE || wake_at.elapsed() < std::time::Duration::from_secs(4)) {
+            continue;
+        }
         if music && voice.wake.load(Ordering::SeqCst) {
+            wake_at = std::time::Instant::now();
             let t0 = std::time::Instant::now();
             let head = prepare(&seg[..seg.len().min(RATE * 8 / 5)]);
             let mut q = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
