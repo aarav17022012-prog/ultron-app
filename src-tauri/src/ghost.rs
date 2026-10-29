@@ -113,6 +113,15 @@ fn animate(app: AppHandle) {
             let dt = last.elapsed().as_secs_f64().min(0.05);
             last = Instant::now();
             let Some(h) = hwnd(&app) else { break };
+            // (Esc sends it away at once, for the rest of the task: the work goes on, out of sight)
+            if unsafe { windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(0x1B) } as u16 & 0x8000 != 0 {
+                VISIBLE.store(false, Ordering::SeqCst);
+                *MOTION.lock().unwrap() = None;
+                unsafe {
+                    let _ = ShowWindow(h, SW_HIDE);
+                }
+                break;
+            }
             let (pos, vel) = {
                 let mut g = MOTION.lock().unwrap();
                 let Some(m) = g.as_mut() else { break };
