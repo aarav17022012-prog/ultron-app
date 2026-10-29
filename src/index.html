@@ -7868,21 +7868,24 @@ document.addEventListener('pointerdown', e => {
   e.preventDefault(); e.stopPropagation();
   try { bar.setPointerCapture(e.pointerId); } catch(_){}
   const r = bar.getBoundingClientRect(), at = ev => Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
-  let sent = 0;
+  let sent = 0; OSD.drag = true;
+  // (brightness is slow for Windows to change: sent four times a second at most, and once more where it's let go)
   const set = (ev, last) => {
-    const v = at(ev), now = performance.now();
+    const v = at(ev), now = performance.now(), gap = OSD.kind === 'bright' ? 250 : 60;
     osdShow(OSD.kind, v, false);
-    if (last || now - sent > 60){ sent = now; invoke('qs_set', OSD.kind === 'bright' ? {what:'bright', v:Math.round(v * 100)} : {what:'vol', v}); }
+    if (last || now - sent > gap){ sent = now; invoke('qs_set', OSD.kind === 'bright' ? {what:'bright', v:Math.round(v * 100)} : {what:'vol', v}); }
   };
   const mv = ev => set(ev);
-  const up = ev => { bar.removeEventListener('pointermove', mv); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up); set(ev, true); };
+  const up = ev => { bar.removeEventListener('pointermove', mv); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up); set(ev, true); setTimeout(() => { OSD.drag = false; }, 600); };
   bar.addEventListener('pointermove', mv); bar.addEventListener('pointerup', up); bar.addEventListener('pointercancel', up);
   set(e);
 }, true);
 document.addEventListener('pointerover', e => { if (e.target.closest && e.target.closest('#osd')){ OSD.over = true; clearTimeout(OSD.t); } }, true);
 document.addEventListener('pointerout', e => { if (e.target.closest && e.target.closest('#osd') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#osd'))){ OSD.over = false; clearTimeout(OSD.t); OSD.t = setTimeout(osdHide, 1200); } }, true);
-listen('osd', d => { if (S.osd) osdShow(d.kind, d.level, d.muted); });
-listen('bright', v => { if (S.osd) osdShow('bright', v / 100); });
+// (while it's being dragged, Windows' own word on the level is ignored: each step dragged changed it, Windows told of
+//  the change a moment later, and the bar jumped back under the pointer)
+listen('osd', d => { if (S.osd && !OSD.drag) osdShow(d.kind, d.level, d.muted); });
+listen('bright', v => { if (S.osd && !OSD.drag) osdShow('bright', v / 100); });
 if (TAURI && S.osd) setTimeout(() => invoke('osd_set', {on:true}), 2500);
 function ksSync(){ invoke('sounds_set', {keys:!!S.keySounds, clicks:!!S.keySounds}); if (S.keySounds && !KS.bufs){ ksCtx(); ksLoad(); } }
 // (soft and calm, ASMR: the brightness rounded off above 3 kHz so nothing clicks sharp, a touch lower in pitch, and a

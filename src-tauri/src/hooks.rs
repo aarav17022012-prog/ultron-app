@@ -1,7 +1,8 @@
 //! Low-level hooks that stay hooked. Windows quietly takes away a low-level keyboard or mouse hook that's slow to answer
 //! (the PC busy, and the hook's thread not given a turn in time), and says nothing: ULTRON's Alt+Tab or volume keys then
 //! stopped answering, and Windows' own came back until ULTRON was started again. Each hook here runs on a thread of the
-//! highest priority, so it's given its turn at once, and is put in afresh every 15 seconds in case it was taken away.
+//! highest priority, so it's given its turn at once, and is put in afresh every 3 seconds in case it was taken away (Windows drops a slow one
+//! silently, and its own Alt+Tab came back until the next time).
 
 use std::time::{Duration, Instant};
 
@@ -29,7 +30,7 @@ pub fn keep(keyboard: HOOKPROC, mouse: HOOKPROC) {
                 DispatchMessageW(&msg);
             }
             MsgWaitForMultipleObjects(None, false, 1000, QS_ALLINPUT);
-            if at.elapsed() > Duration::from_secs(15) {
+            if at.elapsed() > Duration::from_secs(3) {
                 at = Instant::now();
                 // (the new one first, then the old one let go: no moment without one)
                 for (id, p, h) in [(WH_KEYBOARD_LL, keyboard, &mut k), (WH_MOUSE_LL, mouse, &mut m)] {
