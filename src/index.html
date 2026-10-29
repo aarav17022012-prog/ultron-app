@@ -7705,11 +7705,12 @@ async function cxRoute(cmd){
     const re = new RegExp('^(?:(?:in|on|with|using|inside|open)\\s+(?:the\\s+)?' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s+app)?[,:]?\\s*(?:and\\s+|then\\s+)?)|(?:\\s+(?:in|on|with|using)\\s+(?:the\\s+)?' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s+app)?[.!?]?$)', 'i');
     if (!re.test(cmd)) continue;
     const rest = cmd.replace(re, ' ').trim();
-    if (rest && !/^(turn|switch|enable|disable|set|select|choose|pick|click|press|tap|type|write|tick|untick|uncheck|expand|collapse|open|go to|search|scroll|play|pause)\b/i.test(rest)) continue;
     if (/\s(and|then)\s|,\s*then\b|;/i.test(rest)) continue;   // (more than one thing to do: the task agent plans it)
     const m0 = rest ? `In ${a.name}: ${rest}` : `Bringing up ${a.name}.`;
     reply.classList.remove('bad', 'long', 'steps'); reveal(reply, m0, 45); fit();
-    let said = ''; try { said = await invokeLoud('app_task', {name:a.name, text:rest}); } catch(err){ said = String(err).replace(/^Error:\s*/, ''); }
+    // (anything said to a connected app goes straight to it first; only if that can't be done does the task agent take
+    //  it on: a short list of verbs used to send everything else the slow way)
+    let said = ''; try { said = await invokeLoud('app_task', {name:a.name, text:rest}); } catch(err){ return null; }
     if (said){ reveal(reply, said, 40); fit(); }
     return {reply:said || m0, ok:true, action:'', icon:'chat'};
   }

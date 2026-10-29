@@ -852,6 +852,7 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
     let mut sent = 0usize; // (how much of the stretch being said was last handed over to be heard so far)
     let (mut dict_loud, mut dict_voice, mut dict_at) = (0f32, 0f32, std::time::Instant::now());
     let (mut quiet_loud, mut quiet_at, mut quiet_told) = (0f32, std::time::Instant::now(), false);
+    let mut env = 0.03f32; // (how loud the microphone has lately been, for the automatic gain)
     for (chunk, rate) in raw_rx {
         if voice.paused.load(Ordering::SeqCst) {
             if !was_paused {
@@ -870,6 +871,13 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
             set_status(&app, "listening", "", 0.0);
         }
         was_paused = false;
+        // Automatic gain: a microphone that reaches ULTRON very quietly (a laptop's array set low, or turned down
+        // somewhere along the way: voices of 0.002 where 0.05 is usual) is lifted to an ordinary level before anything
+        // listens, up to 32 dB; an ordinary one is left as it is. Quick to come down for a loud sound, slow to rise.
+        let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len().max(1) as f32).sqrt();
+        env = if rms > env { env * 0.6 + rms * 0.4 } else { env * 0.9993 + rms * 0.0007 };
+        let gain = (0.03 / env.max(0.00075)).clamp(1.0, 40.0);
+        let chunk: Vec<f32> = if gain > 1.05 { chunk.iter().map(|s| (s * gain).clamp(-1.0, 1.0)).collect() } else { chunk };
         to16.push(&chunk, rate, &mut out16);
         to48.push(&chunk, rate, &mut buf48);
         // RNNoise: how much each 10 ms sounds like a human voice

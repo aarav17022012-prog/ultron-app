@@ -35,7 +35,7 @@ let still = 0;
     if (desk) sp.aim((x - .5) * 2, (y - .5) * 2);
     if (desk && !shown){ shown = true; sp.start(); } else if (!desk && shown){ shown = false; sp.stop(); }
   }
-  setTimeout(poll, still > 25 ? 250 : 60);
+  setTimeout(poll, still > 25 ? 600 : 70);
 })();
 </script>
 </body></html>
