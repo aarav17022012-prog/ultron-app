@@ -5,7 +5,7 @@
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -432,6 +432,8 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
     // (the most accurate model, while dictating with it on)
     let mut best: Option<whisper_rs::WhisperState> = None;
     let mut best_at = std::time::Instant::now();
+    // (loaded on a thread of its own: five seconds of loading held up the first thing dictated)
+    let mut best_rx: Option<Receiver<Option<whisper_rs::WhisperState>>> = None;
     loop {
         // another language chosen: its model is fetched if need be, and used from the next thing heard
         if voice.reload.swap(false, Ordering::SeqCst) {
@@ -452,6 +454,11 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         if held.is_none() && voice.live.load(Ordering::SeqCst) {
             held = WhisperContext::new_with_params(path.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
             last = std::time::Instant::now();
+        }
+        if let Some(s) = best_rx.as_ref().and_then(|r| r.try_recv().ok()) {
+            best = s;
+            best_rx = None;
+            best_at = std::time::Instant::now();
         }
         // (what's finished comes first; meanwhile, while dictating, what's still being said is heard as it grows)
         let got = match rx.try_recv() {
@@ -481,12 +488,16 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
             Ok(s) => s,
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
                 let want_best = voice.patient.load(Ordering::SeqCst) && voice.best.load(Ordering::SeqCst) && *voice.lang.lock().unwrap() == "en";
-                if want_best && best.is_none() {
+                if want_best && best.is_none() && best_rx.is_none() {
                     if let Some(f) = best_path(&app) {
-                        let t0 = std::time::Instant::now();
-                        best = WhisperContext::new_with_params(f.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
-                        best_at = std::time::Instant::now();
-                        crate::log_line(&format!("voice: the most accurate dictation model up in {} ms", t0.elapsed().as_millis()));
+                        let (tx, rx) = std::sync::mpsc::channel();
+                        best_rx = Some(rx);
+                        std::thread::spawn(move || {
+                            let t0 = std::time::Instant::now();
+                            let s = WhisperContext::new_with_params(f.to_string_lossy().as_ref(), WhisperContextParameters::default()).ok().and_then(|c| c.create_state().ok());
+                            crate::log_line(&format!("voice: the most accurate dictation model up in {} ms", t0.elapsed().as_millis()));
+                            let _ = tx.send(s);
+                        });
                     }
                 }
                 if best.is_some() && !want_best && best_at.elapsed() > std::time::Duration::from_secs(60) {
@@ -719,9 +730,28 @@ impl Vad {
     }
 }
 
+/// Windows' default microphone, by its id (to notice when it's changed: headphones plugged in, another chosen)
+fn default_mic() -> Option<String> {
+    use windows::Win32::Media::Audio::{eCapture, eConsole, IMMDeviceEnumerator, MMDeviceEnumerator};
+    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_ALL, COINIT_MULTITHREADED};
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let en: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+        let id = en.GetDefaultAudioEndpoint(eCapture, eConsole).ok()?.GetId().ok()?;
+        let s = id.to_string().ok();
+        CoTaskMemFree(Some(id.0 as *const _));
+        s
+    }
+}
+
 fn microphone(app: AppHandle, raw_tx: SyncSender<(Vec<f32>, u32)>) {
+    // (a microphone that only gives silence is opened again, but not more than once a minute)
+    let mut reopened: Option<std::time::Instant> = None;
     loop {
         let failed = Arc::new(AtomicBool::new(false));
+        // (when it last gave anything but digital silence, in ms from t0: a room is never exactly silent)
+        let t0 = std::time::Instant::now();
+        let alive = Arc::new(AtomicU64::new(0));
         let stream = (|| -> Result<cpal::Stream, String> {
             let host = cpal::default_host();
             let dev = host.default_input_device().ok_or("No microphone found")?;
@@ -735,10 +765,14 @@ fn microphone(app: AppHandle, raw_tx: SyncSender<(Vec<f32>, u32)>) {
             macro_rules! build {
                 ($t:ty, $conv:expr) => {{
                     let tx = raw_tx.clone();
+                    let alive = alive.clone();
                     dev.build_input_stream::<$t, _, _>(
                         config,
                         move |d: &[$t], _| {
                             let mono: Vec<f32> = d.chunks(ch).map(|c| c.iter().map(|s| $conv(*s)).sum::<f32>() / ch as f32).collect();
+                            if mono.iter().any(|x| x.abs() > 1e-6) {
+                                alive.store(t0.elapsed().as_millis() as u64, Ordering::Relaxed);
+                            }
                             let _ = tx.try_send((mono, rate));
                         },
                         err,
@@ -759,8 +793,27 @@ fn microphone(app: AppHandle, raw_tx: SyncSender<(Vec<f32>, u32)>) {
         })();
         match stream {
             Ok(s) => {
+                // Windows can switch the default microphone (headphones connected, another chosen in Settings) or
+                // leave the one in use giving only silence, without any error: what you said then never reached
+                // ULTRON, dictation and the notch's mic "did nothing". The default is looked at every 3 s, and a
+                // microphone that gives nothing but digital silence for 6 s is opened again.
+                let id = default_mic();
+                let mut n = 0u32;
                 while !failed.load(Ordering::SeqCst) {
                     std::thread::sleep(Duration::from_millis(500));
+                    n += 1;
+                    if n % 6 == 0 && default_mic() != id {
+                        crate::log_line("voice: the default microphone changed; listening on the new one");
+                        break;
+                    }
+                    let quiet = (t0.elapsed().as_millis() as u64).saturating_sub(alive.load(Ordering::Relaxed));
+                    // (looked at muted or not: the stream is heard from even while ULTRON ignores it, so after the laptop
+                    //  wakes from sleep it's healthy again before dictation or a tap on the mic needs it)
+                    if n >= 12 && quiet > 6000 && reopened.is_none_or(|t| t.elapsed() > Duration::from_secs(60)) {
+                        crate::log_line("voice: the microphone gave only silence for 6 s; opening it again");
+                        reopened = Some(std::time::Instant::now());
+                        break;
+                    }
                 }
                 drop(s); // device unplugged or changed: rebuild on the new default
             }

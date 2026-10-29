@@ -3524,7 +3524,7 @@ html.vision .pr-row.on{background:var(--g3); box-shadow:inset 0 0 0 1px var(--ha
   box-shadow:inset 0 0 0 .8px rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.08), 0 16px 38px -8px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.25);
   pointer-events:none; opacity:0; visibility:hidden; clip-path:inset(0 37% 72% 37% round 23px); transform:translateY(-10px);
   transition:opacity .22s ease .06s, clip-path .32s cubic-bezier(.5,0,.75,0), transform .32s cubic-bezier(.5,0,.75,0), visibility 0s .34s; --v:0}
-.osd.on{opacity:1; visibility:visible; clip-path:inset(0 0 0 0 round 23px); transform:none; transition:opacity .14s, clip-path .5s cubic-bezier(.2,1.12,.3,1), transform .5s cubic-bezier(.2,1.12,.3,1), visibility 0s}
+.osd.on{opacity:1; visibility:visible; clip-path:inset(0 0 0 0 round 23px); transform:none; pointer-events:auto; transition:opacity .14s, clip-path .5s cubic-bezier(.2,1.12,.3,1), transform .5s cubic-bezier(.2,1.12,.3,1), visibility 0s}
 .osd-ic{width:20px; height:20px; flex:none; fill:none; stroke:#fff; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; overflow:visible}
 .osd-ic .f{fill:#fff; stroke:none}
 .osd-ic .ray{transform-origin:12px 12px; transform:rotate(calc(var(--v) * 90deg)) scale(calc(.72 + var(--v) * .32)); transition:transform .3s cubic-bezier(.2,1,.3,1)}
@@ -3914,7 +3914,7 @@ html:not(.vision) .glass:not(.notch):not(.ears):not(.mbar):not(.wh-disc):not(.wh
 /* Hazelnut: the same glass with a warm roasted tint and a little more frost, deep enough that white words read over
    the brightest page. The taskbar (the bar along the top and the wheel) keeps its own dark smoke either way. */
 html.hazel:not(.vision) .glass:not(.notch):not(.ears):not(.mbar):not(.wh-disc):not(.wh-tray){--tint:radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.07), transparent 60%), linear-gradient(180deg, rgba(26,26,34,.4), rgba(10,10,16,.54)) !important}
-html.hazel:not(.vision) .glass:not(.notch):not(.ears):not(.mbar):not(.wh-disc):not(.wh-tray) > .gw > .gwc{filter:saturate(1.85) brightness(.94) contrast(1.04)}
+
 html:not(.vision) .glass.panel-glass, html:not(.vision) .glass.panel-glass *, html:not(.vision) .dd, html:not(.vision) .dd *, html:not(.vision) .ds-tray *{text-shadow:0 .5px 1.5px rgba(0,0,0,.45) !important}
 
 /* ---------- words that never blend in ----------
@@ -3958,6 +3958,10 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
 .lock.sp .lk-sp:not(.lk-fg){opacity:1} .lock.sp .lk-bg{opacity:0; transition:opacity .9s ease}
 .lock.sp.spfg .lk-fg{opacity:1; filter:brightness(.86)}
 .lock.ask .lk-fg{opacity:0 !important}
+
+.osd .osd-bar{cursor:pointer; touch-action:none} .osd .osd-bar::after{content:""; position:absolute; inset:-10px 0}
+.osd:hover .osd-bar{height:10px; transition:height .2s var(--glide)}
+#track{touch-action:none} #track.drag{height:5px} #track.drag #knob{opacity:1; transform:scale(1.3)}
 </style>
 </head>
 <body>
@@ -4630,6 +4634,8 @@ function glassDraw(g, a){
   if (!c){ c = g._c = document.createElement('canvas'); c.className = 'gwc'; g.appendChild(c); g._x = c.getContext('2d', {alpha:false}); blank = true; }
   if (c.width !== glassBmp.width || c.height !== glassBmp.height){ c.width = glassBmp.width; c.height = glassBmp.height; blank = true; }
   g._x.globalAlpha = blank || a == null ? 1 : a;             // (a < 1: the new picture is laid over the old one a little at a time)
+  if (g._vib == null){ const p = g.parentElement; g._vib = !!p && !p.matches('.notch, .ears, .mbar, .wh-disc, .wh-tray'); }
+  g._x.filter = g._vib && document.documentElement.classList.contains('hazel') ? 'saturate(1.85) brightness(.94) contrast(1.04)' : 'none';
   g._x.drawImage(glassBmp, 0, 0);
   // (each piece of glass shows what's really behind it: the bar the wallpaper above your windows, the open notch the
   //  app under it. Nothing is carried from one into the other)
@@ -5695,13 +5701,26 @@ $('play').addEventListener('click', () => {
 });
 $('next').addEventListener('click', () => { swipeDir = 1; invoke('media_control', {action:'next'}); });
 $('prev').addEventListener('click', () => { swipeDir = -1; invoke('media_control', {action:'prev'}); });
-$('track').addEventListener('click', e => {
-  if (!cur || !cur.duration) return;
-  const r = e.currentTarget.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-  cur.position = f * cur.duration; cur.updated = Date.now(); lastLine = -9; playHold = Date.now() + 1500;
-  if (listenMode !== 'off') setTimeout(() => songReq(), 60);
-  invoke('media_control', {action:'seek', value:cur.position});
+$('track').addEventListener('pointerdown', e => {
+  if (!cur || !cur.duration || e.button !== 0) return;
+  e.preventDefault(); e.stopPropagation();
+  const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch(_){}
+  const r = el.getBoundingClientRect(), at = ev => Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+  el.classList.add('drag');
+  const mv = ev => {
+    const f = at(ev); cur.position = f * cur.duration; cur.updated = Date.now(); playHold = Date.now() + 1500;
+    fillEl.style.transform = `scaleX(${f})`; knobEl.style.left = (f * 100).toFixed(2) + '%';
+  };
+  const up = ev => {
+    el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+    el.classList.remove('drag'); mv(ev); lastLine = -9;
+    if (listenMode !== 'off') setTimeout(() => songReq(), 60);
+    invoke('media_control', {action:'seek', value:cur.position});
+  };
+  el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  mv(e);
 });
+$('track').addEventListener('click', e => e.stopPropagation());
 
 /* dropdown */
 let menuSig = '';
@@ -7641,9 +7660,30 @@ function osdShow(kind, level, muted){
   el.querySelector('b').textContent = pc;
   el.classList.toggle('mute', !!muted);
   if (el.classList.contains('on')){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
-  el.classList.add('on');
-  clearTimeout(OSD.t); OSD.t = setTimeout(() => el.classList.remove('on', 'bump'), 1500);
+  const was = el.classList.contains('on');
+  el.classList.add('on'); OSD.kind = kind === 'bright' ? 'bright' : 'vol'; OSD.v = v;
+  clearTimeout(OSD.t); if (!OSD.over) OSD.t = setTimeout(osdHide, 1500);
+  if (!was) syncHit();
 }
+function osdHide(){ const el = $('osd'); el.classList.remove('on', 'bump'); OSD.over = false; setTimeout(syncHit, 360); }
+document.addEventListener('pointerdown', e => {
+  const bar = e.target.closest && e.target.closest('.osd-bar'); if (!bar || !$('osd').classList.contains('on')) return;
+  e.preventDefault(); e.stopPropagation();
+  try { bar.setPointerCapture(e.pointerId); } catch(_){}
+  const r = bar.getBoundingClientRect(), at = ev => Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+  let sent = 0;
+  const set = (ev, last) => {
+    const v = at(ev), now = performance.now();
+    osdShow(OSD.kind, v, false);
+    if (last || now - sent > 60){ sent = now; invoke('qs_set', OSD.kind === 'bright' ? {what:'bright', v:Math.round(v * 100)} : {what:'vol', v}); }
+  };
+  const mv = ev => set(ev);
+  const up = ev => { bar.removeEventListener('pointermove', mv); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up); set(ev, true); };
+  bar.addEventListener('pointermove', mv); bar.addEventListener('pointerup', up); bar.addEventListener('pointercancel', up);
+  set(e);
+}, true);
+document.addEventListener('pointerover', e => { if (e.target.closest && e.target.closest('#osd')){ OSD.over = true; clearTimeout(OSD.t); } }, true);
+document.addEventListener('pointerout', e => { if (e.target.closest && e.target.closest('#osd') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#osd'))){ OSD.over = false; clearTimeout(OSD.t); OSD.t = setTimeout(osdHide, 1200); } }, true);
 listen('osd', d => { if (S.osd) osdShow(d.kind, d.level, d.muted); });
 listen('bright', v => { if (S.osd) osdShow('bright', v / 100); });
 if (TAURI && S.osd) setTimeout(() => invoke('osd_set', {on:true}), 2500);
@@ -10069,6 +10109,7 @@ function syncHit(){
   if (Pick && Pick.on && Pick.box) rects.push(Pick.box);
   if (window.DK && DK.on && !fullscreen && !barHid && !wheel.classList.contains('away')){ const cx = innerWidth / 2; rects.push(WH.open ? {x:Math.floor(cx - WH.R - 8), y:0, w:Math.ceil(2 * WH.R + 16), h:Math.ceil(32 + WH.D + 14 + (WH.tray || WH.drag ? 78 : 0))} : {x:Math.floor(cx - 46), y:30, w:92, h:26}); }
   if (nbOn && nbBox) rects.push(nbBox);
+  { const o = document.getElementById('osd'); if (o && o.classList.contains('on')){ const r = o.getBoundingClientRect(); rects.push({x:Math.floor(r.left - 4), y:Math.floor(r.top - 4), w:Math.ceil(r.width + 8), h:Math.ceil(r.height + 8)}); } }
   if (window.BAT && BAT.open){ const r = batw.getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
   if ($('tch') && $('tch').classList.contains('on')){ const r = $('tch').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 4), y:Math.floor(r.top - 4), w:Math.ceil(r.width + 8), h:Math.ceil(r.height + 8)}); }
   if (window.AT && AT.shown){ const r = $('atbIn').getBoundingClientRect(); rects.push({x:Math.floor(r.left - 6), y:Math.floor(r.top - 6), w:Math.ceil(r.width + 12), h:Math.ceil(r.height + 12)}); }
@@ -12193,7 +12234,18 @@ async function dsShow(kind, force){
   if (winH < tall){ winH = tall; invoke('set_window_height', {h:tall}); await dsTall(); }
   DS.items = (await invoke('shelf_list')) || [];
   if (!DS.on) return;
-  dsPaint(true); dsLay();
+  const key = DS.items.map(i => i.path).join('|');
+  if (key !== DS.shown || !dsRow.children.length){
+    DS.shown = key; dsPaint(true);
+    await Promise.race([Promise.all([...dsRow.querySelectorAll('img')].map(i => i.decode().catch(() => {}))), new Promise(r => setTimeout(r, 160))]);
+    if (!DS.on) return;
+  } else {
+    // (the same things on it: they come in again as they are)
+    for (const el of dsRow.children) el.classList.remove('in');
+    void dsRow.offsetWidth;
+    for (const el of dsRow.children) el.classList.add('in');
+  }
+  dsLay();
   dsEl.classList.toggle('dragging', kind === 'drop');
   void dsTray.offsetWidth; dsEl.classList.add('on');
   syncHit(); glassAim(); wake();

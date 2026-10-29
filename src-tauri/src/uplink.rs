@@ -1,112 +1,143 @@
-//! Web answers: facts from Brave Search for ULTRON's answers. A question about the world (people, events, prices, "what
-//! is", "how many") is looked up on Brave Search from a page of ULTRON's own, hidden and kept ready in the background:
-//! the results are fetched from inside it (Brave answers a real browser's page, not a bare request), read as text, and
-//! only the lines that bear on the question kept, a few hundred characters, which the brain answers from in a sentence
-//! or two. Kept open for five quiet minutes, so a question after another doesn't wait for it to start.
-//!
-//! Nothing is clicked, typed or solved there: a check asking whether this is a person stands it down for ten minutes,
-//! and Wikipedia, the news and DuckDuckGo answer meanwhile. With no internet, nothing waits on it: the local brain
-//! answers at once.
+//! Web answers, from the web's open sources: Wikipedia (its search and the opening of the articles it finds) and
+//! DuckDuckGo's Instant Answer API, asked at the same time. Both are free, need no key, and are made to be asked by
+//! apps; nothing is read off a search engine's pages. Only the lines that bear on the question are kept, a few hundred
+//! characters, and the sentence among them that answers it is said as it is (or, failing that, the brain answers from
+//! them). With no internet, nothing waits on it: the local brain answers at once.
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
-use std::sync::{mpsc, Mutex};
+use std::sync::{mpsc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::AppHandle;
 
-const LABEL: &str = "uplink";
-static ONE: Mutex<()> = Mutex::new(());
-static LAST: Mutex<Option<Instant>> = Mutex::new(None);
-static BLOCKED: Mutex<Option<Instant>> = Mutex::new(None);
-static TIDY: AtomicBool = AtomicBool::new(false);
-/// The last look found no internet (the page's fetch couldn't reach anything)
+/// The last look found no internet (neither source could be reached)
 pub static OFFLINE: AtomicBool = AtomicBool::new(false);
-/// What Brave said to each question in the last ten minutes
-static SEEN: std::sync::LazyLock<Mutex<std::collections::HashMap<String, (Instant, String)>>> = std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+/// What was found for each question in the last ten minutes
+static SEEN: LazyLock<Mutex<std::collections::HashMap<String, (Instant, String)>>> = LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+/// (one client, its connections kept open between questions: the second question skips the handshakes)
+static NET: LazyLock<ureq::Agent> = LazyLock::new(|| crate::net::agent(Duration::from_millis(2600)));
 
-/// Fetches Brave's results for a question from inside its own page and reads them (titles and the words under each),
-/// leaving what it found in `window.__u`; POLL reads that.
-const START: &str = r#"(() => {
-  window.__u = null;
-  if (location.host !== 'search.brave.com'){ window.__u = {ready:true, text:'', wrong:true}; return 1; }
-  const t = e => (e && e.textContent || '').replace(/\s+/g, ' ').trim();
-  fetch('/search?q=' + encodeURIComponent(WANT) + '&source=web', {credentials:'include'}).then(r => {
-    if (r.status === 429 || r.status === 403) return {blocked:true};
-    return r.text().then(h => {
-      const d = new DOMParser().parseFromString(h, 'text/html'), out = [];
-      if (d.querySelector('#captcha, form[action*="captcha"], .captcha')) return {blocked:true};
-      for (const c of [...d.querySelectorAll('.generic-snippet .content')].slice(0, 8)){
-        let p = c; for (let i = 0; i < 6 && p && !p.querySelector('.title'); i++) p = p.parentElement;
-        const h2 = p ? t(p.querySelector('.title')) : '', s = t(c).replace(/^([A-Z][a-z]+ \d{1,2}, \d{4}|\d+ (minutes?|hours?|days?|weeks?|months?|years?) ago) - /, '');
-        if (s) out.push((h2 ? h2 + '\t' : '') + s);
-      }
-      const ib = d.querySelector('#infobox'); const ibt = ib ? t(ib).slice(0, 600) : '';
-      if (ibt && out.length < 3) out.push(ibt);
-      return {ready:true, text:out.join('\n')};
-    });
-  }).then(v => { window.__u = v; }, () => { window.__u = {ready:true, text:'', offline:true}; });
-  return 1;
-})()"#;
-const POLL: &str = "(() => window.__u)()";
+pub struct Facts {
+    pub text: String,
+    pub direct: Option<String>,
+}
+
+/// The connections to both opened ahead, as the notch opens or typing starts (a question then saves the handshakes)
+pub fn warm(_app: &AppHandle) {
+    for u in ["https://en.wikipedia.org/w/api.php?action=query&meta=siteinfo&format=json", "https://api.duckduckgo.com/?q=ultron&format=json&no_html=1"] {
+        let _ = NET.get(u).call();
+    }
+}
+
+fn json(url: &str) -> Result<Value, bool> {
+    // (Err(true): no answer at all, the internet may be down; Err(false): an answer, but not one to use)
+    let r = NET.get(url).call().map_err(|e| matches!(e, ureq::Error::Transport(_)))?;
+    r.into_json().map_err(|_| false)
+}
+
+/// What a question is about, for searching: "what is the capital of Australia?" -> "capital of Australia"
+fn subject(q: &str) -> String {
+    let mut s = q.trim().trim_end_matches(['?', '.', '!']).trim().to_string();
+    for lead in ["who is", "who was", "who are", "who wrote", "what is", "what's", "what are", "what was", "where is", "where are", "when was", "when did", "when is",
+        "how tall is", "how old is", "how big is", "how far is", "how many", "how much", "tell me about", "define", "the", "a", "an"] {
+        let l = s.to_lowercase();
+        if l.starts_with(lead) && l[lead.len()..].starts_with(' ') && !(lead.starts_with("who wrote") || lead.starts_with("how ")) {
+            s = s[lead.len()..].trim().to_string();
+        }
+    }
+    if s.is_empty() { q.trim().to_string() } else { s }
+}
+
+/// Wikipedia: the three articles its search finds first, and the opening of each
+fn wiki(q: &str) -> Result<Option<Facts>, bool> {
+    let url = format!("https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&generator=search&gsrsearch={}&gsrlimit=3&prop=extracts&exintro=1&explaintext=1&exsentences=8&redirects=1", enc(&subject(q)));
+    let v = json(&url)?;
+    let mut pages: Vec<&Value> = v["query"]["pages"].as_array().map(|a| a.iter().collect()).unwrap_or_default();
+    pages.sort_by_key(|p| p["index"].as_i64().unwrap_or(99));
+    let lines: Vec<String> = pages.iter().filter_map(|p| Some(format!("{}\t{}", p["title"].as_str()?, p["extract"].as_str()?.replace('\n', " ")))).collect();
+    // (all three openings kept: the answer is often the second article's first line)
+    let text = boil(q, &lines.join("\n"), 1800);
+    Ok((!text.is_empty()).then(|| Facts { direct: answer_in(q, &text), text }))
+}
+
+/// DuckDuckGo's Instant Answer API: an answer it has outright (a sum, a conversion), or its summary of the subject
+fn ddg(q: &str) -> Result<Option<Facts>, bool> {
+    let v = json(&format!("https://api.duckduckgo.com/?q={}&format=json&no_html=1&skip_disambig=1&t=ultron", enc(&subject(q))))?;
+    let direct = v["Answer"].as_str().filter(|a| !a.is_empty() && a.len() < 300).map(|a| a.to_string());
+    let mut lines = Vec::new();
+    if let (Some(h), Some(a)) = (v["Heading"].as_str(), v["AbstractText"].as_str()) {
+        if !a.is_empty() {
+            lines.push(format!("{h}\t{a}"));
+        }
+    }
+    if let Some(d) = v["Definition"].as_str().filter(|d| !d.is_empty()) {
+        lines.push(d.to_string());
+    }
+    for t in v["RelatedTopics"].as_array().into_iter().flatten().take(3) {
+        if let Some(s) = t["Text"].as_str() {
+            lines.push(s.to_string());
+        }
+    }
+    let text = boil(q, &lines.join("\n"), 700);
+    if text.is_empty() && direct.is_none() {
+        return Ok(None);
+    }
+    let direct = direct.or_else(|| answer_in(q, &text));
+    Ok(Some(Facts { direct, text }))
+}
+
+/// The web's facts for a question: Wikipedia and DuckDuckGo asked at once. The first with a sentence that answers it
+/// is used; failing that, Wikipedia's lines if they came, else DuckDuckGo's.
+pub fn facts(_app: &AppHandle, q: &str) -> Option<Facts> {
+    let key = q.trim().to_lowercase();
+    if let Some((at, text)) = SEEN.lock().unwrap().get(&key) {
+        if at.elapsed() < Duration::from_secs(600) {
+            return Some(Facts { direct: answer_in(q, text), text: text.clone() });
+        }
+    }
+    let t0 = Instant::now();
+    let (tx, rx) = mpsc::channel::<(bool, Result<Option<Facts>, bool>)>();
+    for wiki_side in [true, false] {
+        let (tx, q) = (tx.clone(), q.to_string());
+        std::thread::spawn(move || {
+            let _ = tx.send((wiki_side, if wiki_side { wiki(&q) } else { ddg(&q) }));
+        });
+    }
+    drop(tx);
+    let (mut kept, mut from_wiki, mut down) = (None::<Facts>, false, 0);
+    while let Some(left) = Duration::from_millis(2800).checked_sub(t0.elapsed()) {
+        let Ok((is_wiki, r)) = rx.recv_timeout(left) else { break };
+        let f = match r {
+            Ok(Some(f)) => f,
+            Ok(None) => continue,
+            Err(no_net) => {
+                down += usize::from(no_net);
+                continue;
+            }
+        };
+        if f.direct.is_some() {
+            kept = Some(f);
+            break;
+        }
+        if kept.is_none() || (is_wiki && !from_wiki) {
+            from_wiki = is_wiki;
+            kept = Some(f);
+        }
+    }
+    OFFLINE.store(down == 2, SeqCst);
+    crate::log_line(&format!("web: {} in {} ms{}", if kept.is_some() { "found" } else { "nothing found" }, t0.elapsed().as_millis(), if kept.as_ref().is_some_and(|f| f.direct.is_some()) { ", a sentence that answers it" } else { "" }));
+    if let Some(f) = &kept {
+        let mut seen = SEEN.lock().unwrap();
+        seen.retain(|_, (at, _)| at.elapsed() < Duration::from_secs(600));
+        seen.insert(key, (Instant::now(), f.text.clone()));
+    }
+    kept
+}
 
 fn enc(s: &str) -> String {
     s.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else if b == b' ' { "+".into() } else { format!("%{b:02X}") }).collect()
-}
-
-fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
-    if let Some(w) = app.get_webview_window(LABEL) {
-        return Ok(w);
-    }
-    WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External("https://search.brave.com/".parse().map_err(|_| "bad address")?))
-        .title("ULTRON")
-        .visible(false)
-        .focused(false)
-        .skip_taskbar(true)
-        .decorations(false)
-        .shadow(false)
-        // (not private: Brave keeps its own small cookies between questions, and asks for a check far less often)
-        .inner_size(900.0, 800.0)
-        .position(-3000.0, -3000.0)
-        .additional_browser_args(crate::BROWSER_ARGS) // (the same as every other ULTRON window, or the engine refuses it)
-        .build()
-        .map_err(|e| e.to_string())
-}
-
-/// Run a little script in the page and give back what it returns.
-fn run(w: &WebviewWindow, js: &str) -> Option<Value> {
-    let (tx, rx) = mpsc::channel::<String>();
-    let js = js.to_string();
-    w.with_webview(move |pv| unsafe {
-        let Ok(core) = pv.controller().CoreWebView2() else { return };
-        let done = webview2_com::ExecuteScriptCompletedHandler::create(Box::new(move |_, out| {
-            let _ = tx.send(out);
-            Ok(())
-        }));
-        let _ = core.ExecuteScript(&wcore62::HSTRING::from(js.as_str()), &done);
-    })
-    .ok()?;
-    serde_json::from_str(&rx.recv_timeout(Duration::from_secs(3)).ok()?).ok()
-}
-
-/// (closed after twenty quiet minutes: its memory, a page's worth, goes back at once)
-fn keep_tidy(app: &AppHandle) {
-    if TIDY.swap(true, SeqCst) {
-        return;
-    }
-    let app = app.clone();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_secs(15));
-        let quiet = LAST.lock().unwrap().map_or(true, |t| t.elapsed() > Duration::from_secs(1200));
-        if quiet {
-            if let Some(w) = app.get_webview_window(LABEL) {
-                let _ = w.destroy();
-            }
-            TIDY.store(false, SeqCst);
-            return;
-        }
-    });
 }
 
 /// The lines of the results that bear on the question, in their order, about `most` characters in all (Google's own
@@ -123,7 +154,7 @@ fn boil(q: &str, text: &str, most: usize) -> String {
         }
         let low = l.to_lowercase();
         let score = keys.iter().filter(|k| low.contains(k.as_str())).count() as f32 + if i < 3 { 1.5 } else { 0.0 };
-        lines.push((i, score, l.chars().take(320).collect()));
+        lines.push((i, score, l.chars().take(600).collect()));
     }
     let mut best = lines.clone();
     best.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -137,41 +168,6 @@ fn boil(q: &str, text: &str, most: usize) -> String {
         keep.insert(*i);
     }
     lines.into_iter().filter(|(i, _, _)| keep.contains(i)).map(|(_, _, l)| l).collect::<Vec<_>>().join("\n")
-}
-
-/// Google's own answer (its overview, or the answer box at the top), in a few sentences: moderate, not a page.
-fn moderate(s: &str) -> String {
-    let s = s.split('\n').map(str::trim).filter(|l| l.len() > 2 && !l.starts_with("Show more") && !l.starts_with("AI responses may")).collect::<Vec<_>>().join(" ");
-    let mut out = String::new();
-    for sentence in s.split_inclusive(['.', '!', '?']) {
-        if out.len() > 220 && out.len() + sentence.len() > 460 {
-            break;
-        }
-        out.push_str(sentence);
-        if out.matches(['.', '!', '?']).count() >= 4 {
-            break;
-        }
-    }
-    let out = out.trim().to_string();
-    if out.len() > 520 { format!("{}…", out.chars().take(500).collect::<String>().trim_end()) } else { out }
-}
-
-/// What Google says about a question: the lines that bear on it (for the brain to answer from), and Google's own
-/// answer when it gives one (said as it is: no brain needed, so it's quick).
-pub struct Facts {
-    pub text: String,
-    pub direct: Option<String>,
-}
-
-/// The window opened ahead (the notch has just opened: a question may be coming), on Google's page, ready.
-pub fn warm(app: &AppHandle) {
-    if BLOCKED.lock().unwrap().is_some_and(|t| t > Instant::now()) || app.get_webview_window(LABEL).is_some() {
-        return;
-    }
-    if window(app).is_ok() {
-        *LAST.lock().unwrap() = Some(Instant::now());
-        keep_tidy(app);
-    }
 }
 
 /// Is there internet at all (asked before saying there isn't: Brave's page failing to fetch isn't always that)
@@ -234,6 +230,8 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
             "sang" | "sung" | "singer" | "sing" => "sing",
             "built" | "builder" | "build" => "build",
             "born" | "birth" => "born",
+            "tall" | "height" | "high" | "elevation" | "altitude" => "height",
+            "chief" | "ceo" => "ceo",
             "died" | "die" | "death" | "dead" => "die",
             w => w,
         }
@@ -245,6 +243,9 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
         return None;
     }
     let num = ["how many", "how much", "how old", "how long", "how far", "how tall", "how big", "what year", "when ", "population", "price", "cost", "age of"].iter().any(|w| ql.contains(w));
+    // ("who is the president of France", "what is the capital of Australia": asks for someone or something by its
+    //  role; "who was Albert Einstein", "what is photosynthesis": asks what something is)
+    let role = ["who is the ", "who was the ", "what is the ", "what's the ", "what was the ", "who's the "].iter().any(|r| ql.starts_with(r));
     let define = ql.starts_with("what is") || ql.starts_with("what are") || ql.starts_with("what's") || ql.contains("meaning") || ql.starts_with("define") || ql.starts_with("who is") || ql.starts_with("who was");
     let mut best: Option<(f32, String)> = None;
     for (rank, line) in text.lines().enumerate() {
@@ -253,23 +254,51 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
             let s = unparen(s);
             let s = s.as_str();
             let n = s.chars().count();
-            if !(20..=240).contains(&n) || s.contains("...") || s.contains('…') || s.ends_with('?') || s.contains(" | ") {
+            // (a whole sentence only: a line cut short ends in a piece of one)
+            if !(20..=280).contains(&n) || s.contains("...") || s.contains('…') || s.ends_with('?') || s.contains(" | ") || !s.ends_with(['.', '!', '"', ')']) {
                 continue;
             }
             let low = s.to_lowercase();
             let words: Vec<String> = low.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).map(stem).collect();
             let hit = keys.iter().filter(|k| words.contains(k)).count() as f32;
             let cover = hit / keys.len() as f32;
-            if cover < 0.6 {
+            // (every idea in the question there, when it has more than one: a sentence about half of it answers the
+            //  wrong question, and a wrong sentence said at once is worse than a right one a few seconds later)
+            if cover < if keys.len() >= 2 { 0.99 } else { 0.6 } {
                 continue;
             }
             let digits = s.chars().any(|c| c.is_ascii_digit());
             let mut score = cover * 3.0 + hit * 0.3 - rank as f32 * 0.35 - k as f32 * 0.25;
             if num {
-                score += if digits { 0.8 } else { -1.5 };
+                if !digits {
+                    continue;
+                }
+                score += 0.8;
+            }
+            // ("the capital of Australia": "Canberra is the capital city of Australia", the answer before "is" and the
+            //  question after it, not "The Australian Capital Territory is an internal territory of Australia")
+            // ("the largest planet": not "the second largest")
+            if ["second", "third", "fourth", "fifth"].iter().any(|o| !ql.contains(o) && keys.iter().any(|k| low.contains(&format!("{o} {k}")) || low.contains(&format!("{o}-{k}")))) {
+                continue;
+            }
+            if keys.len() >= 2 && role {
+                if let Some(at) = [" is ", " was ", " are ", " were "].iter().filter_map(|v| low.find(v)).min() {
+                    let count = |part: &str| keys.iter().filter(|k| part.split(|c: char| !c.is_alphanumeric()).any(|w| stem(w) == **k)).count();
+                    let (subj, pred) = (count(&low[..at]), count(&low[at..]));
+                    if pred < keys.len() {
+                        continue;
+                    }
+                    if subj == 0 {
+                        score += 1.2;
+                    }
+                }
             }
             if define && (low.contains(" is ") || low.contains(" are ") || low.contains(" was ") || low.contains(" refers to ")) {
                 score += 0.5;
+                // ("what is photosynthesis": "Photosynthesis is ...", the thing itself first)
+                if keys.len() == 1 && words.first().is_some_and(|w| *w == keys[0]) {
+                    score += 0.6;
+                }
             }
             if !s.starts_with(|c: char| c.is_uppercase() || c.is_ascii_digit()) {
                 score -= 1.0;
@@ -287,15 +316,14 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
             if n > 180 {
                 score -= 0.5;
             }
-            // ("who is the president of France": "Emmanuel Macron is ...", not "The president of France is the co-prince
-            //  of Andorra")
-            if ql.starts_with("who ") {
-                let ws: Vec<&str> = s.split_whitespace().take(2).collect();
-                let named = ws.len() == 2 && ws.iter().all(|w| w.starts_with(|c: char| c.is_uppercase())) && !["The", "A", "An", "In", "On", "This", "As", "It"].contains(&ws[0]);
-                if !named {
-                    continue;
-                }
-                score += 1.0;
+            // ("who is the president of France": a sentence that names someone, "Emmanuel Macron is ..." or "The current
+            //  president is Emmanuel Macron", not "The president of France is the co-prince of Andorra")
+            if role && ql.starts_with("who") {
+                let toks: Vec<&str> = s.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != '.')).collect();
+                let cap = |w: &str| w.starts_with(|c: char| c.is_uppercase()) && !["The", "A", "An", "In", "On", "This", "As", "It", "He", "She"].contains(&w);
+                let named_at = toks.windows(2).position(|p| cap(p[0]) && cap(p[1]) && !keys.contains(&stem(&p[0].to_lowercase())) && !keys.contains(&stem(&p[1].to_lowercase())));
+                let Some(at) = named_at else { continue };
+                score += if at == 0 { 1.0 } else { 0.6 };
             }
             if best.as_ref().map_or(true, |b| score > b.0) {
                 best = Some((score, s.to_string()));
@@ -311,136 +339,4 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
     let s = if s.ends_with(['.', '!']) { s } else { s + "." };
     crate::log_line(&format!("web: answered from the results themselves (sure {score:.1})"));
     Some(s)
-}
-
-fn untag(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut inside = false;
-    for c in s.chars() {
-        match c {
-            '<' => inside = true,
-            '>' => inside = false,
-            c if !inside => out.push(c),
-            _ => {}
-        }
-    }
-    out.replace("&amp;", "&").replace("&#x27;", "'").replace("&#39;", "'").replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
-        .split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-/// DuckDuckGo's results for a question (its plain page, which answers a plain request in about a second): asked at
-/// the same time as Brave, so a check on Brave's side, or its page still getting ready, never leaves a question without
-/// the web.
-fn ddg(q: &str) -> Option<Facts> {
-    let t0 = Instant::now();
-    let url = format!("https://html.duckduckgo.com/html/?q={}", enc(q.trim()));
-    let html = crate::net::agent(Duration::from_millis(2600)).get(&url)
-        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
-        .call().ok()?.into_string().ok()?;
-    let mut lines = Vec::new();
-    for block in html.split("class=\"result results_links").skip(1) {
-        if block.contains("result--ad") || lines.len() >= 8 {
-            continue;
-        }
-        let pick = |mark: &str| block.split_once(mark).and_then(|(_, r)| r.split_once('>')).and_then(|(_, r)| r.split_once("</a>")).map(|(t, _)| untag(t)).unwrap_or_default();
-        let (title, words) = (pick("class=\"result__a\""), pick("class=\"result__snippet\""));
-        if !words.is_empty() {
-            lines.push(if title.is_empty() { words } else { format!("{title}\t{words}") });
-        }
-    }
-    OFFLINE.store(false, SeqCst);
-    let text = boil(q, &lines.join("\n"), 700);
-    crate::log_line(&format!("web: DuckDuckGo's results for that in {} ms, boiled down to {} characters", t0.elapsed().as_millis(), text.len()));
-    (!text.is_empty()).then(|| Facts { direct: answer_in(q, &text), text })
-}
-
-/// The web's facts for a question: Brave and DuckDuckGo asked at once. The first with a sentence that answers it is
-/// used; failing that, Brave's results if they came, else DuckDuckGo's.
-pub fn facts(app: &AppHandle, q: &str) -> Option<Facts> {
-    let (tx, rx) = mpsc::channel::<(bool, Option<Facts>)>();
-    for brave_side in [true, false] {
-        let (tx, app, q) = (tx.clone(), app.clone(), q.to_string());
-        std::thread::spawn(move || {
-            let _ = tx.send((brave_side, if brave_side { brave(&app, &q) } else { ddg(&q) }));
-        });
-    }
-    drop(tx);
-    let t0 = Instant::now();
-    let (mut kept, mut from_brave) = (None::<Facts>, false);
-    while let Some(left) = Duration::from_millis(3200).checked_sub(t0.elapsed()) {
-        let Ok((is_brave, f)) = rx.recv_timeout(left) else { break };
-        let Some(f) = f else { continue };
-        if f.direct.is_some() {
-            return Some(f);
-        }
-        if kept.is_none() || (is_brave && !from_brave) {
-            from_brave = is_brave;
-            kept = Some(f);
-        }
-    }
-    kept
-}
-
-/// Brave's results for a question, boiled down to what bears on it (None: it's standing down, it didn't answer in time,
-/// there's no internet, or there was nothing).
-fn brave(app: &AppHandle, q: &str) -> Option<Facts> {
-    if BLOCKED.lock().unwrap().is_some_and(|t| t > Instant::now()) {
-        return None;
-    }
-    // (the same question within ten minutes: what Brave said then, at once, and Brave isn't asked again)
-    let key = q.trim().to_lowercase();
-    if let Some((at, text)) = SEEN.lock().unwrap().get(&key) {
-        if at.elapsed() < Duration::from_secs(600) {
-            return Some(Facts { direct: answer_in(q, text), text: text.clone() });
-        }
-    }
-    let _one = ONE.try_lock().ok()?; // (one look at a time)
-    let t0 = Instant::now();
-    let fresh = app.get_webview_window(LABEL).is_none();
-    let w = window(app).ok()?;
-    *LAST.lock().unwrap() = Some(Instant::now());
-    keep_tidy(app);
-    // (its page still coming in, the first time takes ten seconds or so: this question isn't kept waiting for it; the
-    //  brain answers now, and the next question has Brave)
-    // (its page still coming in: waited on for up to two seconds, it's usually ready in one; past that the question isn't
-    //  kept waiting, the brain answers now, and the next question has Brave)
-    let ready = || run(&w, "(() => location.host === 'search.brave.com' && document.readyState !== 'loading')()") == Some(Value::Bool(true));
-    let _ = fresh;
-    while !ready() {
-        if t0.elapsed() > Duration::from_millis(2000) {
-            crate::log_line("web: Brave's page is still getting ready; answered without it this time");
-            return None;
-        }
-        std::thread::sleep(Duration::from_millis(80));
-    }
-    let js = START.replace("WANT", &serde_json::to_string(q.trim()).unwrap_or_default());
-    run(&w, &js)?;
-    let t1 = Instant::now();
-    while t1.elapsed() < Duration::from_millis(3000) {
-        std::thread::sleep(Duration::from_millis(60));
-        let Some(v) = run(&w, POLL) else { continue };
-        if v.is_null() {
-            continue;
-        }
-        if v["blocked"] == true {
-            *BLOCKED.lock().unwrap() = Some(Instant::now() + Duration::from_secs(600));
-            crate::log_line("web: Brave asked for a check; standing down for ten minutes");
-            return None;
-        }
-        if v["wrong"] == true {
-            let _ = w.navigate("https://search.brave.com/".parse().ok()?);
-            return None;
-        }
-        OFFLINE.store(v["offline"] == true, SeqCst);
-        let text = boil(q, v["text"].as_str().unwrap_or(""), 700);
-        crate::log_line(&format!("web: Brave's results for that in {} ms, boiled down to {} characters{}", t0.elapsed().as_millis(), text.len(), if v["offline"] == true { " (no internet)" } else { "" }));
-        if !text.is_empty() {
-            let mut seen = SEEN.lock().unwrap();
-            seen.retain(|_, (at, _)| at.elapsed() < Duration::from_secs(600));
-            seen.insert(key, (Instant::now(), text.clone()));
-        }
-        return (!text.is_empty()).then(|| Facts { direct: answer_in(q, &text), text });
-    }
-    crate::log_line("web: Brave didn't answer in time");
-    None
 }
