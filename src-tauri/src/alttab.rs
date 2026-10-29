@@ -88,6 +88,7 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
                         0x09 if down => tell(if held(0x10) { "prev" } else { "next" }),
                         0x25 | 0x26 if down => tell("prev"),
                         0x27 | 0x28 if down => tell("next"),
+                        0x51 | 0x57 | 0x2E if down => tell("quit"),
                         0x1B if down => {
                             UP.store(false, SeqCst);
                             tell("cancel");

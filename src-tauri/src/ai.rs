@@ -1414,9 +1414,25 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     if config(app).gemini && !small_talk(user) && !wants_steps(user) && crate::cloud::active(app).is_none() {
         let t0 = Instant::now();
         let _ = app.emit_to("main", "ai-phase", "Looking it up…");
-        if let Some(d) = crate::uplink::facts(app, user).and_then(|f| f.direct) {
+        // (a word asked about: the dictionary's entry, drawn as a card of its own)
+        if let Some((say, mut card)) = crate::uplink::word_asked(user).and_then(|w| crate::uplink::word(&w)) {
+            card["q"] = user.into();
+            let _ = app.emit_to("main", "ai-card", card);
+            return Some(Reply { reply: say, action: String::new(), icon: "chat", ok: true });
+        }
+        if let Some(f) = crate::uplink::facts(app, user).filter(|f| f.direct.is_some()) {
             crate::log_line(&format!("web: answered in {} ms, before any brain", t0.elapsed().as_millis()));
-            return Some(Reply { reply: d, action: String::new(), icon: "chat", ok: true });
+            // (the picture of what it's about, small, under the answer: an animal, a person, a place, a thing)
+            if let Some(src) = f.source.clone() {
+                let (a, q) = (app.clone(), user.to_string());
+                std::thread::spawn(move || {
+                    if let Some(mut card) = crate::uplink::thing(&src) {
+                        card["q"] = q.into();
+                        let _ = a.emit_to("main", "ai-card", card);
+                    }
+                });
+            }
+            return Some(Reply { reply: f.direct.unwrap_or_default(), action: String::new(), icon: "chat", ok: true });
         }
     }
     let ai = app.state::<Ai>();
@@ -1502,7 +1518,7 @@ pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     if web_mode && web.is_none() && crate::uplink::OFFLINE.load(std::sync::atomic::Ordering::SeqCst) && !crate::uplink::online() {
         return Some(Reply { reply: "No internet right now. Try again later, or switch to Local in Settings › Brain.".into(), action: String::new(), icon: "chat", ok: false });
     }
-    let cap = if many { 0 } else if web.is_some() && !thinking { 1 } else { sentence_cap(app) };
+    let cap = if many { 0 } else if web.is_some() && !thinking { 2 } else { sentence_cap(app) };
     let max = if many { 400 } else { match (cap, thinking) { (0, _) => 320, (1, false) => 50, (1, true) => 80, (_, false) => 90, (_, true) => 140 } };
     // (a service or the graphics card reads it all in a blink; the processor gets the first few sentences)
     // (and in Web mode always: fewer words for it to read is most of how fast the answer comes)

@@ -17,11 +17,109 @@ pub static OFFLINE: AtomicBool = AtomicBool::new(false);
 /// What was found for each question in the last ten minutes
 static SEEN: LazyLock<Mutex<std::collections::HashMap<String, (Instant, String)>>> = LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
 /// (one client, its connections kept open between questions: the second question skips the handshakes)
-static NET: LazyLock<ureq::Agent> = LazyLock::new(|| crate::net::agent(Duration::from_millis(2600)));
+static NET: LazyLock<ureq::Agent> = LazyLock::new(|| {
+    ureq::AgentBuilder::new()
+        .timeout(Duration::from_millis(2600))
+        .timeout_connect(Duration::from_millis(2500))
+        .user_agent(&format!("ULTRON/{} (desktop assistant; install {})", env!("CARGO_PKG_VERSION"), install_id()))
+        .build()
+});
+
+/// This PC's own id for the web's sources (made once, at random, and kept beside ULTRON's settings)
+fn install_id() -> String {
+    let dir = std::path::PathBuf::from(std::env::var("APPDATA").unwrap_or_default()).join("com.ultron.notch");
+    let f = dir.join("install-id");
+    if let Ok(s) = std::fs::read_to_string(&f) {
+        if s.trim().len() >= 8 {
+            return s.trim().to_string();
+        }
+    }
+    let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0) ^ (std::process::id() as u128) << 64;
+    let id = format!("{:016x}", (seed as u64) ^ ((seed >> 64) as u64).rotate_left(29) ^ 0x9e37_79b9_7f4a_7c15);
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = std::fs::write(&f, &id);
+    id
+}
 
 pub struct Facts {
     pub text: String,
     pub direct: Option<String>,
+    /// the article the answer came from (for its picture)
+    pub source: Option<String>,
+}
+
+/// The article a sentence came from, among the "Title\tbody" lines
+fn source_of(text: &str, said: &str) -> Option<String> {
+    let head: String = said.chars().take(40).collect();
+    text.lines().find_map(|l| l.split_once('\t').filter(|(_, b)| unparen(b).contains(&head)).map(|(t, _)| t.to_string()))
+}
+
+/// "define ubiquitous", "what does ubiquitous mean", "meaning of serendipity", "serendipity meaning": the word asked about
+pub fn word_asked(q: &str) -> Option<String> {
+    let l = q.trim().trim_end_matches(['?', '.', '!']).trim().to_lowercase();
+    let ok = |w: &str| {
+        let w = w.trim().trim_matches(['"', '\'', '“', '”']);
+        (!w.is_empty() && w.split_whitespace().count() <= 2 && w.chars().all(|c| c.is_alphabetic() || c == ' ' || c == '-' || c == '\'')).then(|| w.to_string())
+    };
+    for (a, b) in [("define ", ""), ("definition of ", ""), ("what is the meaning of ", ""), ("what's the meaning of ", ""), ("meaning of ", ""), ("what does ", " mean"),
+        ("what is the definition of ", ""), ("synonyms for ", ""), ("synonyms of ", ""), ("synonym for ", ""), ("synonym of ", "")] {
+        if let Some(rest) = l.strip_prefix(a) {
+            if let Some(w) = rest.strip_suffix(b).and_then(ok) {
+                return Some(w);
+            }
+        }
+    }
+    l.strip_suffix(" meaning").or_else(|| l.strip_suffix(" definition")).and_then(ok)
+}
+
+/// A dictionary's entry for a word (dictionaryapi.dev, free and open): what's said, and the card the page draws
+pub fn word(w: &str) -> Option<(String, Value)> {
+    let v = json(&format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", enc(w))).ok()?;
+    let e = v.get(0)?;
+    let word = e["word"].as_str()?.to_string();
+    let phons = e["phonetics"].as_array().cloned().unwrap_or_default();
+    let phon = e["phonetic"].as_str().filter(|s| !s.is_empty()).map(String::from)
+        .or_else(|| phons.iter().find_map(|p| p["text"].as_str().filter(|s| !s.is_empty()).map(String::from))).unwrap_or_default();
+    let audio = phons.iter().filter_map(|p| p["audio"].as_str().filter(|s| !s.is_empty())).max_by_key(|a| a.ends_with("-us.mp3") as u8 * 2 + a.ends_with("-uk.mp3") as u8).unwrap_or("").to_string();
+    let mut meanings = Vec::new();
+    for m in e["meanings"].as_array().into_iter().flatten().take(3) {
+        let defs: Vec<Value> = m["definitions"].as_array().into_iter().flatten().take(3)
+            .filter_map(|d| Some(serde_json::json!({"d": d["definition"].as_str()?, "ex": d["example"].as_str().unwrap_or("")}))).collect();
+        let mut syn: Vec<String> = m["synonyms"].as_array().into_iter().flatten().filter_map(|s| s.as_str().map(String::from)).collect();
+        for d in m["definitions"].as_array().into_iter().flatten() {
+            syn.extend(d["synonyms"].as_array().into_iter().flatten().filter_map(|s| s.as_str().map(String::from)));
+        }
+        let mut seen = HashSet::new();
+        syn.retain(|s| seen.insert(s.to_lowercase()));
+        syn.truncate(6);
+        if !defs.is_empty() {
+            meanings.push(serde_json::json!({"pos": m["partOfSpeech"].as_str().unwrap_or(""), "defs": defs, "syn": syn}));
+        }
+    }
+    let first = meanings.first()?;
+    let say = format!("{} ({}): {}", word.chars().next()?.to_uppercase().collect::<String>() + &word[word.chars().next()?.len_utf8()..], first["pos"].as_str().unwrap_or(""), first["defs"][0]["d"].as_str().unwrap_or(""));
+    crate::log_line(&format!("web: the dictionary's entry for {word:?}"));
+    Some((say, serde_json::json!({"kind": "word", "word": word, "phon": phon, "audio": audio, "meanings": meanings})))
+}
+
+/// Wikipedia's picture for the article an answer came from, for animals, people, places and things (not for ideas,
+/// processes or lists, where a picture adds nothing)
+pub fn thing(title: &str) -> Option<Value> {
+    let summary = |t: &str| json(&format!("https://en.wikipedia.org/api/rest_v1/page/summary/{}", enc(&t.replace(' ', "_")))).ok().filter(|v| v["type"].as_str() == Some("standard"));
+    // (a name as another source writes it, "Red Panda": Wikipedia's search finds the article, "Red panda")
+    let v = summary(title).or_else(|| {
+        let s = json(&format!("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={}&srlimit=1&format=json", enc(title))).ok()?;
+        summary(s["query"]["search"][0]["title"].as_str()?)
+    })?;
+    let desc = v["description"].as_str().unwrap_or("");
+    let d = desc.to_lowercase();
+    if ["concept", "process", "theory", "field of", "branch of", "method", "technique", "study of", "list of", "term ", "phenomenon", "philosophy", "idea", "word", "letter",
+        "number", "unit of", "mathematical", "property", "disambiguation", "abstract"].iter().any(|a| d.contains(a)) {
+        return None;
+    }
+    let t = &v["thumbnail"];
+    let src = t["source"].as_str()?;
+    Some(serde_json::json!({"kind": "thing", "title": v["title"], "desc": desc, "img": src, "w": t["width"], "h": t["height"]}))
 }
 
 /// The connections to both opened ahead, as the notch opens or typing starts (a question then saves the handshakes)
@@ -59,7 +157,10 @@ fn wiki(q: &str) -> Result<Option<Facts>, bool> {
     let lines: Vec<String> = pages.iter().filter_map(|p| Some(format!("{}\t{}", p["title"].as_str()?, p["extract"].as_str()?.replace('\n', " ")))).collect();
     // (all three openings kept: the answer is often the second article's first line)
     let text = boil(q, &lines.join("\n"), 1800);
-    Ok((!text.is_empty()).then(|| Facts { direct: answer_in(q, &text), text }))
+    Ok((!text.is_empty()).then(|| {
+        let direct = answer_in(q, &text);
+        Facts { source: direct.as_deref().and_then(|d| source_of(&text, d)), direct, text }
+    }))
 }
 
 /// DuckDuckGo's Instant Answer API: an answer it has outright (a sum, a conversion), or its summary of the subject
@@ -85,7 +186,8 @@ fn ddg(q: &str) -> Result<Option<Facts>, bool> {
         return Ok(None);
     }
     let direct = direct.or_else(|| answer_in(q, &text));
-    Ok(Some(Facts { direct, text }))
+    let source = v["Heading"].as_str().filter(|h| !h.is_empty() && direct.is_some()).map(String::from);
+    Ok(Some(Facts { direct, text, source }))
 }
 
 /// The web's facts for a question: Wikipedia and DuckDuckGo asked at once. The first with a sentence that answers it
@@ -94,7 +196,8 @@ pub fn facts(_app: &AppHandle, q: &str) -> Option<Facts> {
     let key = q.trim().to_lowercase();
     if let Some((at, text)) = SEEN.lock().unwrap().get(&key) {
         if at.elapsed() < Duration::from_secs(600) {
-            return Some(Facts { direct: answer_in(q, text), text: text.clone() });
+            let direct = answer_in(q, text);
+            return Some(Facts { source: direct.as_deref().and_then(|d| source_of(text, d)), direct, text: text.clone() });
         }
     }
     let t0 = Instant::now();
@@ -247,7 +350,7 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
     //  role; "who was Albert Einstein", "what is photosynthesis": asks what something is)
     let role = ["who is the ", "who was the ", "what is the ", "what's the ", "what was the ", "who's the "].iter().any(|r| ql.starts_with(r));
     let define = ql.starts_with("what is") || ql.starts_with("what are") || ql.starts_with("what's") || ql.contains("meaning") || ql.starts_with("define") || ql.starts_with("who is") || ql.starts_with("who was");
-    let mut best: Option<(f32, String)> = None;
+    let mut best: Option<(f32, String, Option<String>)> = None;
     for (rank, line) in text.lines().enumerate() {
         let body = line.split_once('\t').map_or(line, |(_, b)| b);
         for (k, s) in sentences(body).into_iter().enumerate() {
@@ -326,17 +429,21 @@ pub fn answer_in(q: &str, text: &str) -> Option<String> {
                 score += if at == 0 { 1.0 } else { 0.6 };
             }
             if best.as_ref().map_or(true, |b| score > b.0) {
-                best = Some((score, s.to_string()));
+                // (and the sentence after it, a little more of the answer, when it's a whole one of a reasonable length)
+                let next = sentences(body).get(k + 1).map(|n| unparen(n)).filter(|n| (20..=220).contains(&n.chars().count()) && n.ends_with(['.', '!'])
+                    && !n.contains("...") && n.starts_with(|c: char| c.is_uppercase() || c.is_ascii_digit()));
+                best = Some((score, s.to_string(), next));
             }
         }
     }
-    let (score, mut s) = best.filter(|b| b.0 >= 1.8)?;
+    let (score, mut s, next) = best.filter(|b| b.0 >= 1.8)?;
     // (the little marks results carry: "[1]", a trailing dash or colon)
     while let Some(a) = s.rfind('[').filter(|&a| s[a..].len() <= 5 && s.ends_with(']')) {
         s.truncate(a);
     }
     let s = s.trim().trim_end_matches([',', ';', ':', '-', '—']).trim().to_string();
     let s = if s.ends_with(['.', '!']) { s } else { s + "." };
+    let s = match next { Some(n) => format!("{s} {n}"), None => s };
     crate::log_line(&format!("web: answered from the results themselves (sure {score:.1})"));
     Some(s)
 }
