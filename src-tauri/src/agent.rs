@@ -1720,7 +1720,7 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
             let ask = if q.is_empty() { "Summarize what's on the user's screen in 3 or 4 sentences: what it is and the key points.".to_string() } else { q.clone() };
             let out = crate::ai::oneshot(
                 app,
-                "You are ULTRON. The user is asking about what's on their screen; its text is given below. Answer in plain spoken English, briefly and accurately, using only that text.",
+                "You are Sylver. The user is asking about what's on their screen; its text is given below. Answer in plain spoken English, briefly and accurately, using only that text.",
                 &format!("Screen text:\n{text}\n\nRequest: {ask}"),
                 170,
                 |_| {},
@@ -1736,7 +1736,7 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
             let days = kind.split_once(':').map(|x| x.1).unwrap_or("");
             let (h, m) = crate::skills::clock_after(*secs);
             let at = format!("{}:{:02} {}", if h % 12 == 0 { 12 } else { h % 12 }, m, if h < 12 { "AM" } else { "PM" });
-            let label = if what.trim().is_empty() { "ULTRON".to_string() } else { what.trim().chars().take(40).collect() };
+            let label = if what.trim().is_empty() { "Sylver".to_string() } else { what.trim().chars().take(40).collect() };
             let often = match days { "daily" => " every day", "weekdays" => " on weekdays", "weekends" => " at weekends", _ => "" };
             match crate::clock::add_alarm(h, m, &label, days) {
                 Ok(_) => {
@@ -1747,7 +1747,7 @@ fn exec(app: &AppHandle, cx: &mut Ctx, step: &Step) -> Result<String, String> {
                     crate::log_line(&format!("clock: couldn't add the alarm ({why}); ULTRON keeps it"));
                     let _ = app.emit_to("main", "timer", json!({ "secs": secs, "label": what, "kind": "alarm" }));
                     cx.say = Some(format!("I couldn't put it in the Clock app, so I'll ring it myself at {at}."));
-                    Ok(format!("Set a {at} alarm in ULTRON"))
+                    Ok(format!("Set a {at} alarm in Sylver"))
                 }
             }
         }

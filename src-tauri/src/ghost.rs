@@ -38,7 +38,7 @@ fn window(app: &AppHandle) -> Option<WebviewWindow> {
         return Some(w);
     }
     let w = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("ghost.html".into()))
-        .title("ULTRON cursor")
+        .title("Sylver cursor")
         .inner_size(W, H)
         .decorations(false)
         .transparent(true)

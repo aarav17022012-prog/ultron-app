@@ -200,7 +200,7 @@ pub fn pick(owner: Option<isize>, folder: bool) -> Vec<String> {
         let _ = (|| -> windows::core::Result<()> {
             let d: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
             d.SetOptions(d.GetOptions()? | FOS_FORCEFILESYSTEM | if folder { FOS_PICKFOLDERS } else { FOS_ALLOWMULTISELECT })?;
-            d.SetTitle(&windows::core::HSTRING::from(if folder { "Choose a folder for ULTRON to work with" } else { "Choose files for ULTRON to work with" }))?;
+            d.SetTitle(&windows::core::HSTRING::from(if folder { "Choose a folder for Sylver to work with" } else { "Choose files for Sylver to work with" }))?;
             d.SetOkButtonLabel(&windows::core::HSTRING::from("Connect"))?;
             d.Show(owner.map(|h| HWND(h as _)))?;
             let items = d.GetResults()?;

@@ -85,7 +85,7 @@ const TOOLS: &[(&str, &str, &str, &[&str])] = &[
 
 fn system_prompt() -> String {
     let mut s = String::from(
-        "You are ULTRON's task agent on the user's Windows PC. You complete the task by calling one tool per turn, as JSON: \
+        "You are Sylver's task agent on the user's Windows PC. You complete the task by calling one tool per turn, as JSON: \
 {\"step\": 2 to 6 words for the user about this step, \"tool\": name, \"with\": {...its details}}. After each call you get its result; then choose the next call. \
 Finish with done.\n\
 Rules:\n\

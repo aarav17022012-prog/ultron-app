@@ -488,7 +488,7 @@ pub fn run(app: &AppHandle, raw: &str) -> Reply {
         return talk("Running smoothly. What can I do for you?");
     }
     if t.contains("who are you") || t.contains("what are you") || t.contains("your name") {
-        return talk("I'm ULTRON. I run right here on your PC.");
+        return talk("I'm Sylver. I run right here on your PC.");
     }
     if t.contains("what can you do") || t == "help" {
         return talk("Open apps and sites, search, control music and volume, type for you, take screenshots, lock the PC.");

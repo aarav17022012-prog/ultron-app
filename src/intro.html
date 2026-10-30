@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Welcome to ULTRON</title>
+<title>Welcome to Sylver</title>
 <style>
 :root{--out:cubic-bezier(.16,1,.3,1); --in:cubic-bezier(.7,0,.84,0); --spring:cubic-bezier(.34,1.56,.64,1)}
 *{box-sizing:border-box}
@@ -115,19 +115,19 @@ html, body{margin:0; width:100%; height:100%; overflow:hidden; background:transp
   <div id="cap">Ask it anything, two ways.</div>
   <div id="cards">
     <div class="card a" id="cardA">
-      <div class="mn" id="mnA"><i class="dot"></i><span class="lab">ULTRON</span>
+      <div class="mn" id="mnA"><i class="dot"></i><span class="lab">SYLVER</span>
         <div class="body"><div class="inp"><span class="tx" id="typed"></span><i class="car"></i><span class="snd" id="snd"><svg viewBox="0 0 16 16"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg></span></div>
           <div class="rep" id="repA"></div></div></div>
       <h3>Type to it</h3><p>Click the notch and type. It does the rest.</p>
     </div>
     <div class="card b" id="cardB">
-      <div class="mn" id="mnB"><i class="dot"></i><span class="lab">ULTRON</span>
+      <div class="mn" id="mnB"><i class="dot"></i><span class="lab">SYLVER</span>
         <div class="body"><div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           <div class="rep" id="repB"></div></div></div>
       <h3>Talk to it</h3><p>Just say “Ultron” and ask out loud.</p>
     </div>
   </div>
-  <div class="c" id="mark"><svg viewBox="0 0 640 170"><text x="320" y="138" text-anchor="middle">ULTRON</text></svg></div>
+  <div class="c" id="mark"><svg viewBox="0 0 640 170"><text x="320" y="138" text-anchor="middle">SYLVER</text></svg></div>
   <div id="tag">Your assistant. Right here on your PC.</div>
   <canvas id="pet" width="500" height="500"></canvas>
   <button id="go">Get started</button>
@@ -274,7 +274,7 @@ async function play(){
   // and here it is, peeking in
   $('pet').classList.add('pop'); pet.hop = 1; pet.aim = [-.45, .1];
   tone(660, 0, .05); tone(990, .08, .035);
-  invoke('intro_say', {text:'Hi, I’m Ultron.'});
+  invoke('intro_say', {text:'Hi, I’m Sylver.'});
   await wait(1100);
   pet.aim = [-.1, 0];
   $('go').classList.add('on');

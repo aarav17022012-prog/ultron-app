@@ -490,7 +490,7 @@ fn app_name_of(h: HWND, lookup: &dyn Fn(&str) -> Option<String>) -> Option<Strin
         (exe, aumid) = process_identity(pid)?;
     }
     if exe.to_lowercase().ends_with(r"\explorer.exe") {
-        return Some("Ultron".into()); // the desktop and File Explorer
+        return Some("Sylver".into()); // the desktop and File Explorer
     }
     let key = key_for(Some(&exe), aumid.as_deref());
     Some(lookup(&key).or_else(|| file_description(&exe)).unwrap_or_else(|| exe_stem(&exe)))
@@ -663,10 +663,10 @@ pub fn start(app: AppHandle) {
                     }
                 }
                 let name = match class_name(fg).as_str() {
-                    "Progman" | "WorkerW" => "Ultron".to_string(),
+                    "Progman" | "WorkerW" => "Sylver".to_string(),
                     _ => cache
                         .entry(fg.0 as isize)
-                        .or_insert_with(|| app_name_of(fg, &|k| apps.name_for(k)).unwrap_or_else(|| "Ultron".into()))
+                        .or_insert_with(|| app_name_of(fg, &|k| apps.name_for(k)).unwrap_or_else(|| "Sylver".into()))
                         .clone(),
                 };
                 if name != last_name {

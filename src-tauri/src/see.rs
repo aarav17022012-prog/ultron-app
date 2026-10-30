@@ -155,7 +155,7 @@ pub fn ask(app: &AppHandle, jpeg: &[u8], question: &str) -> Option<String> {
     let url = format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(jpeg));
     let body = serde_json::json!({
         "messages": [
-            { "role": "system", "content": "You are ULTRON, looking at a screenshot of the user's screen. Answer in plain spoken English, briefly and accurately. Only describe what is actually visible." },
+            { "role": "system", "content": "You are Sylver, looking at a screenshot of the user's screen. Answer in plain spoken English, briefly and accurately. Only describe what is actually visible." },
             { "role": "user", "content": [ { "type": "image_url", "image_url": { "url": url } }, { "type": "text", "text": question } ] }
         ],
         "max_tokens": 280,

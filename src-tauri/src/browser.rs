@@ -38,7 +38,7 @@ pub fn show(app: &AppHandle, x: f64, y: f64, w: f64, h: f64, url: Option<String>
     let start = url.as_deref().and_then(parse).unwrap_or_else(|| Url::parse("https://www.google.com").unwrap());
     let handle = app.clone();
     let win = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(start))
-        .title("ULTRON Browser")
+        .title("Sylver Browser")
         .decorations(false)
         .shadow(false) // a shadow adds an invisible frame that made it overflow its box
         .resizable(false)

@@ -163,7 +163,7 @@ pub fn wall(app: &AppHandle, on: bool) -> Result<(), String> {
     }
     let layer = unsafe { wallpaper_layer() }.ok_or("Windows' wallpaper layer couldn't be found")?;
     let win = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("spatial.html".into()))
-        .title("ULTRON wallpaper")
+        .title("Sylver wallpaper")
         .visible(false)
         .focused(false)
         .skip_taskbar(true)

@@ -569,10 +569,10 @@ pub fn start(app: AppHandle) {
             let v = crate::router::vision_model();
             if config(&upgrade).brain == "smart" && !crate::see::available(&upgrade) {
                 let dir = data_dir(&upgrade).join("models");
-                let ok = model_path(&upgrade, v.file).is_some() || download(&upgrade, v.url, &dir.join(v.file), "Getting ULTRON's eyes", v.min).is_ok();
+                let ok = model_path(&upgrade, v.file).is_some() || download(&upgrade, v.url, &dir.join(v.file), "Getting Sylver's eyes", v.min).is_ok();
                 if let (true, Some((proj, url))) = (ok, v.mmproj) {
                     if model_path(&upgrade, proj).is_none() {
-                        let _ = download(&upgrade, url, &dir.join(proj), "Getting ULTRON's eyes", 500e6);
+                        let _ = download(&upgrade, url, &dir.join(proj), "Getting Sylver's eyes", 500e6);
                     }
                 }
             }
@@ -788,7 +788,7 @@ fn system_prompt(len: &str) -> String {
         "detailed" => "a few sentences, up to about 6, with real detail",
         _ => "one or two short sentences, under 30 words in all (usually just one)",
     };
-    format!("You are ULTRON, a sharp, warm, slightly witty assistant that lives in the menu bar of the user's Windows PC. \
+    format!("You are Sylver, a sharp, warm, slightly witty assistant that lives in the menu bar of the user's Windows PC. \
 You run on this computer and your replies are spoken aloud, so talk the way a relaxed, clever person talks out loud: contractions, natural rhythm, \
 {size}, plain spoken {tongue}, no lists, no headings, no emojis, no symbols you wouldn't say (a key word or two may be in **bold**: it's shown, not spoken). \
 Answer questions directly, correctly and helpfully. Be accurate: if you don't know or aren't sure, say so in a few words instead of guessing, \
@@ -923,7 +923,7 @@ pub(crate) fn cut_point(t: &str, n: usize) -> Option<usize> {
 fn thinking_messages(app: &AppHandle, user: &str) -> Vec<(String, String)> {
     let mut m = vec![(
         "system".to_string(),
-        "You are ULTRON, a sharp, warm assistant on the user's Windows PC. Your replies are spoken aloud. Think carefully and answer correctly and clearly in plain spoken English, no markdown, no lists. Keep it very short: one or two sentences, under 30 words; for maths, just the answer with one line of working. If you're not sure, say so instead of guessing. Never encourage violence, hatred or harm toward anyone."
+        "You are Sylver, a sharp, warm assistant on the user's Windows PC. Your replies are spoken aloud. Think carefully and answer correctly and clearly in plain spoken English, no markdown, no lists. Keep it very short: one or two sentences, under 30 words; for maths, just the answer with one line of working. If you're not sure, say so instead of guessing. Never encourage violence, hatred or harm toward anyone."
             .to_string(),
     )];
     let h = app.state::<Ai>().history.lock().unwrap().clone();
@@ -1278,7 +1278,7 @@ fn dish_of(q: &str) -> Option<String> {
 /// (The same words every time, so the brain can keep them ready: see `steps_ready`.)
 fn steps_system(app: &AppHandle) -> String {
     let who = crate::intro::user_name(app).map(|n| format!(" The user's name is {n}.")).unwrap_or_default();
-    format!("You are ULTRON, a sharp, warm assistant on the user's Windows PC. The user is asking for something with several parts: a recipe, how to do something, a list, ideas or a plan. \
+    format!("You are Sylver, a sharp, warm assistant on the user's Windows PC. The user is asking for something with several parts: a recipe, how to do something, a list, ideas or a plan. \
 Give the whole answer, tight and practical. Start with one short friendly line, then the parts on separate short lines, numbered 1. 2. 3. \
 For a recipe: first one line starting with 'Ingredients:' that lists them with amounts, then the numbered steps. \
 At most 8 steps or items, each under 20 words. For a story or a poem, just write it, under 120 words. \

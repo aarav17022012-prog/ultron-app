@@ -2021,11 +2021,11 @@ fn main() {
             rec::hotkeys(handle.clone());
             spotkey::start(handle.clone());
 
-            let quit_item = MenuItem::with_id(app, "quit", "Quit ULTRON", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit Sylver", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_item])?;
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("ULTRON")
+                .tooltip("Sylver")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, e| {
