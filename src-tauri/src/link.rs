@@ -25,6 +25,7 @@ pub const SERVICE: &str = "_ultron-link._tcp.local.";
 pub const PATH: &str = "/";
 const MIN_VERSION: i64 = 1;
 const MAX_VERSION: i64 = 1;
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(8);
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Phone {
@@ -62,6 +63,26 @@ pub fn state() -> State {
 fn set_state(app: &AppHandle, s: State) {
     *STATE.lock().unwrap() = Some(s.clone());
     let _ = app.emit_to("main", "link-state", s);
+}
+
+fn clear_connecting_state(current: &mut Option<State>, phone: &str) -> bool {
+    if current.as_ref().is_some_and(|s| s.state == "connecting" && s.phone == phone) {
+        *current = Some(State { state: "off".into(), ..Default::default() });
+        true
+    } else {
+        false
+    }
+}
+
+fn reset_connecting(app: &AppHandle, phone: &str) {
+    let off = State { state: "off".into(), ..Default::default() };
+    let cleared = {
+        let mut current = STATE.lock().unwrap();
+        clear_connecting_state(&mut current, phone)
+    };
+    if cleared {
+        let _ = app.emit_to("main", "link-state", off);
+    }
 }
 
 fn data(app: &AppHandle) -> std::path::PathBuf {
@@ -123,44 +144,60 @@ fn version(theirs: &Value) -> Option<i64> {
 pub fn connect(app: &AppHandle, phone: &Phone) -> Result<State, String> {
     close();
     set_state(app, State { state: "connecting".into(), phone: phone.name.clone(), version: 0 });
-    let host = if phone.host.contains(':') { format!("[{}]", phone.host) } else { phone.host.clone() };
-    let url = format!("ws://{host}:{}{PATH}", phone.port);
-    let stream = TcpStream::connect_timeout(&format!("{host}:{}", phone.port).parse().map_err(|_| "bad address".to_string())?, Duration::from_secs(4)).map_err(|e| {
-        set_state(app, State { state: "off".into(), ..Default::default() });
-        format!("couldn't reach the phone ({e})")
-    })?;
-    let _ = stream.set_nodelay(true);
-    let (mut ws, _) = tungstenite::client(url.as_str(), stream).map_err(|e| format!("the phone didn't take the connection ({e})"))?;
-    let me = json!({"type": "hello", "deviceId": device_id(app), "deviceName": format!("{}'s laptop", whoami()), "kind": "laptop", "protocolVersion": MAX_VERSION, "minProtocolVersion": MIN_VERSION});
-    ws.send(tungstenite::Message::Text(me.to_string().into())).map_err(|e| e.to_string())?;
-    // their hello first (anything else before it is dropped)
-    let theirs = loop {
-        match ws.read().map_err(|e| e.to_string())? {
-            tungstenite::Message::Text(t) => match serde_json::from_str::<Value>(&t) {
-                Ok(v) if v["type"] == "hello" && v["deviceId"].as_str().is_some_and(|s| !s.is_empty()) && v["protocolVersion"].is_i64() => break v,
-                _ => continue,
-            },
-            tungstenite::Message::Close(_) => return Err("the phone closed the connection".into()),
-            _ => continue,
-        }
-    };
-    let Some(v) = version(&theirs) else {
-        let _ = ws.send(tungstenite::Message::Text(json!({"type": "error", "code": "unsupported_version", "message": format!("laptop speaks {MIN_VERSION}..{MAX_VERSION}")}).to_string().into()));
-        let _ = ws.close(None);
-        set_state(app, State { state: "off".into(), ..Default::default() });
-        return Err("the phone speaks a different version of the link".into());
-    };
-    let name = theirs["deviceName"].as_str().filter(|s| !s.is_empty()).unwrap_or(&phone.name).to_string();
-    let phone_id = theirs["deviceId"].as_str().unwrap_or("").to_string();
-    let _ = ws.get_ref().set_read_timeout(Some(Duration::from_millis(50)));
-    let (tx, rx) = channel::<Out>();
-    let waiting: std::sync::Arc<Mutex<HashMap<String, Sender<Value>>>> = Default::default();
-    *LIVE.lock().unwrap() = Some(Live { out: tx, waiting: waiting.clone() });
-    let st = State { state: "connected".into(), phone: name, version: v };
-    set_state(app, st.clone());
-    let app2 = app.clone();
-    std::thread::spawn(move || pump(app2, ws, rx, waiting, phone_id));
-    Ok(st)
+    let result: Result<State, String> = (|| {
+        let host = if phone.host.contains(':') { format!("[{}]", phone.host) } else { phone.host.clone() };
+        let url = format!("ws://{host}:{}{PATH}", phone.port);
+        let stream = TcpStream::connect_timeout(&format!("{host}:{}", phone.port).parse().map_err(|_| "bad address".to_string())?, Duration::from_secs(4))
+            .map_err(|e| format!("couldn't reach the phone ({e})"))?;
+        stream.set_read_timeout(Some(CONNECT_TIMEOUT)).map_err(|e| e.to_string())?;
+        stream.set_write_timeout(Some(CONNECT_TIMEOUT)).map_err(|e| e.to_string())?;
+        let _ = stream.set_nodelay(true);
+        let (mut ws, _) = tungstenite::client(url.as_str(), stream).map_err(|e| format!("the phone didn't take the connection ({e})"))?;
+        let me = json!({"type": "hello", "deviceId": device_id(app), "deviceName": format!("{}'s laptop", whoami()), "kind": "laptop", "protocolVersion": MAX_VERSION, "minProtocolVersion": MIN_VERSION});
+        ws.send(tungstenite::Message::Text(me.to_string().into())).map_err(|e| e.to_string())?;
+        // their hello first (anything else before it is dropped)
+        let hello_deadline = Instant::now() + CONNECT_TIMEOUT;
+        let theirs = loop {
+            let remaining = hello_deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err("the phone didn't say hello in time.".into());
+            }
+            ws.get_ref().set_read_timeout(Some(remaining)).map_err(|e| e.to_string())?;
+            match ws.read() {
+                Ok(tungstenite::Message::Text(t)) => match serde_json::from_str::<Value>(&t) {
+                    Ok(v) if v["type"] == "hello" && v["deviceId"].as_str().is_some_and(|s| !s.is_empty()) && v["protocolVersion"].is_i64() => break v,
+                    _ => continue,
+                },
+                Ok(tungstenite::Message::Close(_)) => return Err("the phone closed the connection".into()),
+                Ok(_) => continue,
+                Err(tungstenite::Error::Io(e)) if matches!(e.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut) => {
+                    return Err("the phone didn't say hello in time.".into());
+                }
+                Err(e) => return Err(e.to_string()),
+            }
+        };
+        let Some(v) = version(&theirs) else {
+            let _ = ws.send(tungstenite::Message::Text(json!({"type": "error", "code": "unsupported_version", "message": format!("laptop speaks {MIN_VERSION}..{MAX_VERSION}")}).to_string().into()));
+            let _ = ws.close(None);
+            return Err("the phone speaks a different version of the link".into());
+        };
+        let name = theirs["deviceName"].as_str().filter(|s| !s.is_empty()).unwrap_or(&phone.name).to_string();
+        let phone_id = theirs["deviceId"].as_str().unwrap_or("").to_string();
+        ws.get_ref().set_read_timeout(Some(Duration::from_millis(50))).map_err(|e| e.to_string())?;
+        ws.get_ref().set_write_timeout(None).map_err(|e| e.to_string())?;
+        let (tx, rx) = channel::<Out>();
+        let waiting: std::sync::Arc<Mutex<HashMap<String, Sender<Value>>>> = Default::default();
+        *LIVE.lock().unwrap() = Some(Live { out: tx, waiting: waiting.clone() });
+        let st = State { state: "connected".into(), phone: name, version: v };
+        set_state(app, st.clone());
+        let app2 = app.clone();
+        std::thread::spawn(move || pump(app2, ws, rx, waiting, phone_id));
+        Ok(st)
+    })();
+    if result.is_err() {
+        reset_connecting(app, &phone.name);
+    }
+    result
 }
 
 /// The link's own thread: what's to be sent goes out, what comes in is answered or handed to whoever waits for it,
@@ -311,5 +348,17 @@ mod tests {
         assert_eq!(version(&json!({"protocolVersion": 1})), Some(1));
         assert_eq!(version(&json!({"protocolVersion": 3, "minProtocolVersion": 1})), Some(1));
         assert_eq!(version(&json!({"protocolVersion": 3, "minProtocolVersion": 2})), None);
+    }
+
+    #[test]
+    fn failed_attempt_clears_connecting_but_preserves_connected_state() {
+        let mut current = Some(State { state: "connecting".into(), phone: "phone".into(), version: 0 });
+        assert!(clear_connecting_state(&mut current, "phone"));
+        assert_eq!(current.unwrap().state, "off");
+
+        let connected = State { state: "connected".into(), phone: "phone".into(), version: 1 };
+        let mut current = Some(connected.clone());
+        assert!(!clear_connecting_state(&mut current, "phone"));
+        assert_eq!(current.unwrap().state, connected.state);
     }
 }

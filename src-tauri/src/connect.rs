@@ -76,6 +76,10 @@ fn service(id: &str) -> Result<&'static Service, String> {
     SERVICES.iter().find(|s| s.id == id).ok_or_else(|| format!("No app called {id} to connect to."))
 }
 
+fn authorization_header(s: &Service, key: &str) -> Option<String> {
+    (s.id != "discord").then(|| format!("Bearer {key}"))
+}
+
 /// One request to a connected service: its own address with the path given, and its key.
 fn call_with(s: &Service, key: &str, addr: &str, method: &str, path: &str, body: Option<&Value>) -> Result<(u16, String), String> {
     if path.contains("://") || path.contains('@') || (!path.is_empty() && !path.starts_with('/')) {
@@ -86,8 +90,8 @@ fn call_with(s: &Service, key: &str, addr: &str, method: &str, path: &str, body:
         return Err(format!("{}'s address isn't a web address.", s.name));
     }
     let mut req = crate::net::agent(Duration::from_secs(20)).request(method, &format!("{base}{path}")).set("User-Agent", "ULTRON");
-    if s.id != "discord" {
-        req = req.set("Authorization", &format!("Bearer {key}"));
+    if let Some(value) = authorization_header(s, key) {
+        req = req.set("Authorization", &value);
     }
     for (k, v) in s.extra {
         req = req.set(k, v);
@@ -277,4 +281,16 @@ pub fn names_linked_app(text: &str) -> bool {
         l.contains(&format!(" {a} ")) || l.contains(&format!(" {a},")) || (first.len() >= 4 && (l.contains(&format!(" {first} ")) || l.contains(&format!(" {first},"))))
     });
     named && [" and ", " then ", ", then", "; "].iter().any(|w| l.contains(w))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn authorization_uses_bearer_key_except_for_discord() {
+        assert_eq!(authorization_header(&SERVICES[0], "github-secret"), Some("Bearer github-secret".into()));
+        assert_eq!(authorization_header(&SERVICES[4], "ha-secret"), Some("Bearer ha-secret".into()));
+        assert_eq!(authorization_header(&SERVICES[5], "unused"), None);
+    }
 }
