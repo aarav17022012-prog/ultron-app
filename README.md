@@ -11,7 +11,9 @@ what they draw pass straight through to the desktop.
   - When the notch is closed it only reacts to “Ultron …” (turn off *Wake word* in Settings to react to everything).
   - Commands: open apps / sites / folders, search Google or YouTube, “play X (on Spotify)”, pause / resume /
     next / previous, volume up / down / to N% / mute, “type …” into the focused app, screenshot, show desktop,
-    lock the PC, close an app, time and date. Anything else is reported back, never guessed at.
+    lock the PC, close an app, time and date. Set alarms with a clock time (“set an alarm for 7:30 pm”) or a
+    duration (“set an alarm in 10 minutes”); spoken number times such as “seven thirty pm” and “tomorrow morning”
+    are understood too. Anything else is reported back, never guessed at.
   - Replies are spoken with an on-device Windows voice (toggle *Speak replies*).
 - **Lyrics:** follows whatever Windows reports as playing (Spotify, browsers, media apps) with album art,
   play / pause / skip / seek, and time-synced lyrics from LRCLIB (free, no key).
@@ -23,6 +25,9 @@ what they draw pass straight through to the desktop.
 - File / Edit / View / Window menus act on the app you were using (Save, Copy, Zoom, Minimize, snap, …);
   Go opens folders; the ULTRON menu has Settings, Task Manager, Lock Screen, and Quit.
 - Registered as a Windows app bar, so maximized windows start below it. It slides away for fullscreen apps.
+- The taskbar wheel opens from its chevron or configured shortcut. Use **Up/Down** to choose apps or windows,
+  **Right** to enter an app’s open windows, **Left** to return, **Enter** to open/focus, and **Esc** to close.
+- Sylver’s Start/search opens with **Ctrl+Space**; when selected in Settings, the **Windows key** opens it too.
 
 ## Building
 Needs Rust, Node, and the VS C++ Build Tools (its bundled CMake is used for whisper.cpp).

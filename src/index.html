@@ -4070,7 +4070,7 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
     <button class="st clock" id="clock" title="Calendar" aria-label="Calendar"></button>
   </div>
 </header>
-<div class="wheel" id="wheel" aria-label="Taskbar"><div class="wh-tab" id="whTab" role="button" aria-label="Open the taskbar wheel"><svg viewBox="0 0 16 8"><path d="M2 2.5L8 6L14 2.5"/></svg></div><div class="wh-body" id="whBody">
+<div class="wheel" id="wheel" aria-label="Taskbar" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Enter Escape" title="Up/Down: choose an app or window · Right: view an app's windows · Left: return · Enter: open · Esc: close"><div class="wh-tab" id="whTab" role="button" aria-label="Open the taskbar wheel"><svg viewBox="0 0 16 8"><path d="M2 2.5L8 6L14 2.5"/></svg></div><div class="wh-body" id="whBody">
   <div class="wh-tray glass" id="whTray"><i class="gw"></i><div class="wh-pods" id="whPods"></div></div>
   <div class="wh-disc glass" id="whDisc"><i class="gw"></i><div class="wh-hubbg"></div></div>
   <div class="wh-rim" id="whRim"></div>
@@ -10851,7 +10851,7 @@ function whRender(to, grow){
   if (WH.mode === 'wins' && (q || !DK.wins.some(w => w.launch === WH.only))){ WH.mode = 'open'; to = to || 'active'; }
   WH.items = whItems();
   const n = WH.items.length;
-  let i = to === 'first' ? WH.mid : to === 'active' ? WH.items.findIndex(x => x.act) : WH.items.findIndex(x => x.key === keep);
+  let i = to === 'first' ? WH.mid : to === 'active' ? WH.items.findIndex(x => x.act) : to === 'app' ? WH.items.findIndex(x => x.launch === WH.only) : WH.items.findIndex(x => x.key === keep);
   if (i < 0) i = to === 'active' ? Math.floor((n - 1) / 2) : Math.min(WH.sel, n - 1);
   WH.sel = Math.max(0, i);
   wheel.classList.toggle('wins', WH.mode === 'wins');
@@ -11004,8 +11004,18 @@ function whSpin(by){
   const to = Math.max(0, Math.min(n - 1, WH.sel + by)); if (to === WH.sel) return;
   WH.dir = by > 0 ? 1 : -1; WH.sel = to; whName(); whPlace(); whIcons();
 }
+function whEnterWindows(){
+  if (!WH.open || WH.mode !== 'open' || $('whQ').value.trim()) return;
+  const it = WH.items[WH.sel];
+  if (!it || it.kind !== 'app' || it.g.wins.length < 2) return;
+  WH.mode = 'wins'; WH.only = it.launch; whRender('first', true);
+}
+function whBack(){
+  if (WH.mode !== 'wins') return;
+  WH.mode = 'open'; whRender('app', true); WH.only = '';
+}
 // a bead is pressed: go to that window; an app with several shows them on the rim; an app that isn't open, opens
-function whAct(i){
+function whAct(i, keyboard = false){
   const it = WH.items[i]; if (!it) return;
   WH.actAt = performance.now();                              // (see dockWins: the windows changing now mustn't turn it)
   WH.dir = Math.sign(i - WH.sel); WH.sel = i; whName(); whPlace();
@@ -11016,7 +11026,7 @@ function whAct(i){
   else if (it.kind === 'win'){ invoke('dock_act', {id:it.w.id, what:'focus'}); done(); }
   else if (!it.g.wins.length){ invoke('launch', {target:it.launch}); done(); }
   else if (it.g.wins.length > 1){ WH.mode = 'wins'; WH.only = it.launch; whRender('first', true); }
-  else { const w = it.g.wins[0]; invoke('dock_act', {id:w.id, what:w.active && !w.min ? 'min' : 'focus'}); done(); }
+  else { const w = it.g.wins[0]; invoke('dock_act', {id:w.id, what:!keyboard && w.active && !w.min ? 'min' : 'focus'}); done(); }
 }
 function whTile(){
   const b = $('whTile');
@@ -11152,7 +11162,7 @@ wheel.addEventListener('click', e => {
   else if (e.target.closest('#whMas')){ whClose(); closeDD(); setOpen(true); if (activeTab !== 'assistant') selectTab('assistant'); setTimeout(() => $('askIn').focus({preventScroll:true}), 380); }
   else if (e.target.closest('#whTile')) whTile();
   else if (e.target.closest('#whGroups')) whTrayShow(!WH.tray);
-  else if (e.target.closest('#whBack')){ WH.mode = 'open'; whRender('active', true); }
+  else if (e.target.closest('#whBack')) whBack();
 });
 wheel.addEventListener('auxclick', e => {                    // (the middle button on a bead closes its window, or all of that app's)
   const b = e.target.closest('.wh-b'); if (!b || e.button !== 1) return;
@@ -11172,11 +11182,30 @@ $('whPods').addEventListener('pointerover', e => { const p = e.target.closest('.
 //  no longer match shrink away; see .wheel.qflip)
 $('whQ').addEventListener('input', () => { wheel.classList.add('qflip'); whRender('first', true); clearTimeout(WH.qfT); WH.qfT = setTimeout(() => wheel.classList.remove('qflip'), 560); });
 $('whQ').addEventListener('keydown', e => {
-  e.stopPropagation();
-  if (e.key === 'Enter') whAct(WH.sel);
-  else if (e.key === 'Escape'){ if ($('whQ').value){ $('whQ').value = ''; whRender('active', true); } else whClose(); }
-  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); whSpin(1); }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); whSpin(-1); }
+  if (e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); whAct(WH.sel, true); }
+  else if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); whClose(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault(); e.stopPropagation(); whSpin(e.key === 'ArrowDown' ? 1 : -1);
+  } else if (e.key === 'ArrowRight' && !$('whQ').value.trim()){
+    e.preventDefault(); e.stopPropagation(); whEnterWindows();
+  } else if (e.key === 'ArrowLeft' && WH.mode === 'wins'){
+    e.preventDefault(); e.stopPropagation(); whBack();
+  }
+});
+addEventListener('keydown', e => {
+  if (!WH.open || e.defaultPrevented) return;
+  if (e.target === $('whQ') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault(); e.stopPropagation(); whSpin(e.key === 'ArrowDown' ? 1 : -1);
+  } else if (e.key === 'ArrowRight'){
+    e.preventDefault(); e.stopPropagation(); whEnterWindows();
+  } else if (e.key === 'ArrowLeft'){
+    e.preventDefault(); e.stopPropagation(); if (WH.mode === 'wins') whBack();
+  } else if (e.key === 'Enter'){
+    e.preventDefault(); e.stopPropagation(); whAct(WH.sel, true);
+  } else if (e.key === 'Escape'){
+    e.preventDefault(); e.stopPropagation(); whClose();
+  }
 });
 addEventListener('pointerdown', e => { if (WH.open && !e.target.closest('#wheel') && !e.target.closest('#whMenu')) whClose(); });
 addEventListener('resize', () => { if (DK.on) whGeom(); });

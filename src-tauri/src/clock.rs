@@ -21,6 +21,7 @@ $TP = [System.Windows.Automation.TogglePattern]::Pattern; $SP = [System.Windows.
 function Win() { foreach ($w in $A::RootElement.FindAll($T::Children, $C::TrueCondition)) { if ($w.Current.Name -eq 'Clock' -and $w.Current.ClassName -eq 'ApplicationFrameWindow') { return $w } }; $null }
 function Id($el, $id) { $el.FindFirst($T::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::AutomationIdProperty, $id))) }
 function Named($el, $n) { $el.FindFirst($T::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $n))) }
+function AlarmRows($w) { $list = Id $w 'AlarmsScrollViewer'; if ($list) { return $list.FindAll($T::Children, $C::TrueCondition) }; @() }
 # (PowerShell's names ignore case, and a function sees its caller's: nothing here may be called $t, $a or $c)
 function WaitFor($sb, $ms) { $sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.ElapsedMilliseconds -lt $ms) { $r = & $sb; if ($r) { return $r }; Start-Sleep -Milliseconds 150 }; $null }
 function Done($s) { Write-Output $s; exit }
@@ -30,6 +31,8 @@ if (-not $w) { Done 'fail|Clock did not open' }
 $nav = WaitFor { Id $w 'AlarmButton' } 8000
 if (-not $nav) { Done 'fail|no alarm page' }
 try { $nav.GetCurrentPattern($SP).Select() } catch { try { $nav.GetCurrentPattern($IP).Invoke() } catch {} }
+$before = @(AlarmRows $w)
+$beforeMatches = @($before | Where-Object { $_.Current.Name -and $_.Current.Name.IndexOf($Label, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 }).Count
 $add = WaitFor { Id $w 'AddAlarmButton' } 6000
 if (-not $add) { Done 'fail|no add button' }
 $add.GetCurrentPattern($IP).Invoke()
@@ -61,12 +64,14 @@ if ($Days -and $Days -ne 'once') {
   }
 }
 (Id $w 'PrimaryButton').GetCurrentPattern($IP).Invoke()
-Start-Sleep -Milliseconds 900
-$list = Id $w 'AlarmsScrollViewer'
-$seen = $false
-if ($list) { foreach ($i in $list.FindAll($T::Children, $C::TrueCondition)) { if ($i.Current.Name -like "*$Label*") { $seen = $true } } }
+$seen = WaitFor {
+  $rows = @(AlarmRows $w)
+  $found = @($rows | Where-Object { $_.Current.Name -and $_.Current.Name.IndexOf($Label, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 })
+  if ($rows.Count -gt $before.Count -and $found.Count -gt $beforeMatches) { return $true }
+  $null
+} 6000
 try { $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() } catch {}
-if ($seen) { Done "ok|$want" } else { Done "ok?|$want" }
+if ($seen) { Done "ok|$want" } else { Done 'fail|Clock did not confirm the new alarm' }
 "#;
 
 /// Add an alarm to Windows' Clock at `hour`:`minute` (24-hour), named `label`, repeating on `days`
@@ -100,7 +105,7 @@ pub fn add_alarm(hour: u32, minute: u32, label: &str, days: &str) -> Result<Stri
     let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
     crate::log_line(&format!("clock: {} (took {} ms)", text.lines().last().unwrap_or(""), t0.elapsed().as_millis()));
     match text.lines().last().unwrap_or("").split_once('|') {
-        Some(("ok", t)) | Some(("ok?", t)) => Ok(t.to_string()),
+        Some(("ok", t)) => Ok(t.to_string()),
         Some((_, why)) => Err(why.to_string()),
         None => Err(String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("Clock couldn't be worked").to_string()),
     }

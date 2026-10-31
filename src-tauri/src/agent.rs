@@ -565,10 +565,10 @@ pub fn parse_step(piece: &str) -> Step {
             Some(i) if l.starts_with("remind") => (&src[..i], src[i + 4..].to_string()),
             _ => (src, String::new()),
         };
-        let secs = if when.contains(" at ") || l.starts_with("set an alarm") || l.starts_with("wake me") {
-            crate::skills::until_clock(when)
+        let secs = if when.contains(" at ") {
+            crate::skills::until_clock(when).or_else(|| crate::skills::duration(when))
         } else {
-            crate::skills::duration(when)
+            crate::skills::duration(when).or_else(|| crate::skills::until_clock(when))
         };
         if let Some(secs) = secs {
             let kind = if l.starts_with("remind") || l.contains("reminder") { "reminder" } else if l.contains("alarm") || l.starts_with("wake") { "alarm" } else { "timer" };
@@ -2141,6 +2141,34 @@ mod tests {
         }
         for (site, q) in [("amazon", "wireless headphones under 2000 rupees"), ("flipkart", "the cheapest gaming mouse"), ("amazon", "best rated laptop below 50k"), ("youtube", "lofi beats")] {
             println!("{site} {q:?} -> {:?}", site_url(site, q));
+        }
+    }
+
+    #[test]
+    fn alarm_phrases_distinguish_durations_and_clock_times() {
+        for (phrase, expected_secs) in [
+            ("set an alarm in 10 minutes", 600),
+            ("set an alarm for 10 minutes", 600),
+            ("set an alarm for seven minutes", 420),
+            ("wake me up in an hour", 3600),
+        ] {
+            match parse_step(phrase) {
+                Step::Timer(secs, _, kind) => {
+                    assert_eq!(secs, expected_secs, "{phrase}");
+                    assert_eq!(kind, "alarm", "{phrase}");
+                }
+                other => panic!("{phrase} parsed as {other:?}"),
+            }
+        }
+
+        for phrase in ["set an alarm at seven thirty pm", "set an alarm for 7:30 pm", "set an alarm for 7 tomorrow morning"] {
+            match parse_step(phrase) {
+                Step::Timer(secs, _, kind) => {
+                    assert!((1..=86400).contains(&secs), "{phrase}");
+                    assert_eq!(kind, "alarm", "{phrase}");
+                }
+                other => panic!("{phrase} parsed as {other:?}"),
+            }
         }
     }
 }

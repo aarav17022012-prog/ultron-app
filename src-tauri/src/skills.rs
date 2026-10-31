@@ -22,7 +22,9 @@ fn lower(s: &str) -> String {
 pub fn duration(s: &str) -> Option<u64> {
     let l = lower(s).replace("half an hour", "30 minutes").replace("an hour and a half", "90 minutes").replace("a minute", "1 minute")
         .replace("an hour", "1 hour").replace("a second", "1 second").replace("a couple of", "2").replace("a few", "3");
-    let words = [("one", 1.0), ("two", 2.0), ("three", 3.0), ("four", 4.0), ("five", 5.0), ("ten", 10.0), ("fifteen", 15.0), ("twenty", 20.0), ("thirty", 30.0), ("forty", 40.0), ("fifty", 50.0), ("sixty", 60.0)];
+    let words = [("one", 1.0), ("two", 2.0), ("three", 3.0), ("four", 4.0), ("five", 5.0), ("six", 6.0), ("seven", 7.0), ("eight", 8.0), ("nine", 9.0),
+        ("ten", 10.0), ("eleven", 11.0), ("twelve", 12.0), ("thirteen", 13.0), ("fourteen", 14.0), ("fifteen", 15.0), ("sixteen", 16.0), ("seventeen", 17.0),
+        ("eighteen", 18.0), ("nineteen", 19.0), ("twenty", 20.0), ("thirty", 30.0), ("forty", 40.0), ("fifty", 50.0), ("sixty", 60.0)];
     let toks: Vec<&str> = l.split(|c: char| c.is_whitespace() || c == ',').filter(|t| !t.is_empty()).collect();
     let mut total = 0.0;
     let mut i = 0;
@@ -41,35 +43,56 @@ pub fn duration(s: &str) -> Option<u64> {
     (total >= 1.0).then_some(total as u64)
 }
 
-/// "7 pm", "7:30am", "19:00" -> seconds from now until then (today or tomorrow)
+fn clock_number(s: &str) -> Option<u32> {
+    s.parse().ok().or_else(|| {
+        [
+            ("zero", 0), ("one", 1), ("two", 2), ("three", 3), ("four", 4), ("five", 5), ("six", 6), ("seven", 7), ("eight", 8), ("nine", 9),
+            ("ten", 10), ("eleven", 11), ("twelve", 12), ("thirteen", 13), ("fourteen", 14), ("fifteen", 15), ("sixteen", 16), ("seventeen", 17),
+            ("eighteen", 18), ("nineteen", 19), ("twenty", 20), ("thirty", 30), ("forty", 40), ("fifty", 50),
+        ]
+        .iter()
+        .find(|(word, _)| *word == s)
+        .map(|(_, value)| *value)
+    })
+}
+
+/// "7 pm", "seven thirty", "7:30am", "19:00" -> seconds from now until then
 pub fn until_clock(s: &str) -> Option<u64> {
     use windows::Win32::System::SystemInformation::GetLocalTime;
-    let l = lower(s).replace('.', "").replace([',', '!', '?', ';'], " ");
+    let l = lower(s).replace("a.m.", "am").replace("p.m.", "pm").replace([',', '!', '?', ';', '.'], " ");
     let t = l.split_whitespace().collect::<Vec<_>>();
+    let daypart = if t.iter().any(|w| ["pm", "evening", "tonight", "afternoon"].contains(w)) { Some(true) }
+        else if t.iter().any(|w| ["am", "morning"].contains(w)) { Some(false) }
+        else { None };
     for (i, w) in t.iter().enumerate() {
         let (num, mut ampm) = if let Some(n) = w.strip_suffix("am") { (n, Some(false)) } else if let Some(n) = w.strip_suffix("pm") { (n, Some(true)) } else { (*w, None) };
         if ampm.is_none() {
-            ampm = match t.get(i + 1) {
-                Some(&"am") => Some(false),
-                Some(&"pm") => Some(true),
-                _ => None,
-            };
+            let next = t.get(i + 1).copied().unwrap_or("");
+            let after_next = t.get(i + 2).copied().unwrap_or("");
+            ampm = if next == "am" || next == "pm" { Some(next == "pm") }
+                else if after_next == "am" || after_next == "pm" { Some(after_next == "pm") }
+                else { daypart };
         }
-        // "11:57", and the same said or cleaned up as "11 57 pm" or "1157 pm" (a colon is often lost on the way)
         let next = t.get(i + 1).copied().unwrap_or("");
         let after_next = t.get(i + 2).copied().unwrap_or("");
-        let (h, m) = match num.split_once(':') {
-            Some((h, m)) => (h.parse::<u32>().ok()?, m.parse::<u32>().ok()?),
-            None => match num.parse::<u32>() {
-                Ok(h) if h < 24 && next.len() == 2 && next.parse::<u32>().is_ok_and(|m| m < 60) && matches!(after_next, "am" | "pm" | "o'clock") => {
-                    ampm = match after_next { "am" => Some(false), "pm" => Some(true), _ => None };
-                    (h, next.parse::<u32>().unwrap_or(0))
-                }
-                Ok(hm) if (100..=2359).contains(&hm) && hm % 100 < 60 && ampm.is_some() && (3..=4).contains(&num.len()) => (hm / 100, hm % 100),
-                Ok(h) if h < 24 && (ampm.is_some() || l.contains("o'clock")) => (h, 0),
-                _ => continue,
-            },
+        let parsed = if let Some((h, m)) = num.split_once(':') {
+            h.parse::<u32>().ok().zip(m.parse::<u32>().ok())
+        } else if let Some(h) = clock_number(num) {
+            let spoken_minute = clock_number(next).filter(|m| *m < 60);
+            if let Some(m) = spoken_minute.filter(|_| matches!(after_next, "am" | "pm") || daypart.is_some()) {
+                Some((h, m))
+            } else if num.bytes().all(|b| b.is_ascii_digit()) && (3..=4).contains(&num.len()) {
+                num.parse::<u32>().ok().and_then(|hm| ((100..=2359).contains(&hm) && hm % 100 < 60).then_some((hm / 100, hm % 100)))
+            } else {
+                let cue = i > 0 && matches!(t[i - 1], "at" | "for");
+                let duration_unit = next.starts_with("sec") || next.starts_with("min") || next.starts_with("hour") || next.starts_with("hr");
+                (h < 24 && !duration_unit && (ampm.is_some() || l.contains("o'clock") || cue || daypart.is_some())).then_some((h, 0))
+            }
+        } else {
+            None
         };
+        let Some((h, m)) = parsed else { continue };
+        if m >= 60 || h > 23 || (ampm.is_some() && !(1..=12).contains(&h)) { continue; }
         let mut h = h % 24;
         match ampm {
             Some(true) if h < 12 => h += 12,
@@ -79,7 +102,10 @@ pub fn until_clock(s: &str) -> Option<u64> {
         let st = unsafe { GetLocalTime() };
         let now = st.wHour as i64 * 3600 + st.wMinute as i64 * 60 + st.wSecond as i64;
         let mut d = h as i64 * 3600 + m as i64 * 60 - now;
-        if d <= 0 {
+        if t.contains(&"tomorrow") {
+            d += 86400;
+        } else if d <= 0 {
+            if t.contains(&"today") { return None; }
             d += 86400;
         }
         return Some(d as u64);
@@ -87,12 +113,13 @@ pub fn until_clock(s: &str) -> Option<u64> {
     None
 }
 
-/// The time of day `secs` from now, as hour (0-23) and minute.
+/// The time of day `secs` from now, as hour (0-23) and minute, rounded up to Clock's minute precision.
 pub fn clock_after(secs: u64) -> (u32, u32) {
     use windows::Win32::System::SystemInformation::GetLocalTime;
     let st = unsafe { GetLocalTime() };
-    let at = (st.wHour as u64 * 3600 + st.wMinute as u64 * 60 + st.wSecond as u64 + secs) % 86400;
-    ((at / 3600) as u32, (at % 3600 / 60) as u32)
+    let now = st.wHour as u64 * 3600 + st.wMinute as u64 * 60 + st.wSecond as u64;
+    let minute = now.saturating_add(secs).saturating_add(59) / 60 % 1440;
+    ((minute / 60) as u32, (minute % 60) as u32)
 }
 
 #[cfg(test)]
@@ -109,10 +136,13 @@ mod clock_tests {
         assert_eq!(at("set an alarm for 11:57 pm"), (23, 57));
         assert_eq!(at("set an alarm for 11 57 pm"), (23, 57));
         assert_eq!(at("set an alarm for 1157 pm"), (23, 57));
+        assert_eq!(at("set an alarm for seven thirty pm"), (19, 30));
         assert_eq!(at("wake me up at 6 am"), (6, 0));
         assert_eq!(at("set an alarm for 7:05am"), (7, 5));
         assert_eq!(at("set an alarm for 12 pm"), (12, 0));
         assert_eq!(at("set an alarm for 12 30 am"), (0, 30));
+        assert_eq!(at("set an alarm for 7 tomorrow morning"), (7, 0));
+        assert!(super::until_clock("set an alarm for 7:60 pm").is_none());
     }
 }
 
