@@ -1,4 +1,4 @@
-﻿# ULTRON's deck builder: designs a PowerPoint deck live in front of you while the brain is
+# SYLVER's deck builder: designs a PowerPoint deck live in front of you while the brain is
 # still writing it. Slides arrive one per line on stdin (JSON): {"k":"title"...}, then
 # {"k":"slide"...} as each is written, then {"k":"end"}. Morph transitions between slides
 # (the glowing shapes glide), titles fade in, an accent line wipes across, points appear one by one.
@@ -101,7 +101,7 @@ function TitleSlide($m) {
   $below = 160 + [Math]::Max(80, $title.Height) + 14   # the line and subtitle sit right under the title, however many lines it takes
   $bar = Bar $s 74 $below
   $sub = Text $s $m.subtitle 72 ($below + 18) 760 60 22 $t.sub $BodyFont 'sub'
-  $tag = Text $s ("Made with ULTRON  ·  " + (Get-Date -Format 'd MMMM yyyy')) 72 470 600 30 12 $t.sub $BodyFont 'tag'
+  $tag = Text $s ("Made with SYLVER  ·  " + (Get-Date -Format 'd MMMM yyyy')) 72 470 600 30 12 $t.sub $BodyFont 'tag'
   Animate $s $title 10 0 3 0.8 0 | Out-Null
   Animate $s $bar 22 0 3 0.5 0 | Out-Null
   Animate $s $sub 10 0 2 0.7 0 | Out-Null

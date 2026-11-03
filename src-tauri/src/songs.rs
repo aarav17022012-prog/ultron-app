@@ -1,4 +1,4 @@
-//! ULTRON listens to the song itself (what your PC is playing, not the microphone)
+//! SYLVER listens to the song itself (what your PC is playing, not the microphone)
 //! with whisper.cpp and a multilingual model:
 //!  - "sync": the lyrics were found but the video's timing differs from the album
 //!    track (intros, outros), so it hears a few lines and lines the lyrics up.
@@ -7,7 +7,7 @@
 //! When it knows the lyrics, Whisper is given them as a hint, so sung words are recognised far more reliably.
 //! Runs only while the lyrics are on screen and the song is playing.
 //!
-//! The ULTRON Lyric Engine: for lining up it first listens quickly to the raw audio; when that
+//! The SYLVER Lyric Engine: for lining up it first listens quickly to the raw audio; when that
 //! doesn't lock on, and always when writing the words down, it isolates the singer's voice
 //! (lyriceng.rs), finds each sung phrase from the voice itself (exact start times), and
 //! recognises every phrase on its own, hinted with the lyrics or the song so far.

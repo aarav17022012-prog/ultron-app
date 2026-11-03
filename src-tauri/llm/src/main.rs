@@ -1,4 +1,4 @@
-//! ULTRON's local brain: runs a llama.cpp model on this PC and streams replies.
+//! SYLVER's local brain: runs a llama.cpp model on this PC and streams replies.
 //! Protocol (JSON lines): stdin  {"messages":[["system","..."],["user","..."]],"max":200}
 //!                        stdout {"ready":true} once, then {"t":"piece"}... {"done":true} per request.
 

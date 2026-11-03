@@ -3,7 +3,7 @@
 //! While the pointer moves quickly, a soft streak of the pointer itself trails behind it: copies of the very cursor
 //! Windows is showing (an arrow, a hand, a text beam...), fainter the further back, stamped along the way it has just
 //! come, one picture per frame Windows draws. Stopping, the streak melts into the pointer. It's a see-through,
-//! click-through window of ULTRON's, just under the real pointer (which Windows always draws on top).
+//! click-through window of SYLVER's, just under the real pointer (which Windows always draws on top).
 
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::time::Duration;
@@ -105,10 +105,10 @@ unsafe fn shape(c: HCURSOR) -> Option<Shape> {
 unsafe fn run() {
     unsafe {
         let inst: Option<windows::Win32::Foundation::HINSTANCE> = GetModuleHandleW(None).ok().map(|m| m.into());
-        RegisterClassW(&WNDCLASSW { lpfnWndProc: Some(proc), hInstance: inst.unwrap_or_default(), lpszClassName: w!("UltronPointerBlur"), ..Default::default() });
+        RegisterClassW(&WNDCLASSW { lpfnWndProc: Some(proc), hInstance: inst.unwrap_or_default(), lpszClassName: w!("SylverPointerBlur"), ..Default::default() });
         let Ok(win) = CreateWindowExW(
             WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-            w!("UltronPointerBlur"),
+            w!("SylverPointerBlur"),
             w!(""),
             WS_POPUP,
             0,

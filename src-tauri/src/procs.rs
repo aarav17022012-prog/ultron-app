@@ -1,6 +1,6 @@
 //! Cleaner's background apps: programs of yours running with no window open, holding memory. Listed by app (all of
 //! its processes together), largest first. Windows' own parts, its services, drivers' helpers, security software and
-//! ULTRON itself are never listed. Nothing is ended unless you choose it in Settings › Cleaner.
+//! SYLVER itself are never listed. Nothing is ended unless you choose it in Settings › Cleaner.
 
 use std::collections::{HashMap, HashSet};
 
@@ -21,7 +21,7 @@ pub struct Group {
     pub count: u32,
 }
 
-/// Programs that keep the PC itself working (or are ULTRON's own): never listed, whatever folder they're in.
+/// Programs that keep the PC itself working (or are SYLVER's own): never listed, whatever folder they're in.
 const KEEP: [&str; 22] = [
     "\\windows\\", "\\windowsapps\\microsoft.windows", "windows defender", "\\microsoft\\edgewebview\\", "msedgewebview2.exe", "ultron.exe",
     "llama-server.exe", "\\nvidia corporation\\", "\\nvidia\\", "\\realtek\\", "\\intel\\", "\\amd\\", "\\lenovo\\", "\\synaptics\\", "\\dolby\\",

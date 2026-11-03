@@ -1,11 +1,11 @@
-//! ULTRON Action Model: a small neural network written and trained from scratch, only for
-//! ULTRON. It reads a request and decides, in microseconds, what kind of thing you want:
-//! one of ULTRON's actions (open, play, write, click, message, slides...) or just a chat.
+//! SYLVER Action Model: a small neural network written and trained from scratch, only for
+//! SYLVER. It reads a request and decides, in microseconds, what kind of thing you want:
+//! one of SYLVER's actions (open, play, write, click, message, slides...) or just a chat.
 //!
-//! It's a softmax classifier over hashed word and letter patterns, trained when ULTRON starts
+//! It's a softmax classifier over hashed word and letter patterns, trained when SYLVER starts
 //! (well under a second) on thousands of example requests generated from templates below.
-//! When it says "this is an action" but ULTRON's rules can't parse it, the local brain is
-//! asked to rewrite the request into ULTRON's own command language, under a grammar that
+//! When it says "this is an action" but SYLVER's rules can't parse it, the local brain is
+//! asked to rewrite the request into SYLVER's own command language, under a grammar that
 //! makes anything else impossible (see `ai::plan_actions`).
 
 use std::sync::OnceLock;
@@ -222,7 +222,7 @@ fn examples() -> Vec<(String, usize)> {
 
 static MODEL: OnceLock<Model> = OnceLock::new();
 
-/// Train it in the background when ULTRON starts.
+/// Train it in the background when SYLVER starts.
 pub fn start() {
     std::thread::spawn(|| {
         let t0 = std::time::Instant::now();

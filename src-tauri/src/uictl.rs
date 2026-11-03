@@ -1,5 +1,5 @@
 //! Working any app's controls directly, through the accessibility interface every Windows app gives screen readers
-//! (Win32, the Store's apps, Office, Chrome and Edge, Electron apps like WhatsApp, Discord, VS Code...). ULTRON can read
+//! (Win32, the Store's apps, Office, Chrome and Edge, Electron apps like WhatsApp, Discord, VS Code...). SYLVER can read
 //! what's in a window (each button, switch, box, list and slider, with how it's set now) and act on one by its name:
 //! press it, turn it on or off, type into it, set it to a number, choose one of its options, open or close it. All of
 //! that goes to the app itself, without moving the pointer, so it works on a window that's half covered and takes a
@@ -267,7 +267,7 @@ pub fn act(h: HWND, name: &str, action: &str, value: &str) -> Result<String, Str
         format!("There's nothing called “{name}” there. What is there: {}", near.join(", "))
     })?;
     let el = &c.el;
-    // (ULTRON's cursor goes there first, so you see where it's working; it doesn't wait if it isn't out)
+    // (SYLVER's cursor goes there first, so you see where it's working; it doesn't wait if it isn't out)
     if let Some((x, y)) = center(el) {
         crate::ghost::go_wait(x as f64, y as f64);
     }
@@ -382,7 +382,7 @@ pub fn act(h: HWND, name: &str, action: &str, value: &str) -> Result<String, Str
     }
 }
 
-/// The window of an app by its name ("" or none open: the one in front, if it isn't ULTRON's).
+/// The window of an app by its name ("" or none open: the one in front, if it isn't SYLVER's).
 pub fn window_of(app: &tauri::AppHandle, name: &str) -> Option<HWND> {
     use tauri::Manager;
     let n = name.trim().to_lowercase();

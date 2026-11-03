@@ -1,7 +1,7 @@
-//! Teach a task: "Ultron, learn how to file my report", you do it once, Stop, and "Ultron, do file my report" does it
-//! again whenever you like. Nothing is filmed: ULTRON notes only what you did, step by step (the app, the button or box
+//! Teach a task: "Sylver, learn how to file my report", you do it once, Stop, and "Sylver, do file my report" does it
+//! again whenever you like. Nothing is filmed: SYLVER notes only what you did, step by step (the app, the button or box
 //! you clicked, by its own name where it has one, the words you typed, the keys you pressed), so watching costs almost
-//! nothing and doing it again needs no service or key, as often as you like. Your own presses only; ULTRON's never count.
+//! nothing and doing it again needs no service or key, as often as you like. Your own presses only; SYLVER's never count.
 
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::sync::mpsc::{channel, Sender};
@@ -82,7 +82,7 @@ fn exe_of(h: HWND) -> String {
     let mut pid = 0u32;
     unsafe { GetWindowThreadProcessId(h, Some(&mut pid)) };
     if pid == std::process::id() {
-        return "ULTRON".into();
+        return "SYLVER".into();
     }
     use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION};
     unsafe {
@@ -154,8 +154,8 @@ fn note(rx: std::sync::mpsc::Receiver<Raw>) {
             Raw::Click(p) => {
                 let root = unsafe { GetAncestor(WindowFromPoint(p), GA_ROOT) };
                 let exe = exe_of(root);
-                if exe == "ULTRON" || exe.is_empty() {
-                    continue; // (ULTRON's own bar and its Stop button)
+                if exe == "SYLVER" || exe.is_empty() {
+                    continue; // (SYLVER's own bar and its Stop button)
                 }
                 flush(&mut text);
                 if exe != last_app {
@@ -174,8 +174,8 @@ fn note(rx: std::sync::mpsc::Receiver<Raw>) {
                 STEPS.lock().unwrap().push(Act::Click { name, x: (p.x - r.left) as f32 / w, y: (p.y - r.top) as f32 / h });
             }
             Raw::Key(vk, scan) => {
-                if exe_of(unsafe { GetForegroundWindow() }) == "ULTRON" {
-                    continue; // (typed to ULTRON itself)
+                if exe_of(unsafe { GetForegroundWindow() }) == "SYLVER" {
+                    continue; // (typed to SYLVER itself)
                 }
                 if matches!(vk, 0x10 | 0x11 | 0x12 | 0xA0..=0xA5 | 0x5B | 0x5C | 0x14) {
                     continue; // (Shift, Ctrl, Alt, Windows, Caps Lock on their own)

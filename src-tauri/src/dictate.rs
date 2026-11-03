@@ -1,6 +1,6 @@
 //! Dictation: what you say, made ready to type.
 //!
-//! "Ultron, start dictation" (or its shortcut) turns it on: from then on everything heard is typed where the cursor is,
+//! "Sylver, start dictation" (or its shortcut) turns it on: from then on everything heard is typed where the cursor is,
 //! or put on the dictation card, until "stop dictation". The recognizer is given longer pauses before it decides you've
 //! finished, and the last things said as its context (both from the page, through voice_config). Here each heard piece
 //! is shaped to follow what's already there (Settings > Dictation says how much):
@@ -134,7 +134,7 @@ pub struct Opts {
     /// names and words spelled your way
     #[serde(default)]
     pub words: Vec<String>,
-    /// people's names ULTRON has seen (who writes to you): a near miss on one is put right, as for your own words
+    /// people's names SYLVER has seen (who writes to you): a near miss on one is put right, as for your own words
     #[serde(default)]
     pub names: Vec<String>,
 }
@@ -278,7 +278,7 @@ fn corrections(text: &str) -> String {
     w.join(" ")
 }
 
-/// The words you've listed, spelled your way wherever they come up ("ultron" is "ULTRON").
+/// The words you've listed, spelled your way wherever they come up ("ultron" is "SYLVER").
 fn respell(text: &str, words: &[String]) -> String {
     let mut out = text.to_string();
     for want in words.iter().map(|w| w.trim()).filter(|w| !w.is_empty()) {
@@ -346,7 +346,7 @@ fn edits(a: &str, b: &str) -> usize {
 }
 
 /// A name heard close but not right ("Denish" for "Danish") put right: one the recognizer took for a name (it gave it
-/// a capital, and not just for starting a sentence), that sounds the same as a name you've listed or ULTRON has seen,
+/// a capital, and not just for starting a sentence), that sounds the same as a name you've listed or SYLVER has seen,
 /// and is spelled nearly the same. An ordinary word is never changed into a name.
 fn names_fix<'a>(text: &str, names: impl Iterator<Item = &'a String>, mut start: bool) -> String {
     const COMMON: &[&str] = &[
@@ -552,7 +552,7 @@ mod tests {
     use super::*;
 
     fn on() -> Opts {
-        Opts { fillers: true, fixes: true, smart: true, words: vec!["ULTRON".into(), "Tauri".into()], names: vec!["Danish Tillu".into(), "Aarav".into()] }
+        Opts { fillers: true, fixes: true, smart: true, words: vec!["SYLVER".into(), "Tauri".into()], names: vec!["Danish Tillu".into(), "Aarav".into()] }
     }
 
     #[test]
@@ -621,7 +621,7 @@ mod tests {
         let e = shape("Can you send me the file.", "", "", &o);
         assert_eq!((e.text.as_str(), e.held.as_str()), ("Can you send me the file", "?"));
         let f = shape("um ultron is built with tauri.", "", "", &o);
-        assert_eq!(f.text, "ULTRON is built with Tauri");
+        assert_eq!(f.text, "SYLVER is built with Tauri");
         assert!(shape("Scratch that.", "x", "", &o).undo);
         let g = shape("That's the end period", "", "", &o);
         assert_eq!((g.text.as_str(), g.held.as_str()), ("That's the end.", ""));

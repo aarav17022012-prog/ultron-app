@@ -38,7 +38,7 @@ pub struct VoiceStatus {
 pub struct Voice {
     paused: AtomicBool,
     ready: AtomicBool,
-    /// Only speech that starts with "Ultron" would be acted on just now (the page says so).
+    /// Only speech that starts with "Sylver" would be acted on just now (the page says so).
     pub wake: AtomicBool,
     /// Dictating: a pause has to be twice as long before it ends what you're saying.
     pub patient: AtomicBool,
@@ -260,7 +260,7 @@ impl Resampler {
 /* ---------------- whisper ---------------- */
 
 /// The recognizer now and then writes a short phrase out twice ("How are you? How are you?"): what was said once is
-/// kept once (asked twice of ULTRON, and typed twice when dictating). Two words or more repeated whole; a word said
+/// kept once (asked twice of SYLVER, and typed twice when dictating). Two words or more repeated whole; a word said
 /// over and over ("no, no, no") is left as it was.
 fn unrepeat(text: &str) -> String {
     let words: Vec<&str> = text.split_whitespace().collect();
@@ -276,6 +276,11 @@ fn unrepeat(text: &str) -> String {
 
 fn is_noise(text: &str) -> bool {
     let t = text.trim().trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
+    // (one word said over and over, "needle needle": what Whisper makes of a scrap of noise)
+    let ws: Vec<&str> = t.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).collect();
+    if (2..=4).contains(&ws.len()) && ws.iter().all(|w| *w == ws[0]) {
+        return true;
+    }
     if t.is_empty() || text.trim().starts_with('[') || text.trim().starts_with('(') || text.trim().starts_with('*') {
         return true;
     }
@@ -350,13 +355,13 @@ fn shaped<'a>(mut p: FullParams<'a, 'a>, prompt: &'a str, lang: &'a str, threads
     p
 }
 
-/// "Ultron", or one of the ways the recognizer writes it, somewhere in this.
+/// "Sylver", or one of the ways the recognizer writes it, somewhere in this.
 fn has_wake(text: &str) -> bool {
     let l = text.to_lowercase();
     let squashed: String = l.chars().filter(|c| c.is_alphanumeric()).collect();
     // (and the ways it's misheard: "Aertron", "A-Chron", "Altron": a short word starting with a vowel, ending in "tron" or "chron")
     let tronish = |w: &str| w.len() <= 7 && w.starts_with(['a', 'e', 'o', 'u']) && (w.ends_with("tron") || w.ends_with("chron"));
-    squashed.contains("ultron")
+    squashed.contains("sylver") || squashed.contains("silver") || squashed.contains("ultron")
         || l.split(|c: char| !c.is_alphanumeric()).any(|w| ["ultra", "altron", "ultran", "ultrum", "ultrom", "alltron"].contains(&w) || tronish(w))
         || l.split_whitespace().map(|w| w.chars().filter(|c| c.is_alphanumeric()).collect::<String>()).any(|w| tronish(&w))
         // (written in the language you talk in)
@@ -506,12 +511,14 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
                 }
                 if best.is_some() && !want_best && best_at.elapsed() > std::time::Duration::from_secs(60) {
                     best = None;
-                    crate::smooth::trim(std::process::id());
+                    // (its memory goes with it; the process itself isn't emptied: the keyboard and mouse hooks live here, and read back
+                    //  from the disk they held up every key and click on the PC)
                     crate::log_line("voice: the most accurate dictation model put away");
                 }
                 if held.is_some() && last.elapsed() > QUIET {
                     held = None;
-                    crate::smooth::trim(std::process::id());
+                    // (its memory goes with it; the process itself isn't emptied: the keyboard and mouse hooks live here, and read back
+                    //  from the disk they held up every key and click on the PC)
                     crate::log_line("voice: speech model put away (nothing heard for 4 minutes)");
                 }
                 continue;
@@ -527,9 +534,9 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let Some(state) = held.as_mut() else { continue };
         let music =app.state::<crate::media::Media>().state.lock().unwrap().sessions.iter().any(|s| s.playing);
         // A song or a video with words in it is "speech" for as long as it plays, and each stretch was transcribed
-        // carefully (a second or two on half the processor's cores) to find that it wasn't for ULTRON: over a core,
+        // carefully (a second or two on half the processor's cores) to find that it wasn't for SYLVER: over a core,
         // all the while. Nearly all of that time goes into listening to the clip, and it grows with the clip's length.
-        // So while something plays and only "Ultron ..." would be acted on, just the first second and a half (where
+        // So while something plays and only "Sylver ..." would be acted on, just the first second and a half (where
         // the name has to be) is heard first, the quick way; the careful pass is kept for when the name is there.
         let prompt = voice.prompt.lock().unwrap().clone();
         let lang = voice.lang.lock().unwrap().clone();
@@ -556,7 +563,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
             q.set_print_timestamps(false);
             q.set_audio_ctx(128); // (two and a half seconds' worth: the clip, its padding, and a little over)
             if !prompt.is_empty() {
-                q.set_initial_prompt(&prompt); // (the words it's told to expect, "Ultron" first among them)
+                q.set_initial_prompt(&prompt); // (the words it's told to expect, "Sylver" first among them)
             }
             let mut start = String::new();
             if state.full(q, &head).is_ok() {
@@ -567,7 +574,7 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
                 }
             }
             if !has_wake(&start) {
-                crate::log_line(&format!("heard {:.1}s while a song played: no \"Ultron\" at its start (checked in {} ms)", seg.len() as f32 / RATE as f32, t0.elapsed().as_millis()));
+                crate::log_line(&format!("heard {:.1}s while a song played: no \"Sylver\" at its start (checked in {} ms)", seg.len() as f32 / RATE as f32, t0.elapsed().as_millis()));
                 set_status(&app, if voice.paused.load(Ordering::SeqCst) { "paused" } else { "listening" }, "", 0.0);
                 continue;
             }
@@ -807,7 +814,7 @@ fn microphone(app: AppHandle, raw_tx: SyncSender<(Vec<f32>, u32)>) {
             Ok(s) => {
                 // Windows can switch the default microphone (headphones connected, another chosen in Settings) or
                 // leave the one in use giving only silence, without any error: what you said then never reached
-                // ULTRON, dictation and the notch's mic "did nothing". The default is looked at every 3 s, and a
+                // SYLVER, dictation and the notch's mic "did nothing". The default is looked at every 3 s, and a
                 // microphone that gives nothing but digital silence for 6 s is opened again.
                 let id = default_mic();
                 let mut n = 0u32;
@@ -819,7 +826,7 @@ fn microphone(app: AppHandle, raw_tx: SyncSender<(Vec<f32>, u32)>) {
                         break;
                     }
                     let quiet = (t0.elapsed().as_millis() as u64).saturating_sub(alive.load(Ordering::Relaxed));
-                    // (looked at muted or not: the stream is heard from even while ULTRON ignores it, so after the laptop
+                    // (looked at muted or not: the stream is heard from even while SYLVER ignores it, so after the laptop
                     //  wakes from sleep it's healthy again before dictation or a tap on the mic needs it)
                     if n >= 12 && quiet > 6000 && reopened.is_none_or(|t| t.elapsed() > Duration::from_secs(60)) {
                         crate::log_line("voice: the microphone gave only silence for 6 s; opening it again");
@@ -871,11 +878,13 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
             set_status(&app, "listening", "", 0.0);
         }
         was_paused = false;
-        // Automatic gain: a microphone that reaches ULTRON very quietly (a laptop's array set low, or turned down
+        // Automatic gain: a microphone that reaches SYLVER very quietly (a laptop's array set low, or turned down
         // somewhere along the way: voices of 0.002 where 0.05 is usual) is lifted to an ordinary level before anything
         // listens, up to 32 dB; an ordinary one is left as it is. Quick to come down for a loud sound, slow to rise.
         let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len().max(1) as f32).sqrt();
-        env = if rms > env { env * 0.6 + rms * 0.4 } else { env * 0.9993 + rms * 0.0007 };
+        // (it rises only between sentences: rising while you spoke, it lifted the room's hum under your pause until
+        //  the pause no longer counted as one, and a short phrase waited nine seconds to be typed)
+        env = if rms > env { env * 0.6 + rms * 0.4 } else if vad.speaking { env } else { env * 0.9993 + rms * 0.0007 };
         let gain = (0.03 / env.max(0.00075)).clamp(1.0, 40.0);
         let chunk: Vec<f32> = if gain > 1.05 { chunk.iter().map(|s| (s * gain).clamp(-1.0, 1.0)).collect() } else { chunk };
         to16.push(&chunk, rate, &mut out16);
@@ -898,7 +907,7 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
             // (how long a pause ends what's said: long while dictating, short when you've tapped the mic to ask)
             let quiet = if voice.patient.load(Ordering::SeqCst) { 60 } else if voice.live.load(Ordering::SeqCst) { 24 } else { 30 };
             // (dictating or asked: a microphone giving almost nothing for six seconds is said out loud, once: a mic-mute
-            //  key pressed, or the input turned right down, and what you said never reached ULTRON)
+            //  key pressed, or the input turned right down, and what you said never reached SYLVER)
             if voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst) {
                 let rms = (out16[used..used + FRAME].iter().map(|s| s * s).sum::<f32>() / FRAME as f32).sqrt();
                 quiet_loud = quiet_loud.max(rms);
@@ -1022,17 +1031,17 @@ mod tests {
         (b[data..].chunks(2).map(|c| i16::from_le_bytes([c[0], c[1]]) as f32 / 32768.0).collect(), rate)
     }
 
-    /// cargo test --bin ultron dictation -- --nocapture --ignored   (needs ULTRON_WAVS=dir of .wav files)
+    /// cargo test --bin ultron dictation -- --nocapture --ignored   (needs SYLVER_WAVS=dir of .wav files)
     #[test]
     #[ignore]
     fn dictation() {
-        let model = std::env::var("ULTRON_MODEL").map(PathBuf::from).unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("models").join(MODEL_FILE));
+        let model = std::env::var("SYLVER_MODEL").map(PathBuf::from).unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("models").join(MODEL_FILE));
         let ctx = WhisperContext::new_with_params(model.to_string_lossy().as_ref(), WhisperContextParameters::default()).unwrap();
         let mut state = ctx.create_state().unwrap();
         println!("system: {}", whisper_rs::print_system_info());
-        let limit: usize = std::env::var("ULTRON_LIMIT").ok().and_then(|v| v.parse().ok()).unwrap_or(99);
+        let limit: usize = std::env::var("SYLVER_LIMIT").ok().and_then(|v| v.parse().ok()).unwrap_or(99);
         let threads = (std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4) / 2).clamp(2, 8) as i32;
-        let dir = std::env::var("ULTRON_WAVS").unwrap();
+        let dir = std::env::var("SYLVER_WAVS").unwrap();
         let mut files: Vec<_> = std::fs::read_dir(dir).unwrap().filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().map(|x| x == "wav").unwrap_or(false)).collect();
         files.sort();
         for f in files.into_iter().take(limit) {
@@ -1042,8 +1051,8 @@ mod tests {
             r.push(&x, rate, &mut s16);
             let audio = prepare(&s16);
             let t0 = std::time::Instant::now();
-            let mut p = params("Ultron, open Spotify. Set the volume to 40 percent.", threads, audio.len());
-            if std::env::var("ULTRON_GREEDY").is_ok() {
+            let mut p = params("Sylver, open Spotify. Set the volume to 40 percent.", threads, audio.len());
+            if std::env::var("SYLVER_GREEDY").is_ok() {
                 p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
                 p.set_language(Some("en"));
                 p.set_n_threads(threads);
@@ -1051,7 +1060,7 @@ mod tests {
                 p.set_single_segment(true);
                 p.set_no_timestamps(true);
             }
-            if let Some(c) = std::env::var("ULTRON_CTX").ok().and_then(|v| v.parse::<i32>().ok()) {
+            if let Some(c) = std::env::var("SYLVER_CTX").ok().and_then(|v| v.parse::<i32>().ok()) {
                 p.set_audio_ctx(c);
             }
             state.full(p, &audio).unwrap();
@@ -1065,7 +1074,7 @@ mod tests {
 mod wake_tests {
     #[test]
     fn the_name_is_found_however_it_is_written() {
-        for t in ["Ultron, pause the music.", " ultron open spotify", "Hey Ul tron!", "Ultra, next song", "OK, Alltron."] {
+        for t in ["Sylver, pause the music.", " ultron open spotify", "Hey Ul tron!", "Ultra, next song", "OK, Alltron."] {
             assert!(super::has_wake(t), "{t}");
         }
         for t in ["and I will always love you", "ultrasound of the heart", "we are the champions", ""] {

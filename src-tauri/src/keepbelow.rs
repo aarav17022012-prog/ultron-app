@@ -1,4 +1,4 @@
-//! Windows stay below ULTRON's bar, the way they stay below a Mac's menu bar: a window dragged (or resized) up so
+//! Windows stay below SYLVER's bar, the way they stay below a Mac's menu bar: a window dragged (or resized) up so
 //! that its top goes under the bar and the notch is put back just below the bar when you let go of it. Maximized
 //! and full-screen windows are left alone (Windows already keeps maximized ones in the space under the bar).
 
@@ -23,7 +23,7 @@ unsafe extern "system" fn on_moved(_: HWINEVENTHOOK, _: u32, h: HWND, obj: i32, 
         let mut pid = 0u32;
         GetWindowThreadProcessId(h, Some(&mut pid));
         if pid == GetCurrentProcessId() {
-            return; // (ULTRON's own windows)
+            return; // (SYLVER's own windows)
         }
         // the space under the bar: the work area (the bar reserves the strip above it; hidden away, it reserves none)
         let mut work = RECT::default();

@@ -1,4 +1,4 @@
-//! Bring your own key. Out of the box everything ULTRON's brain does happens on this PC. If you add a
+//! Bring your own key. Out of the box everything SYLVER's brain does happens on this PC. If you add a
 //! key from an AI service (Anthropic's Claude, OpenAI, Google's Gemini, OpenRouter, or anything that
 //! speaks the same language), answers and translations come from that service instead: quicker than a
 //! laptop's processor, and better informed. No key, the switch off, or no connection: it works locally,
@@ -58,14 +58,14 @@ fn save(app: &AppHandle, c: &Cfg) {
 /* ---------------- the key, in Windows Credential Manager ---------------- */
 
 fn target(provider: &str) -> Vec<u16> {
-    format!("ULTRON key: {provider}").encode_utf16().chain(Some(0)).collect()
+    format!("SYLVER key: {provider}").encode_utf16().chain(Some(0)).collect()
 }
 
 fn keep_key(provider: &str, key: &str) -> bool {
     use windows::core::PWSTR;
     use windows::Win32::Security::Credentials::{CredWriteW, CREDENTIALW, CRED_PERSIST_LOCAL_MACHINE, CRED_TYPE_GENERIC};
     let mut t = target(provider);
-    let mut user: Vec<u16> = "ULTRON".encode_utf16().chain(Some(0)).collect();
+    let mut user: Vec<u16> = "SYLVER".encode_utf16().chain(Some(0)).collect();
     let mut blob = key.as_bytes().to_vec();
     let c = CREDENTIALW {
         Type: CRED_TYPE_GENERIC,
@@ -341,7 +341,7 @@ pub fn set(app: &AppHandle, on: Option<bool>, model: Option<String>) {
     save(app, &c);
 }
 
-/// Throw a service's key away. If it was the one in use, ULTRON is back on this PC.
+/// Throw a service's key away. If it was the one in use, SYLVER is back on this PC.
 pub fn forget(app: &AppHandle, provider: &str) {
     forget_key(provider);
     let mut c = cfg(app);
@@ -357,11 +357,11 @@ mod tests {
 
     #[test]
     fn speaks_both_dialects() {
-        let msgs: Vec<(String, String)> = [("system", "You are ULTRON."), ("user", "hi"), ("assistant", "Hello."), ("system", "It is 4 PM."), ("user", "what time is it?")]
+        let msgs: Vec<(String, String)> = [("system", "You are SYLVER."), ("user", "hi"), ("assistant", "Hello."), ("system", "It is 4 PM."), ("user", "what time is it?")]
             .iter().map(|(r, c)| (r.to_string(), c.to_string())).collect();
         let claude = Active { provider: "anthropic".into(), model: "claude-haiku-5-5".into(), base: "https://api.anthropic.com/v1".into(), key: "k".into() };
         let b = body(&claude, &msgs, 90, 0.4);
-        assert_eq!(b["system"], "You are ULTRON.\n\nIt is 4 PM.");
+        assert_eq!(b["system"], "You are SYLVER.\n\nIt is 4 PM.");
         assert_eq!(b["messages"].as_array().unwrap().len(), 3);
         assert_eq!(b["messages"][0]["role"], "user");
         assert_eq!(b["max_tokens"], 90);

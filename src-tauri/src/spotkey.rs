@@ -1,4 +1,4 @@
-//! ULTRON's own shortcuts, registered with Windows as ordinary hot keys: Ctrl+Space opens ULTRON's Start (its
+//! SYLVER's own shortcuts, registered with Windows as ordinary hot keys: Ctrl+Space opens SYLVER's Start (its
 //! search), and the wheel can have one of your choosing (Settings, Taskbar). While one is on, no other app gets those
 //! keys (Ctrl+Space: VS Code's suggestions, Excel's column select); switched off, they're given back at once.
 
@@ -11,7 +11,7 @@ use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Input::KeyboardAndMouse::{RegisterHotKey, UnregisterHotKey, HOT_KEY_MODIFIERS, MOD_CONTROL, MOD_NOREPEAT, VK_SPACE};
 use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, PeekMessageW, PostThreadMessageW, MSG, PM_NOREMOVE, WM_APP, WM_HOTKEY, WM_USER};
 
-/// Ctrl+Space: ULTRON's Start
+/// Ctrl+Space: SYLVER's Start
 pub const SPOT: i32 = 0x5350;
 /// the wheel's own shortcut
 pub const WHEEL: i32 = 0x5351;

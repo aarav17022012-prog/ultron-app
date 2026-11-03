@@ -1,6 +1,6 @@
-//! The laptop's lid and sleep, for ULTRON's lock screen (Settings, Look & feel, Lock screen: ULTRON).
+//! The laptop's lid and sleep, for SYLVER's lock screen (Settings, Look & feel, Lock screen: SYLVER).
 //!
-//! Windows tells ULTRON when the lid closes or opens and when the PC goes to sleep or wakes; the page is told
+//! Windows tells SYLVER when the lid closes or opens and when the PC goes to sleep or wakes; the page is told
 //! ("lid": "close" | "open" | "sleep" | "wake") and puts its lock screen up as the lid closes (so it's already
 //! there when the lid opens, with no glimpse of the desktop first), or as it wakes if that was missed.
 
@@ -15,7 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{DEVICE_NOTIFY_CALLBACK, PBT_APMRES
 
 /// GUID_LIDSWITCH_STATE_CHANGE: the lid's state, 0 closed, 1 open (sent once straight away, then on each change).
 const LID: GUID = GUID::from_u128(0xba3e0f4d_b817_4094_a2d1_d56379e6a0f3);
-/// GUID_VIDEO_CURRENT_MONITOR_BRIGHTNESS: the screen's brightness, 0 to 100 (for ULTRON's own indicator)
+/// GUID_VIDEO_CURRENT_MONITOR_BRIGHTNESS: the screen's brightness, 0 to 100 (for SYLVER's own indicator)
 const BRIGHT: GUID = GUID::from_u128(0x8ffee2c6_2d01_46be_adb9_398addc5b4ff);
 static BRIGHT_WAS: AtomicI32 = AtomicI32::new(-1);
 
@@ -23,7 +23,28 @@ static APP: OnceLock<AppHandle> = OnceLock::new();
 /// The lid as last told (-1: not told yet).
 static LAST: AtomicI32 = AtomicI32::new(-1);
 
+/// Asleep, or the lid shut (Windows' modern standby keeps the PC half running with the lid closed: SYLVER's own
+/// timers go on while its page is frozen), and when it last woke, in seconds since 1970
+static RESTING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static WOKE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn epoch() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// Asleep or shut, or woken less than a minute ago: what the page does now says nothing about whether it's stuck
+pub fn resting() -> bool {
+    RESTING.load(std::sync::atomic::Ordering::Relaxed) || epoch().saturating_sub(WOKE.load(std::sync::atomic::Ordering::Relaxed)) < 60
+}
+
 fn tell(what: &str) {
+    use std::sync::atomic::Ordering::Relaxed;
+    if what == "sleep" || what.starts_with("clos") {
+        RESTING.store(true, Relaxed);
+    } else if what == "wake" || what == "open" {
+        RESTING.store(false, Relaxed);
+        WOKE.store(epoch(), Relaxed);
+    }
     if let Some(app) = APP.get() {
         crate::log_line(&format!("lid: {what}"));
         let _ = app.emit_to("main", "lid", what);
@@ -63,7 +84,7 @@ pub fn start(app: AppHandle) {
     if APP.set(app).is_err() {
         return;
     }
-    // (Windows keeps these for as long as ULTRON runs: they're never let go)
+    // (Windows keeps these for as long as SYLVER runs: they're never let go)
     let params: &'static mut DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS =
         Box::leak(Box::new(DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS { Callback: Some(on_power), Context: std::ptr::null_mut() }));
     let h = HANDLE(params as *mut _ as _);

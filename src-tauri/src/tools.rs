@@ -1,4 +1,4 @@
-//! ULTRON's tools: exact, deterministic hands for the task agent (doer.rs). The brain only picks a
+//! SYLVER's tools: exact, deterministic hands for the task agent (doer.rs). The brain only picks a
 //! tool and fills in its details; the work itself is done here, by code that can't hallucinate:
 //! files and folders, Excel and Word (through Office's own automation, office.ps1), the web,
 //! and arithmetic. Every tool answers in plain text the brain reads before its next move.
@@ -32,6 +32,16 @@ static SAVE_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 pub fn set_save_dir(d: Option<PathBuf>) {
     *SAVE_DIR.lock().unwrap() = d;
     *LAST_DIR.lock().unwrap() = None; // (a new task starts with no folder in mind)
+}
+
+pub fn migrate_brand_folders(app: &AppHandle) {
+    let Ok(documents) = app.path().document_dir() else { return };
+    for (old, new) in [("ULTRON Files", "SYLVER Files"), ("ULTRON Presentations", "SYLVER Presentations")] {
+        let (old, new) = (documents.join(old), documents.join(new));
+        if old.exists() && !new.exists() {
+            let _ = std::fs::rename(old, new);
+        }
+    }
 }
 
 /// The folder a listing or search last showed. Their results name things by what's inside that folder
@@ -172,7 +182,7 @@ fn resolve_raw(s: &str) -> Result<PathBuf, String> {
     Ok(alias("documents").unwrap().join(norm))
 }
 
-/// Places ULTRON may look in: your own folders and other drives, never Windows itself.
+/// Places SYLVER may look in: your own folders and other drives, never Windows itself.
 fn readable(p: &Path) -> Result<(), String> {
     let l = p.to_string_lossy().to_lowercase();
     let sys = ["c:\\windows", "c:\\program files", "c:\\programdata", "c:\\$recycle.bin", "c:\\system volume information", "c:\\recovery"];
@@ -202,7 +212,7 @@ fn project_of(p: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Places ULTRON may move or remove things from.
+/// Places SYLVER may move or remove things from.
 fn writable(p: &Path) -> Result<(), String> {
     readable(p)?;
     if p.parent().is_none() || p.to_string_lossy().len() <= 3 {
@@ -817,18 +827,18 @@ fn office(mode: &str, req: &Value, limit: Duration) -> Result<Value, String> {
     wait_json(child, limit)
 }
 
-/// Where new documents go when the request doesn't say: Documents\ULTRON Files (not
-/// Documents\ULTRON, which can be someone's own project folder).
+/// Where new documents go when the request doesn't say: Documents\SYLVER Files (not
+/// Documents\SYLVER, which can be someone's own project folder).
 fn out_path(app: &AppHandle, given: &str, title: &str, ext: &str) -> Result<PathBuf, String> {
     let base = SAVE_DIR.lock().unwrap().clone()
-        .unwrap_or_else(|| app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("ULTRON Files"));
+        .unwrap_or_else(|| app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("SYLVER Files"));
     let p = if given.trim().is_empty() {
         let clean: String = title.chars().map(|c| if "\\/:*?\"<>|".contains(c) { ' ' } else { c }).collect::<String>().split_whitespace().collect::<Vec<_>>().join(" ");
-        let name = if clean.is_empty() { "ULTRON".to_string() } else { clean.chars().take(60).collect() };
+        let name = if clean.is_empty() { "SYLVER".to_string() } else { clean.chars().take(60).collect() };
         free_name(&base, &format!("{name}.{ext}"))
     } else {
         let p = resolve(given)?;
-        let p = if p.is_dir() { free_name(&p, &format!("{}.{ext}", if title.is_empty() { "ULTRON" } else { title })) } else { p.with_extension(ext) };
+        let p = if p.is_dir() { free_name(&p, &format!("{}.{ext}", if title.is_empty() { "SYLVER" } else { title })) } else { p.with_extension(ext) };
         free_name(p.parent().unwrap_or(&base), &p.file_name().unwrap().to_string_lossy())
     };
     readable(&p)?;
@@ -979,7 +989,7 @@ fn fetch(url: &str, secs: u64) -> Result<String, String> {
     let r = match ask(crate::net::agent(Duration::from_secs(secs))) {
         Ok(r) => r,
         Err(ureq::Error::Status(code, _)) => return Err(format!("the site refused (HTTP {code})")),
-        // ULTRON's own resolver couldn't reach it: try the ordinary way
+        // SYLVER's own resolver couldn't reach it: try the ordinary way
         Err(_) => match ask(ureq::AgentBuilder::new().timeout(Duration::from_secs(secs)).build()) {
             Ok(r) => r,
             Err(ureq::Error::Status(code, _)) => return Err(format!("the site refused (HTTP {code})")),
@@ -1306,7 +1316,7 @@ pub fn ps_risk(cmd: &str) -> Risk {
         (&["invoke-expression", " iex ", "downloadstring", "downloadfile", "invoke-webrequest", " iwr ", " curl ", " wget ", "invoke-restmethod", " irm ", "start-bitstransfer", "bitsadmin", "certutil",
             "-encodedcommand", " -enc ", "frombase64string", "mshta", "regsvr32", "rundll32", "net.webclient"],
             "I don't download or run code from the internet this way. Use web_search and read_webpage to read things, or install_app to install an app."),
-        // (System-wide settings are allowed: as administrator, and only with the user's yes, twice over (ULTRON asks,
+        // (System-wide settings are allowed: as administrator, and only with the user's yes, twice over (SYLVER asks,
         //  then Windows does). What stays out of reach is what switches Windows' own protection off, makes or changes
         //  accounts, plants something that runs by itself as a service, or wipes the record of what was done.)
         (&["set-mppreference", "add-mppreference", "remove-mppreference", "disablerealtimemonitoring", "disableantispyware", "set-executionpolicy", "net user", "net localgroup", "new-localuser", "set-localuser",
@@ -1574,7 +1584,7 @@ pub fn screenshot() -> Res {
     let dir = crate::skills::known_folder("pictures").join("Screenshots");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let secs = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
-    let path = free_name(&dir, &format!("ULTRON screenshot {secs}.png"));
+    let path = free_name(&dir, &format!("SYLVER screenshot {secs}.png"));
     img.save(&path).map_err(|e| format!("Couldn't save it: {e}"))?;
     Ok(format!("Screenshot saved: {}", path.display()))
 }

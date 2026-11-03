@@ -2,7 +2,7 @@
 name = "ultron-llm"
 version = "0.1.0"
 edition = "2021"
-description = "Local language model helper for ULTRON (llama.cpp)"
+description = "Local language model helper for SYLVER (llama.cpp)"
 
 [dependencies]
 llama-cpp-2 = "0.1.159"

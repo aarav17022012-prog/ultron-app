@@ -1,12 +1,12 @@
 //! Dynamic windows (Settings, Look & feel): rounded corners on every window. Windows that asked for square corners
 //! get rounded ones (Windows' own rounding). A maximised window, which Windows never rounds, gets them too: its top
-//! corners curve into ULTRON's menu bar (the page draws those, in the bar's own glass, told by "dyn-max"), and its
-//! bottom corners are rounded off in black, like a Mac's screen, by two small windows of ULTRON's own drawn here.
+//! corners curve into SYLVER's menu bar (the page draws those, in the bar's own glass, told by "dyn-max"), and its
+//! bottom corners are rounded off in black, like a Mac's screen, by two small windows of SYLVER's own drawn here.
 //! Every curve comes and goes animated: it opens out from a sharp corner and closes back into one.
 //!
 //! The window in front is looked at when it changes (a foreground hook) and ten times a second while it stays (for a
 //! maximise or restore); nothing listens to every move a window makes (browsers send thousands, and that slowed the
-//! PC). The corners are kept just under ULTRON's own overlay and left out of screen captures (except while testing).
+//! PC). The corners are kept just under SYLVER's own overlay and left out of screen captures (except while testing).
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU32, Ordering::SeqCst};
@@ -39,7 +39,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 static ON: AtomicBool = AtomicBool::new(false);
 static STARTED: AtomicBool = AtomicBool::new(false);
 static THREAD: AtomicU32 = AtomicU32::new(0);
-/// ULTRON's own overlay: the corners are kept just under it, so its panels still come over them
+/// SYLVER's own overlay: the corners are kept just under it, so its panels still come over them
 static MAIN: AtomicIsize = AtomicIsize::new(0);
 static APP: OnceLock<AppHandle> = OnceLock::new();
 const SWITCH: u32 = WM_APP + 0x4C;
@@ -93,11 +93,11 @@ unsafe fn run() {
         let _ = PeekMessageW(&mut m, None, WM_USER, WM_USER, PM_NOREMOVE);
         THREAD.store(GetCurrentThreadId(), SeqCst);
         let inst: Option<windows::Win32::Foundation::HINSTANCE> = GetModuleHandleW(None).ok().map(|m| m.into());
-        RegisterClassW(&WNDCLASSW { lpfnWndProc: Some(proc), hInstance: inst.unwrap_or_default(), lpszClassName: w!("UltronCorners"), ..Default::default() });
+        RegisterClassW(&WNDCLASSW { lpfnWndProc: Some(proc), hInstance: inst.unwrap_or_default(), lpszClassName: w!("SylverCorners"), ..Default::default() });
         let make = || {
             CreateWindowExW(
                 WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
-                w!("UltronCorners"),
+                w!("SylverCorners"),
                 w!(""),
                 WS_POPUP,
                 0,
@@ -116,7 +116,7 @@ unsafe fn run() {
             STARTED.store(false, SeqCst);
             return;
         };
-        // (left out of screen captures, as the rest of ULTRON is; while testing they're to show in ULTRON's own pictures)
+        // (left out of screen captures, as the rest of SYLVER is; while testing they're to show in SYLVER's own pictures)
         if std::env::var("ULTRON_DEV_INBOX").is_err() {
             for h in [cbl, cbr] {
                 let _ = SetWindowDisplayAffinity(h, WDA_EXCLUDEFROMCAPTURE);

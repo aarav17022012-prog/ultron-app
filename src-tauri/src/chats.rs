@@ -1,4 +1,4 @@
-//! Past conversations, kept on this PC, so ULTRON can pick up where you left off, even after a
+//! Past conversations, kept on this PC, so SYLVER can pick up where you left off, even after a
 //! restart. Two things use them:
 //!   - the last few exchanges ride along with every question (follow-ups like "and how tall is he?"
 //!     work across restarts and long pauses);
@@ -95,7 +95,7 @@ fn when(at: u64) -> String {
 
 const STOP: &[&str] = &[
     "the", "and", "for", "that", "this", "with", "you", "your", "are", "was", "were", "what", "when", "where", "which", "who", "why", "how", "can", "could", "would", "should", "did", "does",
-    "have", "has", "had", "about", "tell", "from", "into", "its", "it's", "our", "out", "not", "but", "any", "all", "one", "get", "got", "make", "made", "please", "ultron", "hey", "just",
+    "have", "has", "had", "about", "tell", "from", "into", "its", "it's", "our", "out", "not", "but", "any", "all", "one", "get", "got", "make", "made", "please", "sylver", "ultron", "hey", "just",
     "like", "want", "need", "know", "there", "their", "them", "then", "than", "will", "been", "being", "some", "more", "most", "also", "very", "much", "many", "said", "say", "ask", "asked",
     "talk", "talked", "remember",
 ];
@@ -149,7 +149,7 @@ pub fn recall(app: &AppHandle, query: &str, skip: usize) -> Option<String> {
 pub fn command(app: &AppHandle, text: &str) -> Option<String> {
     let l = text.to_lowercase();
     let l = l.trim().trim_end_matches(['?', '.', '!']).trim();
-    let l = l.strip_prefix("ultron").map(|r| r.trim_start_matches([',', ' '])).unwrap_or(l);
+    let l = l.strip_prefix("sylver").or_else(|| l.strip_prefix("ultron")).map(|r| r.trim_start_matches([',', ' '])).unwrap_or(l);
     if ["forget our chat", "forget our conversation", "forget the chat", "forget this conversation", "clear our chat", "clear the chat", "clear chat history", "delete our chat", "delete chat history",
         "forget what we talked about", "clear our conversation"].iter().any(|p| l.starts_with(p)) {
         clear(app);

@@ -2,7 +2,7 @@
 //!
 //! A photo is saved again as a JPEG (scaled down first when it's huge), a video is encoded again by
 //! Windows' own transcoder (on the graphics card where it can), anything else is zipped. The file you
-//! chose is never touched: the small copy goes to Documents › ULTRON Files › Compressed, and when a
+//! chose is never touched: the small copy goes to Documents › SYLVER Files › Compressed, and when a
 //! copy wouldn't come out smaller none is kept.
 
 use std::collections::VecDeque;
@@ -19,13 +19,13 @@ static BUSY: AtomicBool = AtomicBool::new(false);
 static STOP: AtomicBool = AtomicBool::new(false);
 
 pub fn folder(app: &AppHandle) -> PathBuf {
-    let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("ULTRON Files").join("Compressed");
+    let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("SYLVER Files").join("Compressed");
     let _ = std::fs::create_dir_all(&d);
     d
 }
 
 /// Windows' own "Open" box: for several files of any kind (Files), or for one picture (Wallpaper). It
-/// belongs to ULTRON's window so that it comes up in front. Empty when it was closed without choosing.
+/// belongs to SYLVER's window so that it comes up in front. Empty when it was closed without choosing.
 pub fn pick(owner: Option<isize>, picture: bool) -> Vec<String> {
     pick_as(owner, picture, "Choose photos, videos or files to make smaller", "Shrink")
 }
@@ -152,7 +152,7 @@ fn lighter(to: u64, from: u64) -> bool {
     to > 0 && to < from - from / 20
 }
 
-/// A copy that isn't wanted after all (no smaller, stopped, or failed half-way). It's ULTRON's own, just written.
+/// A copy that isn't wanted after all (no smaller, stopped, or failed half-way). It's SYLVER's own, just written.
 fn drop_copy(p: &Path) {
     for _ in 0..20 {
         if std::fs::remove_file(p).is_ok() || !p.exists() {

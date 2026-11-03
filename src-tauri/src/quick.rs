@@ -96,11 +96,11 @@ pub fn power_saving() -> bool {
 
 /// Generation speed of a short warm-up answer (this is also what compiles the GPU shaders).
 /// The graphics card prepares its programs for each new prompt length the first time it meets one
-/// (that was the odd 10-second answer). So read prompts of every length ULTRON uses now, quietly.
+/// (that was the odd 10-second answer). So read prompts of every length SYLVER uses now, quietly.
 fn warm_up(port: u16, gpu: bool) -> f64 {
     let url = format!("http://127.0.0.1:{port}/completion");
     let say = |n: usize, out: usize| {
-        let filler = "ULTRON lives on this PC and answers questions out loud. ".repeat(n);
+        let filler = "SYLVER lives on this PC and answers questions out loud. ".repeat(n);
         serde_json::json!({
             "prompt": format!("<|im_start|>system\n{filler}<|im_end|>\n<|im_start|>user\nSay hello in one short sentence.<|im_end|>\n<|im_start|>assistant\n"),
             "n_predict": out, "temperature": 0.2, "cache_prompt": false
@@ -197,17 +197,16 @@ fn card_fits() -> bool {
     crate::router::specs().vram_gb >= 3.5
 }
 
-/// Start it in the background once ULTRON is up.
-/// Still getting ready (the first minute or so after ULTRON starts).
+/// Start it in the background once SYLVER is up.
+/// Still getting ready (the first minute or so after SYLVER starts).
 pub fn warming() -> bool {
     WARMING.load(Ordering::SeqCst)
 }
 
 pub fn start(app: AppHandle) {
     let _ = APP.set(app.clone());
-    let s = crate::router::specs();
-    if !card_fits() && s.ram_gb < 11.5 {
-        return; // no room for a second brain: chat stays on the main one
+    if crate::router::tier() == crate::router::Tier::Light {
+        return;
     }
     WARMING.store(true, Ordering::SeqCst);
     std::thread::spawn(move || {
@@ -299,7 +298,7 @@ impl Drop for Done {
     }
 }
 
-/// While it's still warming up (the first minute after ULTRON starts), wait for it rather than
+/// While it's still warming up (the first minute after SYLVER starts), wait for it rather than
 /// sending a simple question to the slower brain.
 pub fn wait(limit: Duration) -> Option<u16> {
     let t0 = Instant::now();

@@ -1,5 +1,5 @@
-//! The ULTRON Lyric Engine, part 1: vocal isolation. Music drowns out a singer for
-//! speech recognition, so before listening ULTRON pulls the voice out of the mix with
+//! The SYLVER Lyric Engine, part 1: vocal isolation. Music drowns out a singer for
+//! speech recognition, so before listening SYLVER pulls the voice out of the mix with
 //! a neural source-separation model (MDX-Net "Kim Vocal 2", run with ONNX Runtime).
 //! Then part 2 (songs.rs) finds each sung phrase and recognises it from the clean voice.
 //!
@@ -141,11 +141,11 @@ impl Separator {
 mod tests {
     use super::*;
 
-    /// cargo test --release --bin ultron isolates -- --ignored --nocapture  (ULTRON_MIX = a 44.1 kHz stereo wav)
+    /// cargo test --release --bin ultron isolates -- --ignored --nocapture  (SYLVER_MIX = a 44.1 kHz stereo wav)
     #[test]
     #[ignore]
     fn isolates() {
-        let path = std::env::var("ULTRON_MIX").unwrap();
+        let path = std::env::var("SYLVER_MIX").unwrap();
         let b = std::fs::read(&path).unwrap();
         let data = b.windows(4).position(|w| w == b"data").unwrap() + 8;
         let s: Vec<f32> = b[data..].chunks(2).map(|c| i16::from_le_bytes([c[0], c[1]]) as f32 / 32768.0).collect();

@@ -1,5 +1,5 @@
-//! Dictated words dragged off their card and dropped into a typing area: a text box, a chat, a document. It's ULTRON's
-//! own drag, not Windows' (that drops words anywhere, into a folder as a file too). While it goes, ULTRON lets the
+//! Dictated words dragged off their card and dropped into a typing area: a text box, a chat, a document. It's SYLVER's
+//! own drag, not Windows' (that drops words anywhere, into a folder as a file too). While it goes, SYLVER lets the
 //! pointer through to the app below, and what's under it is asked, through the accessibility interface screen readers
 //! use, whether you can type there. One you can is outlined; let go over it, it's clicked where you let go and the words
 //! are typed in. Let go anywhere else (or Esc), they go back onto the card.
@@ -42,7 +42,7 @@ unsafe fn typable(e: &IUIAutomationElement) -> bool {
     }
 }
 
-/// Whether the app you were in has its cursor in somewhere you can type (it's given the keyboard back first, if ULTRON
+/// Whether the app you were in has its cursor in somewhere you can type (it's given the keyboard back first, if SYLVER
 /// had it): dictation then types straight into it, rather than onto its card.
 pub fn typing_ready(app: &AppHandle) -> bool {
     use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
@@ -163,7 +163,7 @@ pub fn drag(app: AppHandle, text: String) {
                 let (x, y) = to_page(p.x, p.y);
                 let _ = app.emit_to("main", "words-drop", serde_json::json!({ "ok": at.is_some(), "x": x, "y": y, "esc": esc, "aim": at.map(rect) }));
                 if at.is_some() {
-                    // clicked where it was let go (the caret goes there; ULTRON lets the click through), then typed
+                    // clicked where it was let go (the caret goes there; SYLVER lets the click through), then typed
                     mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                     mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                     std::thread::sleep(Duration::from_millis(140));

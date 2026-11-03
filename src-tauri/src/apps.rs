@@ -38,7 +38,7 @@ pub struct AppEntry {
     pub launch: String,
 }
 
-/// A window that's open, as ULTRON's taskbar shows it. `launch` is what starts its app (the same
+/// A window that's open, as SYLVER's taskbar shows it. `launch` is what starts its app (the same
 /// string the Start list and its pins use, when the app is in that list; else the program's path).
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct OpenWin {
@@ -171,10 +171,10 @@ pub fn shell_open(target: &str) -> bool {
     ok
 }
 
-/// ULTRON, for finding the app a launch is for in its list of apps.
+/// SYLVER, for finding the app a launch is for in its list of apps.
 static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
 
-/// The windows already open of the app `target` opens (its program, its app id, or the app in ULTRON's list it is).
+/// The windows already open of the app `target` opens (its program, its app id, or the app in SYLVER's list it is).
 fn windows_of(target: &str) -> Vec<HWND> {
     let t = target.trim_matches('"').to_lowercase();
     let id = t.strip_prefix("shell:appsfolder\\").map(|s| s.to_string());
@@ -200,7 +200,7 @@ fn app_windows() -> Vec<HWND> {
     all.into_iter().filter(|h| is_app_window(*h, own)).collect()
 }
 
-/// ULTRON's own windows never take the keyboard, so Windows doesn't count ULTRON as the app you're in, and doesn't
+/// SYLVER's own windows never take the keyboard, so Windows doesn't count SYLVER as the app you're in, and doesn't
 /// let what it starts come in front of that app: apps opened behind the one you were in. So the first new window to
 /// appear (within a few seconds) is brought to the front, unless something else has come to the front by then.
 fn front_when_shown(before: Vec<HWND>, target: String) {
@@ -233,7 +233,7 @@ fn front_when_shown(before: Vec<HWND>, target: String) {
     });
 }
 
-/// Bring a window to the front with the keyboard. Windows only lets the app in front hand that over, so ULTRON joins
+/// Bring a window to the front with the keyboard. Windows only lets the app in front hand that over, so SYLVER joins
 /// the front app's input for a moment to do it (an Alt tap is the last resort).
 pub fn force_front(h: HWND) {
     use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
@@ -261,9 +261,9 @@ pub fn force_front(h: HWND) {
 
 fn open_target(target: &str) -> bool {
     unsafe {
-        // (the app that opens may come to the front: ULTRON was just clicked, so it may hand that on)
+        // (the app that opens may come to the front: SYLVER was just clicked, so it may hand that on)
         let _ = windows::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow(windows::Win32::UI::WindowsAndMessaging::ASFW_ANY);
-        // An app from the Start list (shell:AppsFolder\ and its id) is opened here, in ULTRON, not by starting another
+        // An app from the Start list (shell:AppsFolder\ and its id) is opened here, in SYLVER, not by starting another
         // explorer.exe to open it: that extra Explorer coming up was what made the screen stutter as an app opened.
         // A Store app is started by Windows' app activation; any other by the shell, which knows the id.
         if let Some(id) = target.strip_prefix("shell:AppsFolder\\") {
@@ -319,7 +319,7 @@ fn tap_alt() {
 pub fn focus_window(h: HWND) {
     unsafe {
         // (a window that has closed since, or gone: nothing to hand the keyboard to, and the Alt tap below would land on
-        //  ULTRON's own window instead)
+        //  SYLVER's own window instead)
         if !windows::Win32::UI::WindowsAndMessaging::IsWindow(Some(h)).as_bool() || !IsWindowVisible(h).as_bool() {
             return;
         }
@@ -369,7 +369,7 @@ fn real_pid(h: HWND, pid: u32) -> u32 {
 }
 
 impl Apps {
-    /// Every app window that's open, front to back (for ULTRON's taskbar).
+    /// Every app window that's open, front to back (for SYLVER's taskbar).
     pub fn open_windows(&self) -> Vec<OpenWin> {
         let own = unsafe { GetCurrentProcessId() };
         let mut all: Vec<HWND> = Vec::new();
@@ -464,7 +464,7 @@ impl Apps {
     }
 
     /// Give focus back to the app you were using (menu bar clicks briefly take it).
-    /// The app window you were last using (before clicking ULTRON).
+    /// The app window you were last using (before clicking SYLVER).
     pub fn last_window(&self) -> Option<HWND> {
         let h = self.last_external_fg.load(Ordering::SeqCst);
         (h != 0).then(|| HWND(h as _))
@@ -624,7 +624,7 @@ pub fn start(app: AppHandle) {
         // the window in front (and its title: a browser's changes with the tab), and the looks at its colours still due
         let (mut col_win, mut col_title, mut col_due): (isize, String, Vec<std::time::Instant>) = (0, String::new(), Vec::new());
         // Switching apps, Windows' own task switcher, taskbar, Start or search pass through the front on the way to the
-        // next app, a moment each. The bar followed them (showing "Ultron" and its own tint, then the app): two changes
+        // next app, a moment each. The bar followed them (showing "Sylver" and its own tint, then the app): two changes
         // in quick succession, which read as a flicker. Those are passed over, and a new window counts once it has
         // stayed in front for 90 ms.
         const PASSING: [&str; 12] = [

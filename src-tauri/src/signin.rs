@@ -1,5 +1,5 @@
-//! Windows asking for its sign-in when the PC wakes, on or off (Settings > Look & feel > Lock screen, when ULTRON's is
-//! chosen: off, only ULTRON's lock screen comes up as the PC wakes). It's what "If you've been away, when should Windows
+//! Windows asking for its sign-in when the PC wakes, on or off (Settings > Look & feel > Lock screen, when SYLVER's is
+//! chosen: off, only SYLVER's lock screen comes up as the PC wakes). It's what "If you've been away, when should Windows
 //! require you to sign in again?" sets: the power setting CONSOLELOCK (sleep), and DelayLockInterval (PCs that stay
 //! connected while asleep). Both are the signed-in person's own; no administrator is needed. What they were before is
 //! kept, and put back when it's turned on again. Restarts and Win L still go by Windows' sign-in.
@@ -10,7 +10,7 @@ use std::process::Command;
 const NO_WINDOW: u32 = 0x0800_0000;
 
 fn kept() -> std::path::PathBuf {
-    std::env::var("LOCALAPPDATA").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("ULTRON").join("signin-on-wake-was.txt")
+    std::env::var("LOCALAPPDATA").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("SYLVER").join("signin-on-wake-was.txt")
 }
 
 fn powercfg(args: &[&str]) -> Option<String> {
@@ -51,7 +51,7 @@ pub fn asks() -> Option<bool> {
     console_lock().map(|(ac, dc)| ac != 0 || dc != 0)
 }
 
-/// Windows' sign-in on wake on (`true`: as it was before ULTRON turned it off) or off. Gives what it is now.
+/// Windows' sign-in on wake on (`true`: as it was before SYLVER turned it off) or off. Gives what it is now.
 pub fn set(on: bool) -> Option<bool> {
     if on {
         let was = std::fs::read_to_string(kept()).unwrap_or_default();

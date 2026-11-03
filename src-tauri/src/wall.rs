@@ -1,6 +1,6 @@
-//! Wallpaper, in the bar: three of ULTRON's own, and any picture of yours dropped onto the menu.
+//! Wallpaper, in the bar: three of SYLVER's own, and any picture of yours dropped onto the menu.
 //!
-//! The picture is first put in Documents › ULTRON Files › Wallpapers (one of ULTRON's is written
+//! The picture is first put in Documents › SYLVER Files › Wallpapers (one of SYLVER's is written
 //! out there, yours is copied there, so it stays your wallpaper wherever the original goes), then
 //! shown arriving (veil.rs) and handed to Windows.
 
@@ -13,17 +13,17 @@ use base64::Engine;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 
-/// ULTRON's own, as the page knows them ("our:dusk") and as they're named once written out.
+/// SYLVER's own, as the page knows them ("our:dusk") and as they're named once written out.
 const OURS: [(&str, &str); 4] = [("dusk", "Dusk"), ("tide", "Tide"), ("graphite", "Graphite"), ("town", "Town")];
 
 pub fn folder(app: &AppHandle) -> PathBuf {
-    let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("ULTRON Files").join("Wallpapers");
+    let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("SYLVER Files").join("Wallpapers");
     let _ = std::fs::create_dir_all(&d);
     d
 }
 
 fn ours_file(dir: &Path, name: &str) -> PathBuf {
-    dir.join(format!("ULTRON {name}.jpg"))
+    dir.join(format!("SYLVER {name}.jpg"))
 }
 
 fn is_picture(p: &Path) -> bool {
@@ -42,7 +42,7 @@ fn place(dir: &Path, src: &Path) -> Result<PathBuf, String> {
         return Err("That picture isn't there any more".into());
     }
     if !is_picture(src) {
-        return Err("ULTRON takes JPG, PNG or BMP pictures".into());
+        return Err("SYLVER takes JPG, PNG or BMP pictures".into());
     }
     let size = std::fs::metadata(src).map(|m| m.len()).unwrap_or(0);
     if size == 0 || size > 80 * 1024 * 1024 {
@@ -63,13 +63,13 @@ fn place(dir: &Path, src: &Path) -> Result<PathBuf, String> {
     Ok(to)
 }
 
-/// Where the picture to use ends up: one of ULTRON's own written out, or yours copied in.
+/// Where the picture to use ends up: one of SYLVER's own written out, or yours copied in.
 fn prepare(app: &AppHandle, pick: &str) -> Result<PathBuf, String> {
     let dir = folder(app);
     let Some(id) = pick.strip_prefix("our:") else { return place(&dir, Path::new(pick)) };
-    let name = OURS.iter().find(|o| o.0 == id).ok_or("That isn't one of ULTRON's wallpapers")?.1;
+    let name = OURS.iter().find(|o| o.0 == id).ok_or("That isn't one of SYLVER's wallpapers")?.1;
     let to = ours_file(&dir, name);
-    let bytes = app.asset_resolver().get(format!("wallpapers/{id}.jpg")).map(|a| a.bytes).filter(|b| b.starts_with(&[0xFF, 0xD8])).ok_or("That wallpaper is missing from this copy of ULTRON")?;
+    let bytes = app.asset_resolver().get(format!("wallpapers/{id}.jpg")).map(|a| a.bytes).filter(|b| b.starts_with(&[0xFF, 0xD8])).ok_or("That wallpaper is missing from this copy of SYLVER")?;
     if std::fs::metadata(&to).map(|m| m.len()).unwrap_or(0) != bytes.len() as u64 {
         std::fs::write(&to, &bytes).map_err(|e| format!("Couldn't save the wallpaper: {e}"))?;
     }
@@ -114,7 +114,7 @@ fn set(path: &Path) -> Result<(), String> {
     .ok_or_else(|| "Windows wouldn't change the wallpaper".to_string())
 }
 
-/// A small picture of one of yours for the menu, made once and kept while ULTRON runs.
+/// A small picture of one of yours for the menu, made once and kept while SYLVER runs.
 fn thumb(p: &Path) -> Option<String> {
     static MADE: Mutex<Option<HashMap<(PathBuf, u64), String>>> = Mutex::new(None);
     let key = (p.to_path_buf(), std::fs::metadata(p).ok()?.len());
@@ -129,7 +129,7 @@ fn thumb(p: &Path) -> Option<String> {
     Some(url)
 }
 
-/// The wallpaper as it is now, as a picture `w` by `h` (it fills that shape, cut to fit): for ULTRON's
+/// The wallpaper as it is now, as a picture `w` by `h` (it fills that shape, cut to fit): for SYLVER's
 /// search and its lock screen. Made once for each wallpaper and size.
 pub fn picture(w: u32, h: u32) -> Option<String> {
     static MADE: Mutex<Option<HashMap<(PathBuf, u64, u32, u32), String>>> = Mutex::new(None);
@@ -176,7 +176,7 @@ pub fn list(app: &AppHandle) -> Value {
 
 /// Make `pick` ("our:dusk", or the path of a picture) the wallpaper: it pours in over the old one (see
 /// veil.rs), and Windows is given it once it covers the screen. Gives back what `list` gives.
-/// `dry` (only while ULTRON runs with its developer inbox) rehearses the arrival and leaves the wallpaper alone.
+/// `dry` (only while SYLVER runs with its developer inbox) rehearses the arrival and leaves the wallpaper alone.
 pub fn apply(app: &AppHandle, pick: &str, dry: bool, how: u8) -> Result<Value, String> {
     let p = prepare(app, pick)?;
     let dry = dry && std::env::var("ULTRON_DEV_INBOX").is_ok();

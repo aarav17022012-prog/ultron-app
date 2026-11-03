@@ -1,9 +1,9 @@
-//! Screen recording. The picture and sound are captured and compressed by the web engine ULTRON's
+//! Screen recording. The picture and sound are captured and compressed by the web engine SYLVER's
 //! window already runs in (it hands the work to the graphics card's own video encoder when there is
 //! one, so recording doesn't slow the PC), a second at a time; each second is written to the file here
 //! as it arrives, so a long recording never sits in memory and a crash loses at most a second.
 //!
-//! Recordings go to Documents\ULTRON Files\Recordings, with everything else ULTRON makes.
+//! Recordings go to Documents\SYLVER Files\Recordings, with everything else SYLVER makes.
 //! Two keys work from anywhere: Ctrl+Alt+R starts, Ctrl+Alt+S stops.
 
 use std::io::Write;
@@ -17,7 +17,7 @@ static FILE: Mutex<Option<(std::fs::File, PathBuf)>> = Mutex::new(None);
 static KEYS: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
 
 pub fn folder(app: &AppHandle) -> PathBuf {
-    let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("ULTRON Files").join("Recordings");
+    let d = app.path().document_dir().unwrap_or_else(|_| crate::skills::known_folder("documents")).join("SYLVER Files").join("Recordings");
     let _ = std::fs::create_dir_all(&d);
     d
 }
@@ -29,7 +29,7 @@ pub fn begin(app: &AppHandle, ext: &str) -> Result<String, String> {
     let path = folder(app).join(format!("Recording {:04}-{:02}-{:02} {:02}.{:02}.{:02}.{ext}", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond));
     let f = std::fs::File::create(&path).map_err(|e| format!("I couldn't create the recording file: {e}"))?;
     *FILE.lock().unwrap() = Some((f, path.clone()));
-    crate::backdrop::hold(true); // (ULTRON stays in the picture, steadily, for the whole recording)
+    crate::backdrop::hold(true); // (SYLVER stays in the picture, steadily, for the whole recording)
     crate::log_line("recording: started");
     Ok(path.to_string_lossy().to_string())
 }
@@ -60,7 +60,7 @@ pub fn end(secs: f64) -> Option<(String, f64)> {
 }
 
 /// The sound the PC is playing (music, a video, a call), for the recording. The screen capture brings no
-/// sound with it, so while a recording runs ULTRON listens to what's going to the speakers and hands it to
+/// sound with it, so while a recording runs SYLVER listens to what's going to the speakers and hands it to
 /// the page a fiftieth of a second at a time (two channels of 32-bit numbers); the page mixes it into the
 /// file. Returns how many samples a second it comes at (0 when there is nothing to listen to).
 static SOUND_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -115,7 +115,7 @@ pub fn sound(app: &AppHandle, on: bool) -> u32 {
         };
         let mut pieces = 0u32;
         while SOUND_ON.load(Ordering::SeqCst) {
-            std::thread::sleep(std::time::Duration::from_millis(20));
+            std::thread::sleep(std::time::Duration::from_millis(40)); // less frequent polling to reduce CPU
             let chunk: Vec<f32> = std::mem::take(&mut *heard.lock().unwrap());
             if chunk.is_empty() {
                 continue; // (nothing is playing)
@@ -129,8 +129,8 @@ pub fn sound(app: &AppHandle, on: bool) -> u32 {
     rate
 }
 
-/// A real click at a spot in ULTRON's own window (page pixels). The web engine only lets a page start
-/// capturing the screen in answer to a click, so the "start" key presses ULTRON's own Record button.
+/// A real click at a spot in SYLVER's own window (page pixels). The web engine only lets a page start
+/// capturing the screen in answer to a click, so the "start" key presses SYLVER's own Record button.
 pub fn click(app: &AppHandle, x: f64, y: f64) {
     use windows::Win32::Foundation::{POINT, RECT};
     use windows::Win32::UI::Input::KeyboardAndMouse::{mouse_event, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP};
@@ -144,7 +144,7 @@ pub fn click(app: &AppHandle, x: f64, y: f64) {
         let mut old = POINT::default();
         let _ = GetCursorPos(&mut old);
         let _ = SetCursorPos(sx, sy);
-        std::thread::sleep(std::time::Duration::from_millis(60)); // (ULTRON's window notices the pointer and takes the click)
+        std::thread::sleep(std::time::Duration::from_millis(60)); // (SYLVER's window notices the pointer and takes the click)
         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
         std::thread::sleep(std::time::Duration::from_millis(40));
@@ -161,7 +161,7 @@ pub fn keys() -> Vec<&'static str> {
 pub fn hotkeys(app: AppHandle) {
     use windows::Win32::UI::Input::KeyboardAndMouse::{RegisterHotKey, UnregisterHotKey, HOT_KEY_MODIFIERS, MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, MOD_SHIFT};
     use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, MSG, WM_HOTKEY};
-    let _ = folder(&app); // (Documents\ULTRON Files, with Recordings in it, is there from the first start)
+    let _ = folder(&app); // (Documents\SYLVER Files, with Recordings in it, is there from the first start)
     std::thread::spawn(move || unsafe {
         let sets: [(HOT_KEY_MODIFIERS, &[&'static str]); 3] = [(MOD_CONTROL | MOD_ALT, &["Ctrl", "Alt"]), (MOD_ALT | MOD_SHIFT, &["Alt", "Shift"]), (MOD_CONTROL | MOD_ALT | MOD_SHIFT, &["Ctrl", "Alt", "Shift"])];
         for (m, names) in sets {

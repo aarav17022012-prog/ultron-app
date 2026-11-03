@@ -258,7 +258,7 @@ pub fn start(app: AppHandle) {
                                 })
                                 .unwrap_or(false);
                             // the keyboard media key goes to Windows' own "current" player, so only
-                            // fall back to it when that's the player ULTRON is showing
+                            // fall back to it when that's the player SYLVER is showing
                             if !done && current.is_some() && current == sys_id {
                                 crate::apps::send_keys(&[VK_MEDIA_PLAY_PAUSE]);
                             }

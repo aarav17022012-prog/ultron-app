@@ -90,7 +90,7 @@ fn plan() -> Vec<(Group, Vec<Spot>)> {
     let open = |exe: &str| procs.iter().any(|p| p == exe);
     let mut groups = Vec::new();
 
-    // temporary files a day old or more (ULTRON's own, and Claude's, are left alone)
+    // temporary files a day old or more (SYLVER's own, and Claude's, are left alone)
     let mut t = Vec::new();
     if let Ok(rd) = std::fs::read_dir(&temp) {
         for e in rd.flatten() {

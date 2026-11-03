@@ -58,7 +58,7 @@ pub fn register(app: &AppHandle, hwnd: HWND, reserve: f64, height: f64) {
 /// messages back to the window (and the shell answers with "positions changed", which asks for this
 /// again), so nothing is held while they run: this used to keep the lock on `BAR` throughout, and a
 /// change of display arriving together with the shell's notice left the window's thread and a helper
-/// thread waiting on each other for good (ULTRON froze until it was ended). Now only one caller at a
+/// thread waiting on each other for good (SYLVER froze until it was ended). Now only one caller at a
 /// time does the placing, and anyone who asks meanwhile just has it done once more afterwards.
 pub fn position() {
     AGAIN.store(true, SeqCst);
@@ -118,13 +118,13 @@ pub fn remove() {
     }
 }
 
-/// Windows says an app has gone full screen, and ULTRON's bar, notch and the wheel's arrow stand aside. It says so
+/// Windows says an app has gone full screen, and SYLVER's bar, notch and the wheel's arrow stand aside. It says so
 /// for more than a full-screen app, though: for a moment as you switch apps (Alt+Tab's switcher, Task View) and as some
 /// apps open (a splash screen across the screen), and then that it's over. Each time the bar went and came back: the
 /// arrow under it flickered. Now going is put off a moment and done only if what's in front still fills its screen and
 /// is an app's window; coming back is at once.
 static FULL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-/// An app is full screen now (a game, a video), as Windows has said: ULTRON's Alt+Tab steps aside for it.
+/// An app is full screen now (a game, a video), as Windows has said: SYLVER's Alt+Tab steps aside for it.
 pub static FULL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 fn full_screen(on: bool) {
@@ -176,8 +176,8 @@ pub(crate) fn really_full() -> bool {
 }
 
 /// Windows' shell, started again (after an update, very often, or when Explorer is restarted): everything it knew of
-/// ULTRON is gone. ULTRON's strip of the screen was given back to the windows, and Windows' own taskbar came back. Both
-/// are put right: the strip asked for again, and the page told, so ULTRON's own taskbar puts Windows' away again.
+/// SYLVER is gone. SYLVER's strip of the screen was given back to the windows, and Windows' own taskbar came back. Both
+/// are put right: the strip asked for again, and the page told, so SYLVER's own taskbar puts Windows' away again.
 static SHELL_BACK: OnceLock<u32> = OnceLock::new();
 
 unsafe extern "system" fn subclass(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM, _id: usize, _ref: usize) -> LRESULT {

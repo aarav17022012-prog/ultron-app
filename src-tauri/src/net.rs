@@ -1,5 +1,5 @@
 //! Reliable web requests on networks where some of a site's addresses don't work
-//! (e.g. no IPv6, or one of a CDN's IPs unreachable). The first time ULTRON talks
+//! (e.g. no IPv6, or one of a CDN's IPs unreachable). The first time SYLVER talks
 //! to a site it tries all of its addresses at once, then uses only the ones that
 //! answer (remembered for 10 minutes). Without this, a request could sit for the
 //! whole timeout on a dead address while a working one was right there.
@@ -63,7 +63,7 @@ pub fn agent(timeout: Duration) -> ureq::Agent {
         .timeout(timeout)
         .timeout_connect(Duration::from_millis(2500))
         .resolver(|addr: &str| resolve(addr))
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) ULTRON/0.3")
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) SYLVER/0.3")
         .build()
 }
 

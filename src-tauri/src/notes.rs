@@ -1,7 +1,7 @@
-//! ULTRON's own notifications (Settings › Notifications › ULTRON): they hang down from the menu bar in its glass
+//! SYLVER's own notifications (Settings › Notifications › SYLVER): they hang down from the menu bar in its glass
 //! and gather under the bell by the clock, instead of Windows' pop-ups in the corner.
 //!
-//! What comes in: Windows' notification listener (the list Windows' notification centre shows; ULTRON was already
+//! What comes in: Windows' notification listener (the list Windows' notification centre shows; SYLVER was already
 //! allowed to read it for incoming calls) gives each notification's app, words and time. What Windows' own banner
 //! would have offered (its buttons, reply box, pictures, and what a click opens) is read from the notification as the
 //! app sent it, in Windows' notification database: read-only, through Windows' own winsqlite3.dll.
@@ -11,9 +11,9 @@
 //! activator; a link opens; a Store app without one is opened with the arguments; anything else is just opened.
 //! Buttons that nothing outside Windows could press are left off.
 //!
-//! While ULTRON's are on, Windows' own banners are turned off app by app (each app's "Show notification banners",
+//! While SYLVER's are on, Windows' own banners are turned off app by app (each app's "Show notification banners",
 //! the ShowBanner value under Notifications\Settings) so the two don't both show. What was changed is written down
-//! and put back when the setting goes back to Windows, when ULTRON closes, or by the taskbar guard if ULTRON ends
+//! and put back when the setting goes back to Windows, when SYLVER closes, or by the taskbar guard if SYLVER ends
 //! without closing. Clock (alarms) and Phone Link's calls keep Windows' banners: their buttons belong there.
 
 use std::collections::{HashMap, HashSet};
@@ -116,8 +116,8 @@ pub fn on() -> bool {
 
 /* ---------------- what's in Windows' list ---------------- */
 
-/// Called with Windows' list each time calls.rs looks at it (every 0.9 s), only while ULTRON's are on.
-/// New ones go to the page ("note"), gone ones too ("note-gone"); what was there before ULTRON looked comes in quietly.
+/// Called with Windows' list each time calls.rs looks at it (every 0.9 s), only while SYLVER's are on.
+/// New ones go to the page ("note"), gone ones too ("note-gone"); what was there before SYLVER looked comes in quietly.
 pub fn poll(app: &AppHandle, list: &[UserNotification]) {
     let (fresh, first) = {
         let mut st = ST.lock().unwrap();
@@ -527,7 +527,7 @@ pub fn reply(app: &AppHandle, id: u32, text: &str) -> Result<(), String> {
             break;
         }
     }
-    // (the app may have been in front already, its chat opening in place: then nothing changes. Only when ULTRON itself
+    // (the app may have been in front already, its chat opening in place: then nothing changes. Only when SYLVER itself
     //  still has the keyboard has the app not come)
     let main = app.get_webview_window("main").and_then(|w| crate::hit::hwnd_of(&w)).map(|h| h.0 as isize).unwrap_or(0);
     let now = unsafe { GetForegroundWindow() }.0 as isize;
@@ -557,7 +557,7 @@ pub fn dismiss(app: &AppHandle, id: u32) {
     }
 }
 
-/// Clear one app's notifications, or (None) all of them, from ULTRON's list and Windows' alike.
+/// Clear one app's notifications, or (None) all of them, from SYLVER's list and Windows' alike.
 pub fn clear(app: &AppHandle, aumid: Option<String>) {
     let ids: Vec<u32> = {
         let st = ST.lock().unwrap();
@@ -594,7 +594,7 @@ pub fn list() -> Vec<Note> {
     v
 }
 
-/// The setting: ULTRON's (true) or Windows' own (false).
+/// The setting: SYLVER's (true) or Windows' own (false).
 pub fn set(app: &AppHandle, on: bool) {
     {
         let mut st = ST.lock().unwrap();
@@ -677,25 +677,25 @@ pub fn allow(aumid: &str, on: bool) {
     crate::log_line(&format!("notes: {aumid} notifications {}", if on { "on" } else { "off" }));
 }
 
-/* ---------------- Windows' own banners, while ULTRON's are on ---------------- */
+/* ---------------- Windows' own banners, while SYLVER's are on ---------------- */
 
 fn record_path(app: &AppHandle) -> PathBuf {
     app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir()).join("notes-banners.json")
 }
 
-/// Where the record of changed banners is kept, found without a running ULTRON (for the taskbar guard).
+/// Where the record of changed banners is kept, found without a running SYLVER (for the taskbar guard).
 fn record_path_bare() -> Option<PathBuf> {
     std::env::var("APPDATA").ok().map(|a| PathBuf::from(a).join("com.ultron.notch").join("notes-banners.json"))
 }
 
-/// The taskbar guard calls this once the ULTRON it watched has gone.
+/// The taskbar guard calls this once the SYLVER it watched has gone.
 pub fn restore_left_over() {
     if let Some(p) = record_path_bare() {
         banners::restore(&p);
     }
 }
 
-/// ULTRON closing.
+/// SYLVER closing.
 pub fn leave(app: &AppHandle) {
     if on() {
         banners::restore(&record_path(app));
@@ -746,7 +746,7 @@ mod banners {
     pub fn all_off(app: &AppHandle) {
         let ids: Vec<String> = reg::subkeys(SETTINGS).into_iter().filter(|id| reg::qword(&format!("{SETTINGS}\\{id}"), "LastNotificationAddedTime").is_some()).collect();
         cover(app, &ids);
-        crate::log_line(&format!("notes: Windows' own banners off for {} apps while ULTRON's are on", load(&record_path(app)).len()));
+        crate::log_line(&format!("notes: Windows' own banners off for {} apps while SYLVER's are on", load(&record_path(app)).len()));
     }
 
     pub fn restore(path: &std::path::Path) {

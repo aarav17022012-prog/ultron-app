@@ -1,6 +1,6 @@
-# Running ULTRON from source (Windows)
+# Running SYLVER from source (Windows)
 
-ULTRON is a Tauri 2 app: a Rust backend (`src-tauri/`) and one web page (`src/index.html`). It runs on Windows 10/11, 64-bit.
+SYLVER is a Tauri 2 app: a Rust backend (`src-tauri/`) and one web page (`src/index.html`). It runs on Windows 10/11, 64-bit.
 
 ## 1. Install the tools (once)
 
@@ -26,13 +26,13 @@ These are other projects' binaries and models, too big for git (see `.gitignore`
 | Folder | What goes there |
 |---|---|
 | `src-tauri/resources/llama/` | llama.cpp's `llama-server.exe` (build b11136) and all its DLLs (`ggml-*.dll`, `llama.dll`, ...) |
-| `src-tauri/resources/models/` | `ggml-small.en-q5_1.bin` (Whisper), `Kim_Vocal_2.onnx` (the brains, other languages' speech model, the most accurate dictation model and the depth model are fetched by ULTRON when first needed) |
+| `src-tauri/resources/models/` | `ggml-small.en-q5_1.bin` (Whisper), `Kim_Vocal_2.onnx` (the brains, other languages' speech model, the most accurate dictation model and the depth model are fetched by SYLVER when first needed) |
 | `src-tauri/resources/voices/` | `en_US-lessac-high.onnx` (+ `.onnx.json`), `en_US-ryan-high.onnx` (+ `.onnx.json`) |
 | `src-tauri/resources/piper/` | `piper.exe`, its DLLs and the `espeak-ng-data` folder |
 | `src-tauri/resources/screen/` | `omni-icon-detect.onnx` (OmniParser v2 icon detector, AGPL-3.0) |
 | `src-tauri/binaries/` | `ultron-llm-x86_64-pc-windows-msvc.exe` (build it: `cd src-tauri/llm` then `cargo build --release`, and copy the exe here with that name) |
 
-ULTRON fetches its larger AI brains itself the first time it runs (Settings › Brain shows the progress).
+SYLVER fetches its larger AI brains itself the first time it runs (Settings › Brain shows the progress).
 
 ## 3. Run it
 
@@ -43,7 +43,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` builds the backend and opens ULTRON (the first build takes 10-20 minutes; later ones a minute or two).
+`npm run dev` builds the backend and opens SYLVER (the first build takes 10-20 minutes; later ones a minute or two).
 
 To build the release app and its installer:
 
@@ -55,11 +55,11 @@ The installer lands in `src-tauri/target/release/bundle/nsis/`. Tip: the build f
 
 ## 4. Keys and the `.env` file
 
-**ULTRON needs no `.env` file and no keys to run.** Nothing is read from a `.env`; it answers on the PC by itself, and its web answers need no key.
+**SYLVER needs no `.env` file and no keys to run.** Nothing is read from a `.env`; it answers on the PC by itself, and its web answers need no key.
 
 Keys you can add later are typed into the app and kept in **Windows Credential Manager**, never in a file or the repository:
 
-| Where in ULTRON | Key name |
+| Where in SYLVER | Key name |
 |---|---|
 | Settings › Brain › My own key | API key for the chosen provider: Anthropic, OpenAI, Gemini, OpenRouter, or a custom OpenAI-compatible service (plus its base URL and model name) |
 | Notch › Email | Email address + app password (e.g. a Google app password) |
@@ -68,4 +68,4 @@ Keys you can add later are typed into the app and kept in **Windows Credential M
 Environment variables the code reads (all optional, none secret):
 
 - `ULTRON_DEV_INBOX=1`: developer mode (takes test requests from `%TEMP%\ultron-inbox.txt`)
-- `ULTRON_MODEL`, `ULTRON_WAVS`, `ULTRON_LIMIT`, `ULTRON_CTX`, `ULTRON_GREEDY`, `ULTRON_MIX`: only for the speech and lyrics tests (`cargo test -- --ignored`)
+- `SYLVER_MODEL`, `SYLVER_WAVS`, `SYLVER_LIMIT`, `SYLVER_CTX`, `SYLVER_GREEDY`, `SYLVER_MIX`: only for the speech and lyrics tests (`cargo test -- --ignored`)

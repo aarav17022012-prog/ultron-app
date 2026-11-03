@@ -1,4 +1,4 @@
-//! ULTRON Vision: how ULTRON finds things on your screen before it clicks or types.
+//! SYLVER Vision: how SYLVER finds things on your screen before it clicks or types.
 //! Three layers, fastest first, all on this PC:
 //!   1. what the app tells Windows about its buttons and fields (UI Automation), read
 //!      in a single snapshot instead of walking the tree one element at a time;
@@ -17,7 +17,7 @@ use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPRO
 use windows::Win32::UI::Accessibility::*;
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
-/// Something on screen ULTRON could act on.
+/// Something on screen SYLVER could act on.
 pub struct Found {
     pub x: i32,
     pub y: i32,
@@ -69,7 +69,7 @@ fn elements(h: HWND) -> Vec<Seen> {
                 Err(_) => return Vec::new(),
             },
         };
-        // a frozen app can't hold ULTRON up for long
+        // a frozen app can't hold SYLVER up for long
         if let Ok(u2) = uia.cast::<IUIAutomation2>() {
             let _ = u2.SetTransactionTimeout(2500);
             let _ = u2.SetConnectionTimeout(1500);
@@ -400,7 +400,7 @@ fn window_rect(h: HWND) -> Option<RECT> {
     (r.right > r.left && r.bottom > r.top).then_some(r)
 }
 
-/// All the text ULTRON can see in a window, by reading its pixels.
+/// All the text SYLVER can see in a window, by reading its pixels.
 pub fn text_of(h: HWND, limit: usize) -> String {
     let Some(r) = window_rect(h) else { return String::new() };
     let mut out = String::new();
@@ -645,7 +645,7 @@ pub fn locate(app: &AppHandle, h: HWND, what: &str, field: bool) -> Option<Found
         }
         let list: String = names.iter().enumerate().map(|(i, n)| format!("{}. {}\n", i + 1, n.0)).collect();
         let ask = format!("The user wants to {} “{what}”. These are on their screen:\n{list}\nWhich number is it? Reply with only the number, or 0 if none of them fits.", if field { "type into" } else { "click" });
-        let pick = crate::ai::oneshot(app, "You help ULTRON find the right thing on the user's screen. Reply with only a number.", &ask, 6, |_| {})?;
+        let pick = crate::ai::oneshot(app, "You help SYLVER find the right thing on the user's screen. Reply with only a number.", &ask, 6, |_| {})?;
         let n: usize = pick.split(|c: char| !c.is_ascii_digit()).find(|s| !s.is_empty())?.parse().ok()?;
         let (name, (x, y), el) = names.into_iter().nth(n.checked_sub(1)?)?;
         crate::log_line(&format!("vision: the brain picked “{name}” for “{what}” ({} ms)", t0.elapsed().as_millis()));

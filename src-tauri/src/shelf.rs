@@ -2,7 +2,7 @@
 //! tray that comes up; it stays there, at hand, until you drag it out again into any app, or put it away.
 //!
 //! The shelf holds where things are (as a link would), not copies, so nothing is duplicated or moved by keeping it
-//! there. The list is kept in ULTRON's data folder (shelf.json) and survives restarts; things that have since been
+//! there. The list is kept in SYLVER's data folder (shelf.json) and survives restarts; things that have since been
 //! deleted or moved drop off it.
 
 use std::path::{Path, PathBuf};

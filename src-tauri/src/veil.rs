@@ -1,13 +1,13 @@
-//! The new wallpaper arriving. Windows swaps wallpapers in one cut, so ULTRON draws the arrival itself:
+//! The new wallpaper arriving. Windows swaps wallpapers in one cut, so SYLVER draws the arrival itself:
 //! the new picture pours down from under the bar, soft-edged, over the old one, behind every window.
 //! Once it covers the screen Windows is told to change the wallpaper underneath, and a moment later
-//! ULTRON's copy fades away over the identical real one.
+//! SYLVER's copy fades away over the identical real one.
 //!
-//! The picture is drawn in a window of ULTRON's own that sits under every other window, just above the
+//! The picture is drawn in a window of SYLVER's own that sits under every other window, just above the
 //! desktop. (So the desktop's icons are covered while it plays, about a second and a half, and come
 //! back as it fades. Inside the desktop, behind the icons, would be the place for it, and the code for
 //! that is here, ways 1 to 3: but Windows 11 from build 26300 doesn't draw a window put there, though
-//! the window reports itself visible. Measured with a magenta test picture and ULTRON's own look at
+//! the window reports itself visible. Measured with a magenta test picture and SYLVER's own look at
 //! the screen behind its bar, 14 Oct 2026.)
 
 use std::path::{Path, PathBuf};
@@ -161,7 +161,7 @@ unsafe fn build(picture: &Path) -> Vec<Layer> {
         static CLASS: std::sync::Once = std::sync::Once::new();
         let inst: Option<windows::Win32::Foundation::HINSTANCE> = GetModuleHandleW(None).ok().map(|m| m.into());
         CLASS.call_once(|| {
-            RegisterClassW(&WNDCLASSW { lpfnWndProc: Some(proc), hInstance: inst.unwrap_or_default(), lpszClassName: w!("UltronVeil"), ..Default::default() });
+            RegisterClassW(&WNDCLASSW { lpfnWndProc: Some(proc), hInstance: inst.unwrap_or_default(), lpszClassName: w!("SylverVeil"), ..Default::default() });
         });
         let mut layers = Vec::new();
         for s in screens.iter().take(4) {
@@ -186,7 +186,7 @@ unsafe fn build(picture: &Path) -> Vec<Layer> {
             let how = way;
             let make = |child: bool, whole: bool, inside: bool| -> Result<HWND, String> {
                 let (style, x, y, parent) = if child { (WS_CHILD, s.left - at.left, s.top - at.top, Some(home)) } else { (WS_POPUP, s.left, s.top, None) };
-                let hwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW, w!("UltronVeil"), w!(""), style, x, y, w, h, parent, None, inst, None).map_err(|e| format!("making it: {e}"))?;
+                let hwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW, w!("SylverVeil"), w!(""), style, x, y, w, h, parent, None, inst, None).map_err(|e| format!("making it: {e}"))?;
                 let (size, zero) = (SIZE { cx: w, cy: h }, POINT::default());
                 let placed = (|| -> Result<(), String> {
                     if whole {
@@ -353,7 +353,7 @@ unsafe fn leave(layers: Vec<Layer>, ms: u64) {
 }
 
 /// Pour `picture` over the desktop, then run `then` (which makes it the real wallpaper) and give back
-/// what it says. ULTRON's copy stays over the real one for `hold` ms more and fades off by itself.
+/// what it says. SYLVER's copy stays over the real one for `hold` ms more and fades off by itself.
 pub fn arrive(picture: PathBuf, hold: u64, then: Box<dyn FnOnce() -> Result<(), String> + Send>) -> Result<(), String> {
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || unsafe {

@@ -1,7 +1,7 @@
-//! Routines: things ULTRON does by itself at set times. "Every weekday at 9, open my work apps and
+//! Routines: things SYLVER does by itself at set times. "Every weekday at 9, open my work apps and
 //! read me the news." "Every night at 10 remind me to charge my phone." "When you start, open Spotify."
 //! A routine is a schedule plus an ordinary request: when its time comes, the request goes through
-//! ULTRON exactly as if you'd just said it, and the result is shown and spoken.
+//! SYLVER exactly as if you'd just said it, and the result is shown and spoken.
 //! If the PC was off or asleep at the time, it runs when you're back (up to two hours late), once.
 //! They live in routines.json on this PC; say "list my routines" or open Settings › Tasks to manage them.
 
@@ -22,7 +22,7 @@ pub struct Routine {
     pub minute: u32,
     /// 0 = Sunday ... 6 = Saturday; empty = every day
     pub days: Vec<u32>,
-    /// runs when ULTRON starts instead of at a time
+    /// runs when SYLVER starts instead of at a time
     #[serde(default)]
     pub at_start: bool,
     pub on: bool,
@@ -63,10 +63,10 @@ pub fn delete(app: &AppHandle, id: u64) {
 
 const DAY_NAMES: [&str; 7] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-/// "every weekday at 9:00 AM", "Mondays and Fridays at 6:30 PM", "when ULTRON starts"
+/// "every weekday at 9:00 AM", "Mondays and Fridays at 6:30 PM", "when SYLVER starts"
 pub fn when(r: &Routine) -> String {
     if r.at_start {
-        return "when ULTRON starts".into();
+        return "when SYLVER starts".into();
     }
     let (h12, ap) = (if r.hour % 12 == 0 { 12 } else { r.hour % 12 }, if r.hour >= 12 { "PM" } else { "AM" });
     let time = format!("{h12}:{:02} {ap}", r.minute);
@@ -131,10 +131,10 @@ fn clock(s: &str) -> Option<(u32, u32, usize)> {
 pub fn parse(text: &str) -> Option<Routine> {
     let raw = text.trim().trim_end_matches(['.', '!']).trim();
     let l = raw.to_lowercase();
-    let l = l.strip_prefix("ultron").map(|r| r.trim_start_matches([',', ' '])).unwrap_or(&l).to_string();
+    let l = l.strip_prefix("sylver").or_else(|| l.strip_prefix("ultron")).map(|r| r.trim_start_matches([',', ' '])).unwrap_or(&l).to_string();
     let raw = if raw.len() >= l.len() && raw.is_char_boundary(raw.len() - l.len()) { &raw[raw.len() - l.len()..] } else { raw };
-    // when ULTRON (or the PC) starts
-    for p in ["when you start", "whenever you start", "when ultron starts", "every time you start", "every time ultron starts", "when i start my pc", "when my pc starts", "when i turn on my pc",
+    // when SYLVER (or the PC) starts
+    for p in ["when you start", "whenever you start", "when sylver starts", "when ultron starts", "every time you start", "every time sylver starts", "every time ultron starts", "when i start my pc", "when my pc starts", "when i turn on my pc",
         "when the pc starts", "at startup", "on startup", "when windows starts", "every time i start my pc", "when i log in", "when i sign in"] {
         if let Some(i) = l.find(p) {
             let task = format!("{} {}", &raw[..i], &raw[i + p.len()..]);
@@ -229,7 +229,7 @@ fn name_for(task: &str) -> String {
 pub fn command(app: &AppHandle, text: &str) -> Option<String> {
     let l = text.to_lowercase();
     let l = l.trim().trim_end_matches(['?', '.', '!']).trim();
-    let l = l.strip_prefix("ultron").map(|r| r.trim_start_matches([',', ' '])).unwrap_or(l);
+    let l = l.strip_prefix("sylver").or_else(|| l.strip_prefix("ultron")).map(|r| r.trim_start_matches([',', ' '])).unwrap_or(l);
     let about = l.contains("routine");
     if about && ["list", "show", "what", "which", "do i have", "tell me"].iter().any(|p| l.contains(p)) && !l.contains("every") {
         let all = list(app);
@@ -296,7 +296,7 @@ pub fn command(app: &AppHandle, text: &str) -> Option<String> {
     let mut r = parse(text)?;
     // one-off reminders with a time ("remind me at 5 to call mom") aren't routines: they have no "every"
     r.id = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(1);
-    // said back from ULTRON's side: "tell me a joke" becomes "I'll tell you a joke"
+    // said back from SYLVER's side: "tell me a joke" becomes "I'll tell you a joke"
     let mine: Vec<&str> = r.task.split(' ').map(|w| match w.to_lowercase().as_str() {
         "me" => "you",
         "my" => "your",
@@ -347,7 +347,7 @@ fn due(r: &Routine, today: &str, weekday: u32, hour: u32, minute: u32) -> bool {
 
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
-        // the ones that run when ULTRON starts, once everything has settled
+        // the ones that run when SYLVER starts, once everything has settled
         std::thread::sleep(Duration::from_secs(75));
         for r in list(&app).into_iter().filter(|r| r.on && r.at_start) {
             fire(app.clone(), r);
@@ -381,9 +381,9 @@ mod tests {
         assert_eq!(p("every morning tell me the weather"), ("every day at 8:00 AM".into(), "tell me the weather".into()));
         assert_eq!(p("every night at 10 remind me to charge my phone"), ("every day at 10:00 PM".into(), "remind me to charge my phone".into()));
         assert_eq!(p("open spotify every day at 8am"), ("every day at 8:00 AM".into(), "open spotify".into()));
-        assert_eq!(p("when you start, open spotify and outlook"), ("when ULTRON starts".into(), "open spotify and outlook".into()));
+        assert_eq!(p("when you start, open spotify and outlook"), ("when SYLVER starts".into(), "open spotify and outlook".into()));
         assert_eq!(p("every weekend at noon summarize my emails"), ("every weekend at 12:00 PM".into(), "summarize my emails".into()));
-        assert_eq!(p("Ultron, every sunday at 9 back up my documents folder"), ("Sundays at 9:00 AM".into(), "back up my documents folder".into()));
+        assert_eq!(p("Sylver, every sunday at 9 back up my documents folder"), ("Sundays at 9:00 AM".into(), "back up my documents folder".into()));
         for no in ["what is the capital of France", "open spotify", "remind me at 5 to call mom", "every now and then I feel tired", "tell me everything about mars"] {
             assert!(parse(no).is_none(), "{no}");
         }

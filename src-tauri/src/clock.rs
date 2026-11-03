@@ -1,6 +1,6 @@
 //! Alarms go into Windows' own Clock app, so they ring like any other alarm there (and are kept there).
 //!
-//! There's no way in for programs, so ULTRON fills in Clock's own "Add an alarm" form through Windows'
+//! There's no way in for programs, so SYLVER fills in Clock's own "Add an alarm" form through Windows'
 //! UI Automation, the way a screen reader works it: the alarm page, the add button, the hour, minute and
 //! AM/PM pickers (each takes a value as it is), the name, the days it repeats on, Save. Then it checks the
 //! new alarm is in Clock's list, and closes Clock (its alarms ring with the app closed).
@@ -82,7 +82,7 @@ pub fn add_alarm(hour: u32, minute: u32, label: &str, days: &str) -> Result<Stri
     let mut child = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(&file)
-        .args(["-H", &hour.to_string(), "-M", &minute.to_string(), "-Label", if label.is_empty() { "ULTRON" } else { label }, "-Days", if days.is_empty() { "once" } else { days }])
+        .args(["-H", &hour.to_string(), "-M", &minute.to_string(), "-Label", if label.is_empty() { "SYLVER" } else { label }, "-Days", if days.is_empty() { "once" } else { days }])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .creation_flags(NO_WINDOW)

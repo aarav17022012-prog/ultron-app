@@ -41,10 +41,10 @@ pub const GEMMA_1B: Model = Model {
     min: 700e6,
     mmproj: None,
 };
-/// shipped beside the installer as ULTRON-Brain.gguf
+/// shipped beside the installer as SYLVER-Brain.gguf
 pub const GRANITE: Model = Model {
     name: "Smart · Granite 4.0",
-    file: "ULTRON-Brain.gguf",
+    file: "SYLVER-Brain.gguf",
     url: "https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/resolve/main/granite-4.0-h-tiny-Q4_K_M.gguf",
     min: 2e9,
     mmproj: None,
@@ -133,7 +133,7 @@ pub fn specs() -> &'static Specs {
 }
 
 pub fn tier_of(s: &Specs) -> Tier {
-    if s.ram_gb < 11.5 || s.cores < 6 {
+    if s.ram_gb < 11.5 || s.cores < 6 || s.vram_gb < 4.5 {
         Tier::Light
     } else if s.vram_gb >= 7.5 && s.ram_gb >= 15.5 {
         Tier::Power
@@ -192,7 +192,8 @@ mod tests {
         let s = |ram, cores, vram| Specs { ram_gb: ram, cores, vram_gb: vram, gpu: String::new() };
         assert_eq!(tier_of(&s(8.0, 8, 0.0)), Tier::Light);
         assert_eq!(tier_of(&s(16.0, 4, 0.0)), Tier::Light);
-        assert_eq!(tier_of(&s(15.8, 16, 4.0)), Tier::Standard);
+        assert_eq!(tier_of(&s(15.8, 16, 4.0)), Tier::Light);
+        assert_eq!(tier_of(&s(15.8, 16, 6.0)), Tier::Standard);
         assert_eq!(tier_of(&s(32.0, 16, 12.0)), Tier::Power);
         assert!(wants_eyes("what's in this picture"));
         assert!(!wants_eyes("summarize this page"));

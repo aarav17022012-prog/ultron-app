@@ -1,16 +1,16 @@
-//! ULTRON's own taskbar (Settings, Look & feel, Taskbar).
+//! SYLVER's own taskbar (Settings, Look & feel, Taskbar).
 //!
 //! While it's on, Windows' taskbar is out of the way altogether: it's put on "hide automatically" (so
 //! it gives up its strip of the screen and windows reach the bottom edge) and then hidden, so that it
-//! doesn't slide back up when the pointer touches the bottom. ULTRON's taskbar is the wheel that
+//! doesn't slide back up when the pointer touches the bottom. SYLVER's taskbar is the wheel that
 //! rolls down from the top, drawn by the page. How Windows' taskbar was set is written down first and
-//! put back exactly when ULTRON's is switched off.
+//! put back exactly when SYLVER's is switched off.
 //! This side supplies what the page can't see for itself: which windows are open and which is in
 //! front, switching to them, and laying them out side by side with gaps.
 //!
-//! Windows' taskbar must come back whatever happens to ULTRON. It's shown again when ULTRON quits;
-//! and for the times ULTRON is ended from outside, a second, tiny copy of this program does nothing
-//! but wait for ULTRON to go and then show it (`--taskbar-guard`).
+//! Windows' taskbar must come back whatever happens to SYLVER. It's shown again when SYLVER quits;
+//! and for the times SYLVER is ended from outside, a second, tiny copy of this program does nothing
+//! but wait for SYLVER to go and then show it (`--taskbar-guard`).
 
 use std::os::windows::process::CommandExt;
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering::SeqCst};
@@ -34,7 +34,7 @@ use crate::apps::{Apps, OpenWin};
 static ON: AtomicBool = AtomicBool::new(false);
 static GUARDED: AtomicBool = AtomicBool::new(false);
 static WATCHING: AtomicBool = AtomicBool::new(false);
-/// How Windows' taskbar was set before ULTRON's came on (-1: not known).
+/// How Windows' taskbar was set before SYLVER's came on (-1: not known).
 static WAS: AtomicIsize = AtomicIsize::new(-1);
 /// Windows' taskbar isn't hidden before this moment (it's given time to slide away by itself first).
 static HIDE_FROM: AtomicU64 = AtomicU64::new(0);
@@ -70,7 +70,7 @@ fn give_back(was: isize) {
     taskbar(true);
 }
 
-/// ULTRON is closing: Windows gets its taskbar back (ULTRON's comes on again by itself next time, if that's the setting).
+/// SYLVER is closing: Windows gets its taskbar back (SYLVER's comes on again by itself next time, if that's the setting).
 pub fn leave(app: &AppHandle) {
     if ON.swap(false, SeqCst) {
         give_back(WAS.load(SeqCst));
@@ -105,7 +105,7 @@ fn trays() -> Vec<HWND> {
 
 /// Windows shows its taskbar again now and then: an app opening, one asking for attention, a notification. It was put
 /// away again at the next look, up to half a second later, and it flashed up across the bottom of the screen (over the
-/// Drop Shelf too). Now Windows tells ULTRON the moment it shows it, and it's put away at once.
+/// Drop Shelf too). Now Windows tells SYLVER the moment it shows it, and it's put away at once.
 unsafe extern "system" fn tray_shown(_: windows::Win32::UI::Accessibility::HWINEVENTHOOK, _: u32, h: HWND, object: i32, _: i32, _: u32, _: u32) {
     if object != 0 || !ON.load(SeqCst) || now_ms() < HIDE_FROM.load(SeqCst) {
         return;
@@ -166,7 +166,7 @@ pub fn taskbar(show: bool) {
     }
 }
 
-/// The strip of the screen Windows' taskbar has (when it runs along the bottom, where ULTRON's goes).
+/// The strip of the screen Windows' taskbar has (when it runs along the bottom, where SYLVER's goes).
 fn strip() -> Option<RECT> {
     let h = *trays().first()?;
     let mut r = RECT::default();
@@ -175,7 +175,7 @@ fn strip() -> Option<RECT> {
     (w > t * 4 && t > 16 && t < 200).then_some(r)
 }
 
-/// Windows' taskbar as it looks now, for the page to show sliding away as ULTRON's comes in.
+/// Windows' taskbar as it looks now, for the page to show sliding away as SYLVER's comes in.
 pub fn snap() -> Option<String> {
     use base64::Engine;
     let r = strip()?;
@@ -201,12 +201,12 @@ pub fn list(app: &AppHandle) -> Vec<OpenWin> {
     wins
 }
 
-/// Turn ULTRON's taskbar on or off.
+/// Turn SYLVER's taskbar on or off.
 pub fn set(app: &AppHandle, on: bool) -> i32 {
     let file = note(app);
     let written = file.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|s| s.trim().parse::<isize>().ok());
     if !on {
-        // (also the way back after ULTRON was cut off with its own taskbar up: what was written down is put back)
+        // (also the way back after SYLVER was cut off with its own taskbar up: what was written down is put back)
         let was = if ON.swap(false, SeqCst) { WAS.load(SeqCst) } else { written.unwrap_or(-1) };
         if was >= 0 || written.is_some() {
             give_back(was);
@@ -219,7 +219,7 @@ pub fn set(app: &AppHandle, on: bool) -> i32 {
         return 0;
     }
     let Some(now) = tray_state() else { return 0 };
-    let was = written.unwrap_or(now); // (written down already: ULTRON was cut off last time, and what's there now is its own doing)
+    let was = written.unwrap_or(now); // (written down already: SYLVER was cut off last time, and what's there now is its own doing)
     if let Some(p) = &file {
         let _ = std::fs::write(p, was.to_string());
     }
@@ -576,7 +576,7 @@ fn guard(was: isize) {
     }
 }
 
-/// Called first thing in `main`: when this copy was started as the guard, it waits for the ULTRON
+/// Called first thing in `main`: when this copy was started as the guard, it waits for the SYLVER
 /// it was given to end, gives Windows its taskbar back as it was, and says so (true: nothing else to do).
 pub fn guard_if_asked() -> bool {
     let args: Vec<String> = std::env::args().collect();
@@ -589,8 +589,8 @@ pub fn guard_if_asked() -> bool {
         }
     }
     give_back(args.get(i + 2).and_then(|s| s.parse::<isize>().ok()).unwrap_or(-1));
-    crate::minfx::heal(); // (and Windows' own minimize animation, if ULTRON had turned it off)
-    crate::notes::restore_left_over(); // (and the banners ULTRON's notifications had turned off)
+    crate::minfx::heal(); // (and Windows' own minimize animation, if SYLVER had turned it off)
+    crate::notes::restore_left_over(); // (and the banners SYLVER's notifications had turned off)
     true
 }
 

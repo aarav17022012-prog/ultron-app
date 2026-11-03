@@ -2,7 +2,7 @@
 //! with creamy switches. Two low-level hooks of their own (not keys.rs's, which holds the Windows key back) run on a
 //! thread made only once the sounds are first turned on. All they pass on is what kind of press it was (a key,
 //! space, enter, backspace, a click), never which key, and only presses made by hand: keys typed by programs,
-//! ULTRON's own dictation among them, make no sound. The page plays the sound.
+//! SYLVER's own dictation among them, make no sound. The page plays the sound.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::SeqCst};
 use std::sync::mpsc::{channel, Sender};
@@ -102,7 +102,7 @@ pub fn set(app: &AppHandle, keys: bool, clicks: bool) {
         }
     });
     // (on a time-critical thread that puts them back every 15 s: Windows quietly drops a low-level hook that once
-    //  answered late, and the sounds went silent until ULTRON was restarted)
+    //  answered late, and the sounds went silent until SYLVER was restarted)
     crate::hooks::keep(Some(keyboard), Some(mouse));
     crate::log_line("sounds: listening for presses");
 }

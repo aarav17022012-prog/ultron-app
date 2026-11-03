@@ -1,5 +1,5 @@
-//! The first time someone opens ULTRON, it shows them around: no separate window. Once the bar and
-//! notch have arrived, ULTRON's own cursor pops out of the notch, flies to each thing on the bar and
+//! The first time someone opens SYLVER, it shows them around: no separate window. Once the bar and
+//! notch have arrived, SYLVER's own cursor pops out of the notch, flies to each thing on the bar and
 //! explains it in a white speech bubble, then asks what to call you (the tour itself lives in the
 //! page, index.html). It plays once per PC and can be replayed from Settings › About.
 
@@ -19,7 +19,7 @@ pub fn due(app: &AppHandle) -> bool {
     if flag.exists() {
         return false;
     }
-    // marked the moment it's first asked for, even if the tour is skipped or ULTRON is closed mid-way
+    // marked the moment it's first asked for, even if the tour is skipped or SYLVER is closed mid-way
     let _ = std::fs::write(&flag, b"1");
     true
 }
@@ -33,7 +33,7 @@ fn profile(app: &AppHandle) -> PathBuf {
     seen_flag(app).with_file_name("profile.json")
 }
 
-/// What you asked ULTRON to call you.
+/// What you asked SYLVER to call you.
 pub fn user_name(app: &AppHandle) -> Option<String> {
     let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(profile(app)).ok()?).ok()?;
     v["name"].as_str().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())

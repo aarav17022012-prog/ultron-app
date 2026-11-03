@@ -65,7 +65,7 @@ fn keep_layered(hwnd: HWND) {
     }
 }
 
-/// ULTRON back on top of every other always-on-top window, at once (called as soon as another app comes to the front,
+/// SYLVER back on top of every other always-on-top window, at once (called as soon as another app comes to the front,
 /// so nothing that opens stays over the bar or the notch for long).
 pub fn raise_all(app: &AppHandle) {
     if let Some(h) = app.get_webview_window("main").and_then(|w| hwnd_of(&w)) {
@@ -97,14 +97,14 @@ struct Target {
     ignoring: Option<bool>,
     last: (f64, f64),
     last_emit: Instant,
-    /// a button went down over ULTRON and is still held (a drag): it stays clickable wherever the pointer goes
+    /// a button went down over SYLVER and is still held (a drag): it stays clickable wherever the pointer goes
     held: bool,
     was_down: bool,
 }
 
-/// Something is being dragged out of ULTRON into another app (a shelf file, dictated words). The press began on ULTRON,
+/// Something is being dragged out of SYLVER into another app (a shelf file, dictated words). The press began on SYLVER,
 /// which otherwise keeps the pointer until it's let go: then its window, the screen's whole height, was on top wherever
-/// the pointer went, and whatever was dragged was dropped back onto ULTRON instead of the app under it.
+/// the pointer went, and whatever was dragged was dropped back onto SYLVER instead of the app under it.
 pub static DRAGGING_OUT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 const MARGIN: f64 = 10.0; // clickable a little before the pointer arrives
@@ -150,7 +150,7 @@ pub fn watch(app: AppHandle, labels: &[&str]) {
                 let within = |m: f64| rects.iter().any(|h| x >= h.x - m && x <= h.x + h.w + m && y >= h.y - m && y <= h.y + h.h + m);
                 let mut inside = within(MARGIN);
                 near |= within(NEAR);
-                // (pressed on ULTRON and dragged (the floating player, a slider): it stays ULTRON's until the button is let
+                // (pressed on SYLVER and dragged (the floating player, a slider): it stays SYLVER's until the button is let
                 //  go. Its clickable outline came a moment behind a quick drag, and the pointer slipped off onto the app below)
                 if down && !t.was_down {
                     t.held = inside;

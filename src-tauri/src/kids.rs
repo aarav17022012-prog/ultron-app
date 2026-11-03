@@ -1,11 +1,11 @@
-//! ULTRON's helper processes (the language models' servers, the voice engine) must not outlive it.
+//! SYLVER's helper processes (the language models' servers, the voice engine) must not outlive it.
 //!
-//! They used to: closing ULTRON, or restarting it, left its model servers running with nobody to talk
+//! They used to: closing SYLVER, or restarting it, left its model servers running with nobody to talk
 //! to, each holding a gigabyte or more of memory and, for the quick brain, of graphics memory. After a
 //! day of restarts the PC was at its memory limit and everything on it lagged.
 //!
-//! Two things stop that. At start-up, helpers left behind by an ULTRON that is gone are stopped. And
-//! every helper ULTRON starts is put in a group that Windows closes when ULTRON goes, however it goes
+//! Two things stop that. At start-up, helpers left behind by an SYLVER that is gone are stopped. And
+//! every helper SYLVER starts is put in a group that Windows closes when SYLVER goes, however it goes
 //! (closed, restarted, crashed, ended from Task Manager).
 
 use windows::core::{PCWSTR, PWSTR};
@@ -47,8 +47,8 @@ fn path_of(h: HANDLE) -> String {
     }
 }
 
-/// At start-up (only one ULTRON runs at a time, and this one has started nothing yet): any helper that
-/// runs from an ULTRON folder was left behind, and is stopped. Other people's llama-server is not touched.
+/// At start-up (only one SYLVER runs at a time, and this one has started nothing yet): any helper that
+/// runs from an SYLVER folder was left behind, and is stopped. Other people's llama-server is not touched.
 pub fn sweep() {
     let me = std::process::id();
     let mut stopped = 0;
@@ -65,13 +65,13 @@ pub fn sweep() {
         }
     }
     if stopped > 0 {
-        crate::log_line(&format!("start-up: stopped {stopped} helper process(es) an earlier ULTRON had left running"));
+        crate::log_line(&format!("start-up: stopped {stopped} helper process(es) an earlier SYLVER had left running"));
     }
 }
 
-/// From now on each helper ULTRON starts is tied to it. (Looked for every few seconds rather than at each
-/// place one is started: nothing can be forgotten that way. Apps ULTRON opens for you are not helpers
-/// and are left alone: they stay open when ULTRON closes.)
+/// From now on each helper SYLVER starts is tied to it. (Looked for every few seconds rather than at each
+/// place one is started: nothing can be forgotten that way. Apps SYLVER opens for you are not helpers
+/// and are left alone: they stay open when SYLVER closes.)
 pub fn watch() {
     std::thread::spawn(|| unsafe {
         let Ok(job) = CreateJobObjectW(None, PCWSTR::null()) else { return };

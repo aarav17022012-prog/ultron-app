@@ -1,10 +1,10 @@
 //! Glass dialogs (Settings > Look & feel): an ordinary Windows message box ("Save changes?", "Are you sure?") is shown
-//! as ULTRON's own glass one instead. The real box stays where it was, and stays the one that counts: it's only made
+//! as SYLVER's own glass one instead. The real box stays where it was, and stays the one that counts: it's only made
 //! see-through (and so click-through, while it keeps the keyboard: Enter and Esc still answer it), and a button pressed
-//! on ULTRON's presses the same button on it. Only plain boxes are taken over, words and push buttons and nothing else;
-//! one with a tick box, a link or a list in it, one of ULTRON's own, or one that ULTRON isn't allowed to change (an app
+//! on SYLVER's presses the same button on it. Only plain boxes are taken over, words and push buttons and nothing else;
+//! one with a tick box, a link or a list in it, one of SYLVER's own, or one that SYLVER isn't allowed to change (an app
 //! run as administrator) is left as Windows draws it. If the page doesn't show its own within a moment and a half, or
-//! the switch is turned off, or ULTRON goes, the real box comes back.
+//! the switch is turned off, or SYLVER goes, the real box comes back.
 
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::sync::{Mutex, OnceLock};
@@ -138,7 +138,7 @@ fn read(h: HWND) -> Option<Dialog> {
     }
 }
 
-/// See-through (or back as it was). False when Windows won't let ULTRON change it.
+/// See-through (or back as it was). False when Windows won't let SYLVER change it.
 fn veil(h: HWND, on: bool, layered: bool) -> bool {
     unsafe {
         let ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
@@ -265,7 +265,7 @@ pub fn shown(hwnd: isize) {
     }
 }
 
-/// A button pressed on ULTRON's: the same one, pressed on the real box.
+/// A button pressed on SYLVER's: the same one, pressed on the real box.
 pub fn press(hwnd: isize, id: i32) {
     let h = HWND(hwnd as _);
     unsafe {
@@ -284,7 +284,7 @@ pub fn pass(hwnd: isize) {
     }
 }
 
-/// ULTRON is closing: nothing is left see-through behind it.
+/// SYLVER is closing: nothing is left see-through behind it.
 pub fn quit() {
     release_all();
 }

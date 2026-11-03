@@ -1,6 +1,6 @@
 //! Low-level hooks that stay hooked. Windows quietly takes away a low-level keyboard or mouse hook that's slow to answer
-//! (the PC busy, and the hook's thread not given a turn in time), and says nothing: ULTRON's Alt+Tab or volume keys then
-//! stopped answering, and Windows' own came back until ULTRON was started again. Each hook here runs on a thread of the
+//! (the PC busy, and the hook's thread not given a turn in time), and says nothing: SYLVER's Alt+Tab or volume keys then
+//! stopped answering, and Windows' own came back until SYLVER was started again. Each hook here runs on a thread of the
 //! highest priority, so it's given its turn at once, and is put in afresh every 3 seconds in case it was taken away (Windows drops a slow one
 //! silently, and its own Alt+Tab came back until the next time).
 
@@ -17,7 +17,7 @@ fn set(id: WINDOWS_HOOK_ID, p: HOOKPROC) -> Option<HHOOK> {
     unsafe { SetWindowsHookExW(id, p, None, 0) }.ok()
 }
 
-/// Runs these hooks (either may be None) for as long as ULTRON runs.
+/// Runs these hooks (either may be None) for as long as SYLVER runs.
 pub fn keep(keyboard: HOOKPROC, mouse: HOOKPROC) {
     std::thread::spawn(move || unsafe {
         let _ = SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);

@@ -3,7 +3,7 @@
 //! other programs). This is OmniParser's icon detector: a YOLO model that marks everything that
 //! looks pressable. It runs on the processor in about a third of a second for a whole window.
 //!
-//! Its file is `resources/screen/omni-icon-detect.onnx`. Without it ULTRON still works: it then
+//! Its file is `resources/screen/omni-icon-detect.onnx`. Without it SYLVER still works: it then
 //! knows only what the app says about itself and the text it can read.
 //! (The detector's licence is AGPL-3.0, from the YOLO family it's built on.)
 

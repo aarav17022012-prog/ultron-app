@@ -1,8 +1,8 @@
-//! Zero-jank: the processes that draw ULTRON (its WebView2 browser, GPU and page processes)
+//! Zero-jank: the processes that draw SYLVER (its WebView2 browser, GPU and page processes)
 //! get a little more CPU priority than normal, and its heavy workers (the brain, voice, song
-//! listening) a little less. So however hard ULTRON thinks, every animation frame still lands.
+//! listening) a little less. So however hard SYLVER thinks, every animation frame still lands.
 //! Nothing on screen changes; it's only who goes first when the CPU is busy.
-//! The same goes for the graphics card: ULTRON's drawing gets a higher GPU priority than normal,
+//! The same goes for the graphics card: SYLVER's drawing gets a higher GPU priority than normal,
 //! and the quick brain (when it runs on the card) a lower one, so frames never wait for tokens.
 
 use std::collections::HashMap;
@@ -113,16 +113,16 @@ fn boost_renderers() {
 }
 
 /* ---------------- idle memory ----------------
-   Measured: with nothing open, ULTRON's processes hold about 1.3 GB, but in the 15 seconds after their working sets
+   Measured: with nothing open, SYLVER's processes hold about 1.3 GB, but in the 15 seconds after their working sets
    are trimmed they touch only about 130 MB again. The rest (the brain's buffers, the page's caches, a model nobody
    is talking to) just sits there. So once nothing has been open for a while, the page asks WebView2 for its low
-   memory level (its own caches and spare memory go back) and ULTRON's processes are trimmed, again every few
+   memory level (its own caches and spare memory go back) and SYLVER's processes are trimmed, again every few
    minutes while nothing opens. Whatever is needed comes back as it's used; the moment something opens, the page
    goes back to its normal level. */
 
 static IDLE_GEN: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
-/// ULTRON itself and every process it started (the page's, the brains'), not the taskbar guard.
+/// SYLVER itself and every process it started (the page's, the brains'), not the taskbar guard.
 fn ours() -> Vec<u32> {
     let me = unsafe { GetCurrentProcessId() };
     let list = processes();
@@ -159,7 +159,12 @@ pub fn idle(app: &tauri::AppHandle, on: bool) {
         let mut n = 0;
         while IDLE_GEN.load(std::sync::atomic::Ordering::SeqCst) == gen {
             if tight() {
-                for pid in ours() {
+                // (the brains and helpers only: what draws SYLVER itself, its own process and the web engine's, is kept
+                //  in memory. Emptied every few minutes, every look after a while away, and the first after the lid
+                //  was opened, had all of it read back from the disk first: the lag after a pause)
+                let names: HashMap<u32, String> = processes().into_iter().map(|(p, _, n)| (p, n.to_lowercase())).collect();
+                let me = unsafe { GetCurrentProcessId() };
+                for pid in ours().into_iter().filter(|p| *p != me && !names.get(p).is_some_and(|n| n.contains("msedgewebview2"))) {
                     trim(pid);
                 }
                 if n == 0 {
@@ -168,11 +173,11 @@ pub fn idle(app: &tauri::AppHandle, on: bool) {
                 n += 1;
             }
             // (and again now and then: what the bar's clock and the character touch creeps back in)
-            for _ in 0..(4 * 60) {
+            for _ in 0..(4 * 12) { // check less frequently (every 5s for 4 minutes)
                 if IDLE_GEN.load(std::sync::atomic::Ordering::SeqCst) != gen {
                     return;
                 }
-                std::thread::sleep(Duration::from_secs(1));
+                std::thread::sleep(Duration::from_secs(5));
             }
         }
     });
@@ -191,7 +196,7 @@ fn memory_level(app: &tauri::AppHandle, low: bool) {
     });
 }
 
-/// Keep ULTRON's drawing ahead (new page processes appear when windows open, so check now and then).
+/// Keep SYLVER's drawing ahead (new page processes appear when windows open, so check now and then).
 pub fn start() {
     std::thread::spawn(|| {
         std::thread::sleep(Duration::from_secs(2));

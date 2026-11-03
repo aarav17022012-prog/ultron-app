@@ -1,14 +1,15 @@
-//! Live liquid glass: ULTRON's glass shows what's really behind it (your windows, not just the
-//! wallpaper). A few times a second the area under ULTRON's overlay is captured with ULTRON itself
+//! Live liquid glass: SYLVER's glass shows what's really behind it (your windows, not just the
+//! wallpaper). A few times a second the area under SYLVER's overlay is captured with SYLVER itself
 //! left out (Windows' "exclude from capture", switched on only for that instant, so your own
-//! screenshots still show ULTRON), shrunk, blurred, and handed to the page as the glass's backdrop.
+//! screenshots still show SYLVER), shrunk, blurred, and handed to the page as the glass's backdrop.
 //! It runs slowly when only the bar shows and not at all while a full-screen app hides the bar.
 //!
 //! While a panel or the floating lyrics are open the glass is live: Windows hands over each new picture
 //! of the screen as it is drawn (the service screen recorders use), so what's behind the glass moves with
-//! it instead of a few times a second. ULTRON is left out of captures for as long as that lasts, except
-//! when a screenshot key is pressed or ULTRON's own recorder is running.
+//! it instead of a few times a second. SYLVER is left out of captures for as long as that lasts, except
+//! when a screenshot key is pressed or SYLVER's own recorder is running.
 
+use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
@@ -27,12 +28,12 @@ pub fn set_rate(ms: u64) {
 }
 
 /// One box-blur pass along rows (or columns), using running sums.
-fn box_pass(src: &[f32], dst: &mut [f32], w: usize, h: usize, r: usize, rows: bool) {
+fn box_pass(src: &[f32], dst: &mut [f32], pre: &mut [f32], w: usize, h: usize, r: usize, rows: bool) {
     let (lines, len) = if rows { (h, w) } else { (w, h) };
-    let mut pre = vec![0f32; len + 1];
     for l in 0..lines {
         let at = |i: usize| if rows { (l * w + i) * 3 } else { (i * w + l) * 3 };
         for c in 0..3 {
+            pre[0] = 0.0;
             for i in 0..len {
                 pre[i + 1] = pre[i] + src[at(i) + c];
             }
@@ -45,12 +46,23 @@ fn box_pass(src: &[f32], dst: &mut [f32], w: usize, h: usize, r: usize, rows: bo
 }
 
 /// A fast blur: three box-blur passes each way look like a Gaussian.
+#[cfg(test)]
 fn blur(px: &mut [f32], w: usize, h: usize, r: usize) {
     let mut tmp = vec![0f32; px.len()];
+    let mut pre = vec![0f32; w.max(h) + 1];
+    blur_with_scratch(px, &mut tmp, &mut pre, w, h, r);
+}
+
+fn blur_with_scratch(px: &mut [f32], tmp: &mut [f32], pre: &mut [f32], w: usize, h: usize, r: usize) {
     for _ in 0..3 {
-        box_pass(px, &mut tmp, w, h, r, true);
-        box_pass(&tmp, px, w, h, r, false);
+        box_pass(px, tmp, pre, w, h, r, true);
+        box_pass(tmp, px, pre, w, h, r, false);
     }
+}
+
+thread_local! {
+    static FINISH_SCRATCH: RefCell<(Vec<f32>, Vec<f32>, Vec<f32>)> =
+        RefCell::new((Vec::new(), Vec::new(), Vec::new()));
 }
 
 /// Copy a part of the screen straight into a small bitmap (Windows averages the pixels as it shrinks).
@@ -80,11 +92,11 @@ pub(crate) fn grab_small(r: RECT, w: i32, h: i32) -> Option<Vec<u8>> {
     }
 }
 
-/// While the screen is being recorded the glass keeps the picture it has: ULTRON has to stay in the
+/// While the screen is being recorded the glass keeps the picture it has: SYLVER has to stay in the
 /// recording, steadily, and seeing what's behind it means leaving it out of captures.
 static HOLD: AtomicBool = AtomicBool::new(false);
 static BUSY: std::sync::Mutex<()> = std::sync::Mutex::new(());
-/// ULTRON's window (for the threads that only put it back into captures); until when it stays in them
+/// SYLVER's window (for the threads that only put it back into captures); until when it stays in them
 /// because a screenshot key was just pressed; and whether the live feed is running.
 static WIN: AtomicIsize = AtomicIsize::new(0);
 static SNAP_UNTIL: AtomicU64 = AtomicU64::new(0);
@@ -106,11 +118,11 @@ fn paused() -> bool {
     HOLD.load(Ordering::SeqCst) || OTHERS.load(Ordering::SeqCst) || ticks() < SNAP_UNTIL.load(Ordering::SeqCst)
 }
 
-/// Whether ULTRON is left out of captures right now (so it's only switched when it changes: each switch made Windows
+/// Whether SYLVER is left out of captures right now (so it's only switched when it changes: each switch made Windows
 /// redraw the whole overlay, a flash, every time a menu opened or closed).
 static OUT: AtomicBool = AtomicBool::new(false);
 
-/// Leave ULTRON out of screen captures, or put it back.
+/// Leave SYLVER out of screen captures, or put it back.
 fn exclude(on: bool) {
     if OUT.swap(on, Ordering::SeqCst) == on {
         return;
@@ -128,12 +140,12 @@ pub fn hold(on: bool) {
     let _wait = BUSY.lock(); // (a refresh already under way finishes first)
     if on {
         exclude(false);
-        std::thread::sleep(Duration::from_millis(50)); // (ULTRON is back in the picture before the recording's first frame)
+        std::thread::sleep(Duration::from_millis(50)); // (SYLVER is back in the picture before the recording's first frame)
     }
 }
 
 /// Keys that start a screenshot or a recording in Windows, the Snipping Tool, the Game Bar and NVIDIA's
-/// overlay (PrtSc, Win+Shift+S, Win+Shift+R, Win+Alt+R, Win+Alt+G, Win+G, Alt+F9, Alt+F10, Alt+Z): ULTRON goes
+/// overlay (PrtSc, Win+Shift+S, Win+Shift+R, Win+Alt+R, Win+Alt+G, Win+G, Alt+F9, Alt+F10, Alt+Z): SYLVER goes
 /// straight back into captures and stays there for a while, so it is in what's being taken and the recorder
 /// isn't put off by a window that hides from it. By then the recording itself is noticed (others_watch).
 fn snap_watch() {
@@ -188,9 +200,9 @@ mod nvenc {
 
 /// Is another program recording or streaming the screen? Two signs: the graphics card's video encoder is at
 /// work (NVIDIA's recorder, the Snipping Tool, OBS, Discord and video calls all compress what they capture
-/// with it), or a recording program that doesn't use it is running. While either holds, ULTRON never hides
-/// from captures: its glass keeps the backdrop it has, and the recording shows ULTRON steadily. (Hiding from
-/// captures, even for a moment, made ULTRON blink in other programs' recordings, and can stop NVIDIA's
+/// with it), or a recording program that doesn't use it is running. While either holds, SYLVER never hides
+/// from captures: its glass keeps the backdrop it has, and the recording shows SYLVER steadily. (Hiding from
+/// captures, even for a moment, made SYLVER blink in other programs' recordings, and can stop NVIDIA's
 /// recorder outright: it treats a window that hides as protected content.)
 fn others_watch() {
     const RECORDERS: [&str; 10] = ["obs64.exe", "obs32.exe", "sharex.exe", "bdcam.exe", "camrecorder.exe", "bcastdvr.exe", "screenrec.exe", "loom.exe", "action.exe", "captura.exe"];
@@ -207,7 +219,7 @@ fn others_watch() {
                 exclude(false);
                 if !told {
                     told = true;
-                    crate::log_line("live glass: something is recording the screen, so ULTRON stays in the picture and the glass keeps the backdrop it has");
+                    crate::log_line("live glass: something is recording the screen, so SYLVER stays in the picture and the glass keeps the backdrop it has");
                 }
             }
         }
@@ -245,26 +257,32 @@ fn differs(a: &[u8], b: &[u8]) -> bool {
 
 /// A small picture of the screen (BGRA), blurred and toned, as a JPEG data URL.
 fn finish(shot: &[u8], w: usize, hh: usize) -> Option<String> {
-    let mut small: Vec<f32> = Vec::with_capacity(w * hh * 3);
-    for p in shot.chunks_exact(4) {
-        small.extend_from_slice(&[p[2] as f32, p[1] as f32, p[0] as f32]);
-    }
-    blur(&mut small, w, hh, 4);
-    let mut bytes: Vec<u8> = small.iter().map(|v| v.round().clamp(0.0, 255.0) as u8).collect();
-    crate::sys::tone(&mut bytes, 1.3, 1.0); // the glass's toning, done here instead of by a filter on the page
-    let img = image::RgbImage::from_raw(w as u32, hh as u32, bytes)?;
-    let mut out = std::io::Cursor::new(Vec::new());
-    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 82).encode_image(&img).ok()?;
-    Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out.into_inner())))
+    FINISH_SCRATCH.with(|scratch| {
+        let mut scratch = scratch.borrow_mut();
+        let (small, tmp, pre) = &mut *scratch;
+        small.clear();
+        for p in shot.chunks_exact(4) {
+            small.extend_from_slice(&[p[2] as f32, p[1] as f32, p[0] as f32]);
+        }
+        tmp.resize(small.len(), 0.0);
+        pre.resize(w.max(hh) + 1, 0.0);
+        blur_with_scratch(small, tmp, pre, w, hh, 4);
+        let mut bytes: Vec<u8> = small.iter().map(|v| v.round().clamp(0.0, 255.0) as u8).collect();
+        crate::sys::tone(&mut bytes, 1.3, 1.0); // the glass's toning, done here instead of by a filter on the page
+        let img = image::RgbImage::from_raw(w as u32, hh as u32, bytes)?;
+        let mut out = std::io::Cursor::new(Vec::new());
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 82).encode_image(&img).ok()?;
+        Some(format!("data:image/jpeg;base64,{}", base64::engine::general_purpose::STANDARD.encode(out.into_inner())))
+    })
 }
 
-/// (developer runs only) ULTRON back in screen captures for a while, its glass held as it is: for pictures of it.
+/// (developer runs only) SYLVER back in screen captures for a while, its glass held as it is: for pictures of it.
 pub fn dev_show() {
     SNAP_UNTIL.store(ticks() + 20_000, Ordering::SeqCst);
     exclude(false);
 }
 
-/// What's behind ULTRON's overlay, one picture at a time: the slow way, for while only the bar shows.
+/// What's behind SYLVER's overlay, one picture at a time: the slow way, for while only the bar shows.
 fn capture(app: &AppHandle) -> Option<String> {
     let _busy = BUSY.lock().ok()?;
     if paused() {
@@ -272,7 +290,7 @@ fn capture(app: &AppHandle) -> Option<String> {
     }
     let (h, r) = window(app)?;
     let (w, hh) = small_size(r);
-    // ULTRON is left out of captures (and stays out until a screenshot or a recording wants it back: see paused)
+    // SYLVER is left out of captures (and stays out until a screenshot or a recording wants it back: see paused)
     let shot = unsafe {
         if !OUT.load(Ordering::SeqCst) {
             let _ = h;
@@ -297,12 +315,12 @@ mod live {
         ctx: ID3D11DeviceContext,
         dup: IDXGIOutputDuplication,
         stage: ID3D11Texture2D,
-        part: RECT, // the part of that screen under ULTRON
+        part: RECT, // the part of that screen under SYLVER
         _device: ID3D11Device,
     }
 
     impl Feed {
-        /// Follow the screen that `r` (ULTRON's window, in desktop pixels) is on.
+        /// Follow the screen that `r` (SYLVER's window, in desktop pixels) is on.
         pub unsafe fn open(r: RECT) -> Option<Feed> {
             let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
             let mut a = 0;
@@ -359,8 +377,8 @@ mod live {
         }
 
         unsafe fn read(&self, info: &DXGI_OUTDUPL_FRAME_INFO, res: Option<&IDXGIResource>, w: usize, h: usize) -> Option<Vec<u8>> {
-            if info.LastPresentTime == 0 || info.TotalMetadataBufferSize == 0 {
-                return None; // (only the pointer moved, or nothing on screen was redrawn: no need to read the picture back)
+            if info.LastPresentTime == 0 {
+                return None; // (only the pointer moved: no need to read the picture back)
             }
             let tex: ID3D11Texture2D = res?.cast().ok()?;
             let p = self.part;
@@ -414,6 +432,10 @@ pub fn start(app: AppHandle) {
     snap_watch();
     others_watch();
     std::thread::spawn(move || {
+        unsafe {
+            use windows::Win32::System::Threading::{GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL};
+            let _ = SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+        }
         std::thread::sleep(Duration::from_secs(2));
         let mut last_log = Instant::now() - Duration::from_secs(600);
         let mut feed: Option<live::Feed> = None;
@@ -432,7 +454,7 @@ pub fn start(app: AppHandle) {
             if fast {
                 slow_at = None;
             } else if slow_at.get_or_insert_with(Instant::now).elapsed() > Duration::from_secs(20) && feed.take().is_some() {
-                LIVE.store(false, Ordering::SeqCst); // (ULTRON stays out of captures: the slow pictures need that too)
+                LIVE.store(false, Ordering::SeqCst); // (SYLVER stays out of captures: the slow pictures need that too)
             }
             if every == 0 {
                 exclude(false); // (no glass to look behind: back in everyone's screenshots)
@@ -446,7 +468,7 @@ pub fn start(app: AppHandle) {
                     let _busy = BUSY.lock();
                     if let Some((_, r)) = window(&app).filter(|_| !paused()) {
                         exclude(true);
-                        std::thread::sleep(Duration::from_millis(40)); // (the compositor takes ULTRON out before the first picture)
+                        std::thread::sleep(Duration::from_millis(40)); // (the compositor takes SYLVER out before the first picture)
                         feed = unsafe { live::Feed::open(r) };
                         feed_r = r;
                         if feed.is_some() {
@@ -458,7 +480,7 @@ pub fn start(app: AppHandle) {
                         }
                     }
                 }
-                // (ULTRON's window grew or shrank, for the Drop Shelf or back: the feed is opened again on the new part of
+                // (SYLVER's window grew or shrank, for the Drop Shelf or back: the feed is opened again on the new part of
                 //  the screen. Kept on the old one, its picture was stretched over the new window: the shelf's glass showed
                 //  the wrong part of the screen)
                 if feed.is_some() && window(&app).is_some_and(|(_, r)| r != feed_r) {
@@ -469,7 +491,7 @@ pub fn start(app: AppHandle) {
                 if let Some(f) = feed.as_mut() {
                     let t0 = Instant::now();
                     match unsafe { f.next(100, dims.0, dims.1) } {
-                        // (a picture taken as ULTRON was being put back into captures would have ULTRON in it)
+                        // (a picture taken as SYLVER was being put back into captures would have SYLVER in it)
                         Ok(Some(shot)) if !paused() && differs(&shot, &last) => {
                             moving = true;
                             if let Some(url) = finish(&shot, dims.0, dims.1) {
@@ -499,7 +521,7 @@ pub fn start(app: AppHandle) {
             }
             let t0 = Instant::now();
             if let Some(url) = capture(&app) {
-                // (nothing behind ULTRON has changed since the last look: the page already has this picture)
+                // (nothing behind SYLVER has changed since the last look: the page already has this picture)
                 if url != sent || sent_at.elapsed() > Duration::from_secs(60) {
                     let _ = app.emit_to("main", "backdrop", &url);
                     (sent, sent_at) = (url, Instant::now());

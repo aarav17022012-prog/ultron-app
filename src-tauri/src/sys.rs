@@ -265,7 +265,7 @@ pub fn wifi_connect(ssid: &str) -> bool {
 }
 
 /// Join a network with its password: a profile for it is given to Windows (as Windows' own box would), then
-/// it's joined, and ULTRON waits to see it connect. A wrong password never connects: the profile is taken away
+/// it's joined, and SYLVER waits to see it connect. A wrong password never connects: the profile is taken away
 /// again, so the network isn't left "saved" with it.
 pub fn wifi_join(ssid: &str, key: &str, auth: &str) -> bool {
     let x = |s: &str| s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&apos;");
@@ -551,7 +551,7 @@ fn holiday_feed(country: &str) -> Option<&'static str> {
     })
 }
 
-/// A country's holidays (about ten years of them), fetched once and kept for three weeks in ULTRON's folder.
+/// A country's holidays (about ten years of them), fetched once and kept for three weeks in SYLVER's folder.
 pub fn holidays(app: &tauri::AppHandle, country: &str) -> Vec<Holiday> {
     use tauri::Manager;
     let Some(feed) = holiday_feed(country) else { return Vec::new() };

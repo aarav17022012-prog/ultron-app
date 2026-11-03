@@ -1,11 +1,11 @@
 //! Agent watch (the notch's Settings): coding agents (Claude Code, Cursor, VS Code, Windsurf, Codex…) asking for you,
-//! with a question or for a permission, or done with what they were doing. ULTRON's character changes to say so.
+//! with a question or for a permission, or done with what they were doing. SYLVER's character changes to say so.
 //!
 //! It hears of it two ways, each allowed in Settings first:
 //! - the agent apps' own Windows notifications (read from Windows' list, which calls.rs looks at anyway);
-//! - Claude Code's hooks, connected only when you press Connect: Claude Code then starts ULTRON's own program with
+//! - Claude Code's hooks, connected only when you press Connect: Claude Code then starts SYLVER's own program with
 //!   `--agent` when it stops or asks for you. That hands what it said (and which window it's in) to the running
-//!   ULTRON through a small file, and is gone again at once.
+//!   SYLVER through a small file, and is gone again at once.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -146,9 +146,9 @@ fn window_of(app: &str) -> isize {
 
 /* ---------------- Claude Code's hooks: the `--agent` program ---------------- */
 
-/// Started by Claude Code (`ULTRON.exe --agent`), with what happened on its input. Finds the window Claude Code runs
+/// Started by Claude Code (`SYLVER.exe --agent`), with what happened on its input. Finds the window Claude Code runs
 /// in (the first of its parents with one: the terminal, VS Code, the Claude app), leaves a note for the running
-/// ULTRON, and ends.
+/// SYLVER, and ends.
 pub fn relay() {
     use std::io::{IsTerminal, Read};
     let mut s = String::new();
@@ -165,7 +165,7 @@ pub fn relay() {
     let _ = std::fs::create_dir_all(&dir);
     let name = format!("{}-{}.json", now_ms(), std::process::id());
     let part = dir.join(format!("{name}.part"));
-    // (written whole, then named: the running ULTRON never reads half of one)
+    // (written whole, then named: the running SYLVER never reads half of one)
     if std::fs::write(&part, note.to_string()).is_ok() {
         let _ = std::fs::rename(&part, dir.join(name));
     }
@@ -206,7 +206,7 @@ fn host_window() -> (isize, String) {
     (0, String::new())
 }
 
-/// The running ULTRON's side: notes left by `--agent` are read (and removed) a few times a second while Agent watch is on.
+/// The running SYLVER's side: notes left by `--agent` are read (and removed) a few times a second while Agent watch is on.
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_millis(if WATCH.load(SeqCst) { 300 } else { 2000 }));
@@ -216,7 +216,7 @@ pub fn start(app: AppHandle) {
         let mut files: Vec<PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect();
         files.sort();
         for p in files {
-            // (left while ULTRON wasn't running, or wasn't watching: old news, cleared away)
+            // (left while SYLVER wasn't running, or wasn't watching: old news, cleared away)
             let fresh = std::fs::metadata(&p).and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).is_some_and(|d| d < Duration::from_secs(30));
             let s = std::fs::read_to_string(&p).unwrap_or_default();
             let _ = std::fs::remove_file(&p);
@@ -260,7 +260,7 @@ pub fn from_notes(app: &AppHandle, list: &[UserNotification]) {
         let info = n.AppInfo().ok();
         let name = info.as_ref().and_then(|a| a.DisplayInfo().ok()).and_then(|d| d.DisplayName().ok()).map(|s| s.to_string()).unwrap_or_default();
         let aumid = info.as_ref().and_then(|a| a.AppUserModelId().ok()).map(|s| s.to_string()).unwrap_or_default();
-        if name.eq_ignore_ascii_case("ULTRON") {
+        if name.eq_ignore_ascii_case("SYLVER") {
             continue;
         }
         let both = format!("{name} {aumid}").to_lowercase();
@@ -297,12 +297,12 @@ fn settings_path() -> Option<PathBuf> {
     Some(PathBuf::from(std::env::var("USERPROFILE").ok()?).join(".claude").join("settings.json"))
 }
 
-/// A hook command that is ULTRON's.
+/// A hook command that is SYLVER's.
 fn ours(cmd: &str) -> bool {
     cmd.contains("--agent") && cmd.to_lowercase().contains("ultron")
 }
 
-/// Claude Code's settings have ULTRON's hooks in them.
+/// Claude Code's settings have SYLVER's hooks in them.
 pub fn hooks_state() -> bool {
     let Some(text) = settings_path().and_then(|p| std::fs::read_to_string(p).ok()) else { return false };
     let Ok(v) = serde_json::from_str::<Value>(&text) else { return false };
@@ -311,7 +311,7 @@ pub fn hooks_state() -> bool {
     })
 }
 
-/// Add ULTRON's two hooks to Claude Code's settings (when it stops, when it asks for you), or take them out again.
+/// Add SYLVER's two hooks to Claude Code's settings (when it stops, when it asks for you), or take them out again.
 /// Only ever from the button you press. Everything else in the file is left as it was; a copy of it from before the
 /// first change is kept beside it.
 pub fn hooks_set(on: bool) -> Result<bool, String> {
@@ -331,7 +331,7 @@ pub fn hooks_set(on: bool) -> Result<bool, String> {
     for ev in ["Notification", "Stop"] {
         let list = h.entry(ev).or_insert_with(|| json!([]));
         let Some(a) = list.as_array_mut() else { continue };
-        // ULTRON's own out first (one left from an ULTRON elsewhere too), then put back if wanted
+        // SYLVER's own out first (one left from an SYLVER elsewhere too), then put back if wanted
         let mut emptied = Vec::new();
         for (i, m) in a.iter_mut().enumerate() {
             if let Some(hs) = m.get_mut("hooks").and_then(|x| x.as_array_mut()) {

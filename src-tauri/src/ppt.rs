@@ -95,7 +95,7 @@ pub fn build(app: &AppHandle, topic: &str, n: usize, mut status: impl FnMut(&str
     let mut f = std::fs::File::create(&script).map_err(|e| e.to_string())?;
     f.write_all(b"\xEF\xBB\xBF").and_then(|_| f.write_all(SCRIPT.trim_start_matches('\u{feff}').as_bytes())).map_err(|e| e.to_string())?;
     drop(f);
-    let dir = app.path().document_dir().unwrap_or_else(|_| std::env::temp_dir()).join("ULTRON Presentations");
+    let dir = app.path().document_dir().unwrap_or_else(|_| std::env::temp_dir()).join("SYLVER Presentations");
     let _ = std::fs::create_dir_all(&dir);
 
     // PowerPoint starts now, while the facts are looked up and the slides are written

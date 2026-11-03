@@ -1,6 +1,6 @@
 //! Fresh facts for the local AI. A 1.5B model on your PC can't know about people
 //! and events after it was made, so for "who is…", "what happened to…", news and
-//! weather questions ULTRON looks the topic up first (Wikipedia, Google News, wttr.in;
+//! weather questions SYLVER looks the topic up first (Wikipedia, Google News, wttr.in;
 //! all free, no account) and the model answers from that.
 
 use std::time::Duration;
@@ -26,7 +26,7 @@ struct Kind {
 fn subject(q: &str) -> Option<(String, Kind)> {
     let l = q.to_lowercase().replace(['’', '‘'], "'");
     let l = l.trim().trim_end_matches(['?', '.', '!']).trim();
-    let l = l.trim_start_matches("ultron").trim_start_matches([',', ' ']).trim();
+    let l = l.strip_prefix("sylver").or_else(|| l.strip_prefix("ultron")).unwrap_or(l).trim_start_matches([',', ' ']).trim();
     let newsy = [
         "what happened to", "what happened with", "what happened in", "what happened at", "what's happening with", "what is happening with",
         "what's going on with", "what is going on with", "whats going on with", "what's going on in", "what is going on in", "news about",
@@ -59,7 +59,7 @@ fn subject(q: &str) -> Option<(String, Kind)> {
             s = r.trim().to_string();
         }
     }
-    // things about you, your PC or ULTRON itself aren't on the web
+    // things about you, your PC or SYLVER itself aren't on the web
     let personal = ["my ", "me", "you", "your", "it", "this", "that", "time", "date", "day", "the time", "the date", "up", "yourself", "ultron", "on my screen",
         "the weather", "weather", "going on", "happening"];
     if s.len() < 3 || personal.iter().any(|p| s == *p || s.starts_with(&format!("{p} ")) || s.starts_with("my ")) {
@@ -163,14 +163,14 @@ static CACHE: std::sync::Mutex<Vec<(String, Option<String>)>> = std::sync::Mutex
 
 /// Facts to answer the question with, or None when it doesn't need (or couldn't get) any.
 /// The same question again (a follow-up, a retry) is answered from memory instantly.
-/// A question of fact ("who…", "when…", "how many…", "is…"), not one about you or ULTRON.
+/// A question of fact ("who…", "when…", "how many…", "is…"), not one about you or SYLVER.
 fn factual(q: &str) -> bool {
     let l = q.to_lowercase();
     let starts = [
         "who ", "who's ", "what ", "what's ", "when ", "where ", "which ", "why ", "how many ", "how much ", "how old ", "how tall ", "how far ", "how long ",
         "how big ", "how does ", "how do ", "is ", "are ", "was ", "were ", "did ", "does ", "do ", "can ", "has ", "have ", "tell me about ",
     ];
-    let mine = [" you ", " your ", " yours ", " me ", " my ", " i ", " i'm ", " mine ", " ultron "];
+    let mine = [" you ", " your ", " yours ", " me ", " my ", " i ", " i'm ", " mine ", " sylver ", " ultron "];
     let padded = format!(" {} ", l.trim_end_matches(['?', '.', '!']));
     starts.iter().any(|s| l.starts_with(s)) && l.split_whitespace().count() >= 3 && !mine.iter().any(|p| padded.contains(p))
 }

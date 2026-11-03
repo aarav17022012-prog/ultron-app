@@ -1,4 +1,4 @@
-//! ULTRON's own Alt+Tab (Settings > Look & feel): while Alt is held, Tab goes to ULTRON instead of Windows, and the
+//! SYLVER's own Alt+Tab (Settings > Look & feel): while Alt is held, Tab goes to SYLVER instead of Windows, and the
 //! page shows the open windows as glass cards; letting go of Alt goes to the one chosen. Holding Alt and scrolling
 //! (the mouse wheel, or two fingers on the touchpad) runs through them the same way, and Ctrl+Alt+Left/Right hops
 //! straight to the next or last window (a four-finger swipe can be set to send those, in Windows' touchpad settings).
@@ -24,7 +24,7 @@ static STARTED: AtomicBool = AtomicBool::new(false);
 /// the switcher is up (Alt still held)
 static UP: AtomicBool = AtomicBool::new(false);
 static TELL: OnceLock<Mutex<Sender<&'static str>>> = OnceLock::new();
-/// (developer mode: keys a test sends count as pressed; ULTRON's own never do)
+/// (developer mode: keys a test sends count as pressed; SYLVER's own never do)
 static TRYING: AtomicBool = AtomicBool::new(false);
 const OURS: usize = 0x0A17_7AB;
 /// Alt held, as this hook has seen it (Windows' own note of it can lag a key behind)
@@ -42,12 +42,12 @@ fn held(vk: i32) -> bool {
     unsafe { GetAsyncKeyState(vk) as u16 & 0x8000 != 0 }
 }
 
-/// A game or anything else is full screen (as Windows says, the same as ULTRON's bar stands aside for): Windows' own
+/// A game or anything else is full screen (as Windows says, the same as SYLVER's bar stands aside for): Windows' own
 /// switcher is left to it. (Measuring the window in front took some maximized apps with no title bar for full screen
-/// when ULTRON's bar was set to hide away, and Windows' Alt+Tab came up over them.)
+/// when SYLVER's bar was set to hide away, and Windows' Alt+Tab came up over them.)
 fn full() -> bool {
     // (and still so now: a notice that it ended can go astray, and Windows' switcher then came up from then on. And a
-    //  maximized window isn't full screen, even one with no title bar filling the screen when ULTRON's bar hides away:
+    //  maximized window isn't full screen, even one with no title bar filling the screen when SYLVER's bar hides away:
     //  Windows calls those full screen too, and its switcher came up over VS Code, Discord, a browser)
     crate::appbar::FULL.load(SeqCst) && crate::appbar::really_full() && !unsafe { windows::Win32::UI::WindowsAndMessaging::IsZoomed(GetForegroundWindow()) }.as_bool()
 }
@@ -68,7 +68,7 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
         if code >= 0 && ON.load(SeqCst) {
             let k = &*(lp.0 as *const KBDLLHOOKSTRUCT);
             // (keys sent by a program count too: a four-finger swipe set, in Windows' touchpad settings, to a shortcut
-            //  arrives as keys Windows sends; only ULTRON's own are let by)
+            //  arrives as keys Windows sends; only SYLVER's own are let by)
             if k.dwExtraInfo != OURS {
                 let m = wp.0 as u32;
                 let down = m == WM_KEYDOWN || m == WM_SYSKEYDOWN;

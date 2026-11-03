@@ -1,4 +1,4 @@
-//! Email, inside ULTRON. You sign in once (your address and an app password); ULTRON then talks to
+//! Email, inside SYLVER. You sign in once (your address and an app password); SYLVER then talks to
 //! your mail server itself. It doesn't open Gmail or any other app: it reads your inbox, sums
 //! messages up with the quick brain, and tells you when something new arrives.
 //!
@@ -62,17 +62,17 @@ pub fn account(app: &AppHandle) -> Option<Account> {
     Some(a)
 }
 
-/// The address of the sign-in Windows has saved for ULTRON, if there is one.
+/// The address of the sign-in Windows has saved for SYLVER, if there is one.
 fn saved_email() -> Option<String> {
     use windows::core::PCWSTR;
     use windows::Win32::Security::Credentials::{CredEnumerateW, CredFree, CREDENTIALW};
-    let filter: Vec<u16> = "ULTRON mail: *".encode_utf16().chain(Some(0)).collect();
+    let filter: Vec<u16> = "SYLVER mail: *".encode_utf16().chain(Some(0)).collect();
     let (mut n, mut list): (u32, *mut *mut CREDENTIALW) = (0, std::ptr::null_mut());
     unsafe {
         CredEnumerateW(PCWSTR(filter.as_ptr()), Default::default(), &mut n, &mut list).ok()?;
         let name = if n > 0 && !list.is_null() { (**list).TargetName.to_string().ok() } else { None };
         CredFree(list as _);
-        name?.strip_prefix("ULTRON mail: ").map(String::from).filter(|e| e.contains('@'))
+        name?.strip_prefix("SYLVER mail: ").map(String::from).filter(|e| e.contains('@'))
     }
 }
 
@@ -83,7 +83,7 @@ fn save(app: &AppHandle, a: &Account) {
 /* ---------------- the password, in Windows Credential Manager ---------------- */
 
 fn target(email: &str) -> Vec<u16> {
-    format!("ULTRON mail: {email}").encode_utf16().chain(Some(0)).collect()
+    format!("SYLVER mail: {email}").encode_utf16().chain(Some(0)).collect()
 }
 
 fn keep_password(email: &str, pass: &str) -> bool {
@@ -376,7 +376,7 @@ pub fn digest(app: &AppHandle, refresh: bool) -> String {
 pub fn command(app: &AppHandle, text: &str) -> Option<String> {
     let l = text.to_lowercase();
     let l = l.trim().trim_end_matches(['?', '.', '!']).trim();
-    let l = l.strip_prefix("ultron").map(|r| r.trim_start_matches([',', ' '])).unwrap_or(l);
+    let l = l.strip_prefix("sylver").or_else(|| l.strip_prefix("ultron")).map(|r| r.trim_start_matches([',', ' '])).unwrap_or(l);
     let mailish = ["email", "e-mail", "emails", "inbox", "my mail", "new mail", "any mail"].iter().any(|w| l.contains(w));
     let asking = ["check", "any ", "do i have", "summar", "sum up", "what's in", "whats in", "what is in", "read my", "read me my", "read the latest", "read out", "new email", "new mail", "unread", "latest email", "last email", "go through my"].iter().any(|w| l.contains(w));
     // writing an email is the email-draft tool's job, not this

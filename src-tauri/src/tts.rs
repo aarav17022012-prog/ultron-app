@@ -1,6 +1,6 @@
-//! ULTRON's voice: Piper (a neural text-to-speech engine), running on this PC, with one of two voices:
+//! SYLVER's voice: Piper (a neural text-to-speech engine), running on this PC, with one of two voices:
 //! "Lessac", a woman's voice (the one it starts with), or "Ryan", a man's. The page can shape either into
-//! ULTRON's own sound (deeper, with a faint synthetic sheen) or leave it natural. Kept loaded between
+//! SYLVER's own sound (deeper, with a faint synthetic sheen) or leave it natural. Kept loaded between
 //! sentences so a reply starts speaking quickly; unloaded after a while unused.
 
 use std::io::{BufRead, BufReader, Write};
@@ -19,8 +19,8 @@ const VOICES: [(&str, &str, [&str; 4]); 2] = [
     ("lessac", "en_US-lessac-high.onnx", ["1.0", "0.667", "0.8", "0.22"]),
     ("ryan", "en_US-ryan-high.onnx", ["0.93", "0.62", "0.82", "0.18"]),
 ];
-/// Piper's own voices for the other languages ULTRON can be talked to in, fetched the first time one is chosen (about
-/// 60 MB each, kept with ULTRON's data). A language with none here is answered in writing only.
+/// Piper's own voices for the other languages SYLVER can be talked to in, fetched the first time one is chosen (about
+/// 60 MB each, kept with SYLVER's data). A language with none here is answered in writing only.
 const TONGUES: [(&str, &str); 11] = [
     ("hi", "hi/hi_IN/pratham/medium/hi_IN-pratham-medium"),
     ("es", "es/es_ES/davefx/medium/es_ES-davefx-medium"),
@@ -170,7 +170,7 @@ fn tidy(text: &str) -> String {
         // (and the marks other scripts are written with: Hindi's vowel signs, Arabic's, CJK's full stops; not emoji)
         .filter(|c| c.is_alphanumeric() || c.is_whitespace() || ".,!?;:'\"()-–—%$₹&/+".contains(*c) || ('\u{300}'..'\u{2000}').contains(c) || ('\u{3000}'..'\u{3040}').contains(c))
         .collect();
-    for (a, b) in [("ULTRON", "Ultron"), ("Ultron's", "Ultron's"), ("e.g.", "for example"), ("i.e.", "that is"), (" & ", " and "), ("₹", " rupees "), ("—", ", "), ("–", ", ")] {
+    for (a, b) in [("SYLVER", "Sylver"), ("Sylver's", "Sylver's"), ("e.g.", "for example"), ("i.e.", "that is"), (" & ", " and "), ("₹", " rupees "), ("—", ", "), ("–", ", ")] {
         t = t.replace(a, b);
     }
     t.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -214,7 +214,7 @@ pub fn speak(app: &AppHandle, text: &str) -> Option<String> {
     Some(base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
-/// Free the memory when ULTRON hasn't spoken for a while.
+/// Free the memory when SYLVER hasn't spoken for a while.
 pub fn watch(app: AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(60));

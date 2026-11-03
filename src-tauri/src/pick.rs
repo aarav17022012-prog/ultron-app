@@ -1,4 +1,4 @@
-//! Picking text with ULTRON beside you. You choose a text tool (Rewrite, Translate, Explain…) and then
+//! Picking text with SYLVER beside you. You choose a text tool (Rewrite, Translate, Explain…) and then
 //! select the text in whatever app it's in. While that's on, this watches your selecting: as you drag,
 //! the page puts the character next to your cursor; when you let go it gets the selected words and
 //! where they are on screen, marks them, and asks "This?".
@@ -23,7 +23,7 @@ static ON: AtomicBool = AtomicBool::new(false);
 static RUN: AtomicU64 = AtomicU64::new(0);
 
 enum Sel {
-    /// the keyboard is in ULTRON itself (you clicked its panel): says nothing about the other app
+    /// the keyboard is in SYLVER itself (you clicked its panel): says nothing about the other app
     Ours,
     None,
     Some(String, Vec<RECT>),
@@ -60,7 +60,7 @@ unsafe fn selected_in(uia: &IUIAutomation, e: &IUIAutomationElement) -> Option<(
     (text.trim().chars().count() >= 2).then(|| (text.trim().to_string(), rects))
 }
 
-/// What's selected where the keyboard is. `window`: when the keyboard is in ULTRON, look in this
+/// What's selected where the keyboard is. `window`: when the keyboard is in SYLVER, look in this
 /// window instead (the app you were in a moment ago), for text that was already selected.
 unsafe fn selection(uia: &IUIAutomation, own: u32, window: Option<HWND>) -> Sel {
     let Ok(walker) = uia.ControlViewWalker() else { return Sel::None };
@@ -193,7 +193,7 @@ pub fn start(app: AppHandle) {
                 (false, Some((_, mine))) => {
                     down = None;
                     if mine {
-                        continue; // a click on ULTRON itself (its panel, the Yes button)
+                        continue; // a click on SYLVER itself (its panel, the Yes button)
                     }
                     let twice = last_up.map(|(q, t)| t.elapsed() < Duration::from_millis(550) && (q.x - p.x).abs() < 6 && (q.y - p.y).abs() < 6).unwrap_or(false);
                     last_up = Some((p, Instant::now()));

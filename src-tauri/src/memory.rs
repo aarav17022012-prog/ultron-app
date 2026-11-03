@@ -1,4 +1,4 @@
-//! ULTRON's memory: facts about you, kept on this PC and used in every answer. It saves what's
+//! SYLVER's memory: facts about you, kept on this PC and used in every answer. It saves what's
 //! worth knowing ("my sister is Priya", "I'm vegetarian", "remember that my exam is on Friday"),
 //! not the conversation itself. You can ask what it remembers, tell it to forget something, or
 //! see and delete everything in Settings.
@@ -148,11 +148,11 @@ fn about_user(s: &str) -> String {
     out.join(" ")
 }
 
-/// Commands about memory itself. Returns ULTRON's answer when it handled one.
+/// Commands about memory itself. Returns SYLVER's answer when it handled one.
 pub fn command(app: &AppHandle, text: &str) -> Option<String> {
     let l = text.trim().trim_end_matches(['.', '!', '?']).trim();
     let ll = l.to_lowercase();
-    let ll = ll.strip_prefix("ultron").map(|r| r.trim_start_matches([',', ' '])).unwrap_or(&ll).to_string();
+    let ll = ll.strip_prefix("sylver").or_else(|| ll.strip_prefix("ultron")).map(|r| r.trim_start_matches([',', ' '])).unwrap_or(&ll).to_string();
     let after = |p: &str| ll.strip_prefix(p).map(|r| l[l.len() - r.len()..].trim().to_string());
     if ["what do you remember", "what do you know about me", "what have you remembered", "show my memories", "what's in your memory", "what is in your memory"]
         .iter()

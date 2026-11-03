@@ -1,4 +1,4 @@
-# ULTRON's Office hands: builds Excel workbooks and Word documents, and reads them back, through
+# SYLVER's Office hands: builds Excel workbooks and Word documents, and reads them back, through
 # Office's own automation (no clicking, nothing guessed from pixels). One JSON request on stdin,
 # one JSON answer on stdout.
 param([string]$Mode)

@@ -100,7 +100,7 @@ fn announce(app: &AppHandle, c: &Call) {
 /// A stamp of Windows' own notification store (its size and when it was last written, with its journal). It changes
 /// when a notification comes or goes. Reading it costs next to nothing; asking Windows for every notification it
 /// holds costs more the more it holds, and they pile up the longer the PC runs: asked every 0.9 s, that was a cost
-/// that kept growing while ULTRON stayed open. 0 when the store can't be found (then Windows is asked as before).
+/// that kept growing while SYLVER stayed open. 0 when the store can't be found (then Windows is asked as before).
 fn store_stamp() -> u64 {
     let Ok(base) = std::env::var("LOCALAPPDATA") else { return 0 };
     let db = std::path::Path::new(&base).join("Microsoft").join("Windows").join("Notifications").join("wpndatabase.db");
@@ -125,7 +125,7 @@ pub fn start(app: AppHandle) {
         if status != UserNotificationListenerAccessStatus::Allowed {
             status = listener.RequestAccessAsync().ok().and_then(|a| a.get().ok()).unwrap_or(status);
         }
-        crate::log_line(&format!("calls: watching Windows notifications ({})", if status == UserNotificationListenerAccessStatus::Allowed { "allowed" } else { "not allowed: turn on notification access for ULTRON in Windows Settings › Privacy" }));
+        crate::log_line(&format!("calls: watching Windows notifications ({})", if status == UserNotificationListenerAccessStatus::Allowed { "allowed" } else { "not allowed: turn on notification access for SYLVER in Windows Settings › Privacy" }));
         if status != UserNotificationListenerAccessStatus::Allowed {
             return;
         }
@@ -142,7 +142,7 @@ pub fn start(app: AppHandle) {
             }
             stamp = s;
             asked = std::time::Instant::now();
-            // (one look at Windows' list a turn, shared with ULTRON's own notifications when those are on)
+            // (one look at Windows' list a turn, shared with SYLVER's own notifications when those are on)
             let list: Vec<UserNotification> = listener.GetNotificationsAsync(NotificationKinds::Toast).ok().and_then(|a| a.get().ok()).map(|v| v.into_iter().collect()).unwrap_or_default();
             crate::notes::poll(&app, &list);
             crate::coders::from_notes(&app, &list);

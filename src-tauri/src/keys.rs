@@ -1,6 +1,6 @@
-//! The Windows key, for ULTRON's own Start (Settings, Taskbar, Start menu: ULTRON).
+//! The Windows key, for SYLVER's own Start (Settings, Taskbar, Start menu: SYLVER).
 //!
-//! While that's chosen, pressing and letting go of the Windows key on its own opens ULTRON's search
+//! While that's chosen, pressing and letting go of the Windows key on its own opens SYLVER's search
 //! instead of Windows' Start menu, and every Windows-key shortcut (Win+D, Win+E, Win+Shift+S ...)
 //! still does what it always did. This is how:
 //!
@@ -8,7 +8,7 @@
 //! is held, that's a shortcut, so Windows is told at that moment that the Windows key is down (just
 //! ahead of the other key) and everything from there on is Windows' own business. If instead the
 //! Windows key comes up with nothing else pressed, that is held back too, Windows never knew the key
-//! was touched, and the page is told to open ULTRON's search.
+//! was touched, and the page is told to open SYLVER's search.
 //!
 //! (What was tried first: letting the key through and tapping an unassigned key beside it, which is
 //! how the Start menu is usually kept shut. On the build this was made on that worked for a key sent
@@ -36,7 +36,7 @@ static TRYING: AtomicBool = AtomicBool::new(false); // (developer mode: keys a t
 static TELL: OnceLock<Mutex<Sender<u8>>> = OnceLock::new();
 const ALONE_UP: u8 = 1; // the Windows key was pressed and let go by itself
 const LOCK: u8 = 6; // Win+L
-const OURS: usize = 0x554C_5452; // marks the keys ULTRON sends itself, so that it knows them again
+const OURS: usize = 0x554C_5452; // marks the keys SYLVER sends itself, so that it knows them again
 
 fn tell(what: u8) {
     if let Some(t) = TELL.get() {
@@ -44,7 +44,7 @@ fn tell(what: u8) {
     }
 }
 
-/// Send a key going down, or coming up, as ULTRON's own.
+/// Send a key going down, or coming up, as SYLVER's own.
 fn send(vk: u16, up: bool) -> bool {
     let mut flags = if up { KEYEVENTF_KEYUP } else { Default::default() };
     if vk == VK_LWIN.0 || vk == VK_RWIN.0 {
@@ -85,7 +85,7 @@ unsafe extern "system" fn hook(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT {
     unsafe {
         if code >= 0 && ON.load(SeqCst) {
             let k = &*(lp.0 as *const KBDLLHOOKSTRUCT);
-            // (keys that programs send are let by untouched, ULTRON's own among them)
+            // (keys that programs send are let by untouched, SYLVER's own among them)
             if k.dwExtraInfo != OURS && (k.flags.0 & LLKHF_INJECTED.0 == 0 || TRYING.load(SeqCst)) {
                 let win = k.vkCode == VK_LWIN.0 as u32 || k.vkCode == VK_RWIN.0 as u32;
                 let down = wp.0 as u32 == WM_KEYDOWN || wp.0 as u32 == WM_SYSKEYDOWN;

@@ -8,7 +8,7 @@ pub struct Lyrics {
     pub synced: Vec<(f64, String)>, // (seconds, line)
     pub plain: Option<String>,
     pub instrumental: bool,
-    /// the lyrics' timing matches what's playing (same length); otherwise ULTRON lines them up by listening
+    /// the lyrics' timing matches what's playing (same length); otherwise SYLVER lines them up by listening
     pub exact: bool,
 }
 

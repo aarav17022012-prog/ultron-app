@@ -1,6 +1,6 @@
 //! Circle to Search (AI Tools, On screen). The screen is held still as a picture; you draw round a
 //! part of it, and that part is searched: its words are read here (Windows' own offline text
-//! reading), ULTRON's eyes can say what it is (the local vision model, see.rs), and it can be looked
+//! reading), SYLVER's eyes can say what it is (the local vision model, see.rs), and it can be looked
 //! up on the web or in Google Lens. Only Lens sends anything off the PC (the part you circled), and
 //! only when you ask for it.
 //!
@@ -110,14 +110,14 @@ pub fn read(x: i32, y: i32, w: i32, h: i32) -> Vec<String> {
         .collect()
 }
 
-/// What ULTRON's eyes make of a piece.
+/// What SYLVER's eyes make of a piece.
 pub fn ask(app: &AppHandle, x: i32, y: i32, w: i32, h: i32, question: &str) -> Result<String, String> {
     if !crate::see::available(app) {
-        return Err("ULTRON’s eyes (the vision model) aren’t on this PC yet, so it can only read the words here.".into());
+        return Err("SYLVER’s eyes (the vision model) aren’t on this PC yet, so it can only read the words here.".into());
     }
     let (pw, ph, px) = piece(x, y, w, h).ok_or("The picture has gone. Draw round it again.")?;
     let jpg = jpeg(&px, pw, ph, Some(896), 88).ok_or("That part couldn’t be pictured.")?;
-    crate::see::ask(app, &jpg, question).ok_or_else(|| "ULTRON couldn’t make it out this time.".into())
+    crate::see::ask(app, &jpg, question).ok_or_else(|| "SYLVER couldn’t make it out this time.".into())
 }
 
 /// Look the circled part up in Google Lens. Google keeps an uploaded picture with the connection that sent it:

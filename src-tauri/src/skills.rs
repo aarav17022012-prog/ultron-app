@@ -1,4 +1,4 @@
-//! More things ULTRON can do on the PC, used by the agent: messaging (always asks
+//! More things SYLVER can do on the PC, used by the agent: messaging (always asks
 //! before sending), email drafts, writing tools on selected text, reading the
 //! screen, timers and reminders, window snapping, brightness, dark mode, Settings
 //! pages and files. Everything runs locally through Windows itself.
@@ -241,7 +241,7 @@ pub fn message(raw: &str) -> Option<(String, String, String)> {
             }
             match who_what(&rest) {
                 Some(x) => x,
-                // just a name ("message Danish"): the chat is opened and ULTRON asks what to say
+                // just a name ("message Danish"): the chat is opened and SYLVER asks what to say
                 None if ["message", "msg", "whatsapp", "dm"].iter().any(|v| verb.contains(v)) && rest.split_whitespace().count() <= 3 && rest.chars().all(|c| c.is_alphabetic() || c == ' ') => (rest.clone(), String::new()),
                 None => return None,
             }
@@ -262,7 +262,7 @@ pub fn message(raw: &str) -> Option<(String, String, String)> {
     };
     let to = to.trim().trim_start_matches("to ").trim_matches(|c: char| matches!(c, ',' | '.' | ':' | ';' | '"' | '\'' | ' ')).to_string();
     let text = text.trim();
-    // in quotes: the message is what's inside them (a "?" after the closing quote was said to ULTRON, not to them)
+    // in quotes: the message is what's inside them (a "?" after the closing quote was said to SYLVER, not to them)
     let text = match text.strip_prefix('"').and_then(|t| t.rfind('"').map(|j| t[..j].to_string())) {
         Some(inner) => inner.trim().to_string(),
         None => text.trim_matches(|c| matches!(c, '"' | '\'')).trim().to_string(),
@@ -302,7 +302,7 @@ fn who_what(rest: &str) -> Option<(String, String)> {
                 return Some((who.to_string(), rest[..i].to_string()));
             }
         }
-        return Some((String::new(), rest.to_string())); // a message with nobody named: not one ULTRON can send
+        return Some((String::new(), rest.to_string())); // a message with nobody named: not one SYLVER can send
     }
     // "message Danish Khan": only a name (every word capitalised, none of them a greeting)
     let words: Vec<&str> = rest.split_whitespace().collect();
@@ -317,7 +317,7 @@ fn who_what(rest: &str) -> Option<(String, String)> {
 /// "Danish's chat is open. What should I say?": who that was asked about, so that what you say next is the message.
 pub static ASKING: std::sync::Mutex<Option<(String, String, std::time::Instant)>> = std::sync::Mutex::new(None);
 
-/// If ULTRON has just asked what to say to someone (within the last minute), this is that someone,
+/// If SYLVER has just asked what to say to someone (within the last minute), this is that someone,
 /// unless what was said now is "never mind".
 pub fn asked_message(text: &str) -> Option<(String, String)> {
     let (app, to, at) = ASKING.lock().unwrap().take()?;
@@ -455,6 +455,12 @@ pub fn set_brightness(v: u32) -> bool {
     ps(&format!("$m = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods; if ($m) {{ Invoke-CimMethod -InputObject $m -MethodName WmiSetBrightness -Arguments @{{Timeout=1; Brightness=[byte]{v}}} | Out-Null; 'ok' }}"))
         .map(|s| s.contains("ok"))
         .unwrap_or(false)
+}
+
+pub fn step_brightness(delta: i32) -> Option<u32> {
+    let delta = delta.clamp(-100, 100);
+    ps(&format!("$m = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness | Select-Object -First 1; $method = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods | Select-Object -First 1; if ($m -and $method) {{ $v = [Math]::Max(0, [Math]::Min(100, [int]$m.CurrentBrightness + ({delta}))); Invoke-CimMethod -InputObject $method -MethodName WmiSetBrightness -Arguments @{{Timeout=1; Brightness=[byte]$v}} | Out-Null; Write-Output $v }}"))
+        .and_then(|s| s.parse().ok())
 }
 
 /// Apps are in dark mode (read from Windows' settings directly: no program started for it).
@@ -643,7 +649,7 @@ pub fn spotify_track(query: &str) -> Option<(String, String, String)> {
     }
     let enc = |s: &str| s.bytes().map(|b| if b.is_ascii_alphanumeric() { (b as char).to_string() } else { format!("%{b:02X}") }).collect::<String>();
     let agent = crate::net::agent(Duration::from_secs(5));
-    let get = |url: &str| agent.get(url).set("User-Agent", "ULTRON/0.3 ( desktop assistant )").call().ok()?.into_json::<serde_json::Value>().ok();
+    let get = |url: &str| agent.get(url).set("User-Agent", "SYLVER/0.3 ( desktop assistant )").call().ok()?.into_json::<serde_json::Value>().ok();
     let found = get(&format!("https://musicbrainz.org/ws/2/recording?fmt=json&limit=4&query={}", enc(&mbq)))?;
     let t0 = Instant::now();
     for rec in found.get("recordings")?.as_array()?.iter().take(4) {

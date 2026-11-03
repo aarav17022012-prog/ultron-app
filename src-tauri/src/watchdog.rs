@@ -1,4 +1,4 @@
-//! A frozen page brought back. The page says it's alive every few seconds; if it goes quiet for 45 s while ULTRON is
+//! A frozen page brought back. The page says it's alive every few seconds; if it goes quiet for 45 s while SYLVER is
 //! on screen (and the page isn't hidden, when its timers are slowed on purpose), the log says which side stopped
 //! answering (the page, or the app's own main thread) and the page is reloaded. At most three times in ten minutes.
 
@@ -12,9 +12,9 @@ use windows::Win32::UI::WindowsAndMessaging::{IsWindowVisible, WM_SYSCOMMAND};
 
 static START: OnceLock<Instant> = OnceLock::new();
 
-/// ULTRON started again if it crashes (a Windows update can leave a driver, or the web engine under ULTRON, in a state
-/// that brings it down). A small copy of ULTRON waits for this one to end; if it ended by crashing (not quit by you,
-/// not ended from Task Manager, not Windows shutting down or restarting), it starts ULTRON again, three times in ten
+/// SYLVER started again if it crashes (a Windows update can leave a driver, or the web engine under SYLVER, in a state
+/// that brings it down). A small copy of SYLVER waits for this one to end; if it ended by crashing (not quit by you,
+/// not ended from Task Manager, not Windows shutting down or restarting), it starts SYLVER again, three times in ten
 /// minutes at most.
 pub fn keep() {
     use std::os::windows::process::CommandExt;
@@ -46,7 +46,7 @@ pub fn keeper_if_asked() -> bool {
     if !crashed || unsafe { GetSystemMetrics(SM_SHUTTINGDOWN) } != 0 {
         return true;
     }
-    let file = std::env::var("LOCALAPPDATA").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("ULTRON").join("restarts.txt");
+    let file = std::env::var("LOCALAPPDATA").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("SYLVER").join("restarts.txt");
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let recent: Vec<u64> = std::fs::read_to_string(&file).unwrap_or_default().lines().filter_map(|l| l.trim().parse().ok()).filter(|t: &u64| now.saturating_sub(*t) < 600).collect();
     if recent.len() >= 3 {
@@ -74,10 +74,10 @@ pub fn alive(hidden: bool) {
     PAGE.store(now(), Relaxed);
 }
 
-/// ULTRON has no menu bar of Windows' own kind. An Alt press on its window (yours, while typing in ULTRON; or the one
-/// ULTRON taps to hand the keyboard back to another app) put the window in Windows' keyboard-menu mode, waiting for a
+/// SYLVER has no menu bar of Windows' own kind. An Alt press on its window (yours, while typing in SYLVER; or the one
+/// SYLVER taps to hand the keyboard back to another app) put the window in Windows' keyboard-menu mode, waiting for a
 /// menu key: the page stopped hearing from the app, and the app from the page, until Escape was pressed. Measured:
-/// one Alt tap, ULTRON frozen. That menu mode is turned away here (installed from the window's own thread).
+/// one Alt tap, SYLVER frozen. That menu mode is turned away here (installed from the window's own thread).
 unsafe extern "system" fn no_menu(h: HWND, msg: u32, wp: WPARAM, lp: LPARAM, _: usize, _: usize) -> LRESULT {
     if msg == WM_SYSCOMMAND && (wp.0 & 0xFFF0) == 0xF100 {
         return LRESULT(0); // (SC_KEYMENU)
@@ -106,8 +106,11 @@ pub fn start(app: tauri::AppHandle) {
             tick = Instant::now();
             let _ = app.run_on_main_thread(|| MAIN.store(now(), Relaxed));
             let page = PAGE.load(Relaxed);
-            // (not started yet; the PC was asleep; ULTRON is hidden; or the page is, and slows its timers on purpose)
-            let away = gap > Duration::from_secs(15) || HIDDEN.load(Relaxed) || !unsafe { IsWindowVisible(HWND(hwnd as _)) }.as_bool();
+            // (not started yet; the PC was asleep; SYLVER is hidden; or the page is, and slows its timers on purpose)
+            // (and while the laptop rests or has just woken: with the lid shut, Windows' modern standby kept this
+            //  running while the page was frozen, and on opening the lid the whole page was reloaded as if stuck,
+            //  just as everything else woke: the lag after a night closed)
+            let away = gap > Duration::from_secs(15) || crate::lid::resting() || HIDDEN.load(Relaxed) || !unsafe { IsWindowVisible(HWND(hwnd as _)) }.as_bool();
             if page == 0 || away {
                 if page != 0 {
                     PAGE.store(now(), Relaxed);

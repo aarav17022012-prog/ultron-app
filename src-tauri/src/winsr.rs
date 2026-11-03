@@ -1,4 +1,4 @@
-//! Windows' own speech recognizer, listening under ULTRON's dictation: each thing you dictate is heard by Whisper and,
+//! Windows' own speech recognizer, listening under SYLVER's dictation: each thing you dictate is heard by Whisper and,
 //! at the same time, by the recognizer built into Windows (Microsoft Speech Recognizer 8.0, on the PC, no internet).
 //! Whisper's words are what's typed; Windows' are a second pair of ears:
 //!
@@ -6,7 +6,7 @@
 //!   "Digital."), dropped.
 //! - Whisper heard nothing (or only "okay", "thank you" and the like, which it often makes up from a breath), Windows
 //!   clearly heard words: Windows' words are used.
-//! - Windows heard one of your names (the ones ULTRON learned or you listed, given to it as words it should expect)
+//! - Windows heard one of your names (the ones SYLVER learned or you listed, given to it as words it should expect)
 //!   where Whisper wrote something that sounds like it: the name is put in.
 //!
 //! The recognizer runs in a small PowerShell of its own (System.Speech), started with dictation and closed three quiet
@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn a_name_whisper_missed_is_put_in() {
-        let names = vec!["Danish".to_string(), "Ultron".to_string()];
+        let names = vec!["Danish".to_string(), "Sylver".to_string()];
         let w = heard("please send a reporter Danish tomorrow morning", 0.8);
         assert_eq!(fuse("Please send the report to Danny's tomorrow morning.", false, Some(&w), &names).unwrap(), "Please send the report to Danish tomorrow morning.");
         assert_eq!(fuse("Please send the report to Danish tomorrow.", false, Some(&w), &names).unwrap(), "Please send the report to Danish tomorrow.");

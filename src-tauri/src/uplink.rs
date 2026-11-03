@@ -21,11 +21,11 @@ static NET: LazyLock<ureq::Agent> = LazyLock::new(|| {
     ureq::AgentBuilder::new()
         .timeout(Duration::from_millis(2600))
         .timeout_connect(Duration::from_millis(2500))
-        .user_agent(&format!("ULTRON/{} (desktop assistant; install {})", env!("CARGO_PKG_VERSION"), install_id()))
+        .user_agent(&format!("SYLVER/{} (desktop assistant; install {})", env!("CARGO_PKG_VERSION"), install_id()))
         .build()
 });
 
-/// This PC's own id for the web's sources (made once, at random, and kept beside ULTRON's settings)
+/// This PC's own id for the web's sources (made once, at random, and kept beside SYLVER's settings)
 fn install_id() -> String {
     let dir = std::path::PathBuf::from(std::env::var("APPDATA").unwrap_or_default()).join("com.ultron.notch");
     let f = dir.join("install-id");
