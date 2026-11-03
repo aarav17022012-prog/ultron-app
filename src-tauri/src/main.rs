@@ -1023,6 +1023,64 @@ async fn dock_recent(aumid: String) -> Vec<(String, String)> {
     tauri::async_runtime::spawn_blocking(move || dock::recent(&aumid, 6)).await.unwrap_or_default()
 }
 
+/// An agent's question or permission answered from Sylver's alert: its window brought up, the answer typed into it
+/// ("1" allow, "2" always, "3" deny in Claude Code's menu, or what you wrote, then Enter). With no window given (Claude
+/// Code's own alerts don't say which), the first window whose title has `hint` in it.
+#[tauri::command]
+async fn agent_answer(id: String, hint: String, text: String, enter: bool) -> bool {
+    tauri::async_runtime::spawn_blocking(move || {
+        let id = if id.is_empty() || id == "0" { window_titled(&hint).map(|h| h.to_string()).unwrap_or_default() } else { id };
+        if id.is_empty() {
+            return false;
+        }
+        dock::act(&id, "focus");
+        std::thread::sleep(Duration::from_millis(380));
+        if !text.is_empty() {
+            commands::type_text(&text);
+        }
+        if enter {
+            std::thread::sleep(Duration::from_millis(60));
+            commands::type_text("\r");
+        }
+        log_line(&format!("agents: answered from the alert ({} characters{})", text.chars().count(), if enter { ", then Enter" } else { "" }));
+        true
+    })
+    .await
+    .unwrap_or(false)
+}
+
+/// The first visible window whose title contains `part` (any case)
+fn window_titled(part: &str) -> Option<isize> {
+    use windows::Win32::Foundation::{HWND, LPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetWindowTextW, IsWindowVisible};
+    struct Find {
+        part: String,
+        found: isize,
+    }
+    unsafe extern "system" fn each(h: HWND, l: LPARAM) -> windows::core::BOOL {
+        unsafe {
+            let f = &mut *(l.0 as *mut Find);
+            if IsWindowVisible(h).as_bool() {
+                let mut b = [0u16; 256];
+                let n = GetWindowTextW(h, &mut b).max(0) as usize;
+                if String::from_utf16_lossy(&b[..n]).to_lowercase().contains(&f.part) {
+                    f.found = h.0 as isize;
+                    return false.into();
+                }
+            }
+            true.into()
+        }
+    }
+    let mut f = Find { part: part.to_lowercase(), found: 0 };
+    if f.part.is_empty() {
+        return None;
+    }
+    unsafe {
+        let _ = EnumWindows(Some(each), LPARAM(&mut f as *mut Find as isize));
+    }
+    (f.found != 0).then_some(f.found)
+}
+
 #[tauri::command]
 async fn dock_act(id: String, what: String) {
     let _ = tauri::async_runtime::spawn_blocking(move || dock::act(&id, &what)).await;
@@ -1976,7 +2034,7 @@ fn main() {
             media_state, media_control, get_lyrics,
             media_fast, translate, news, ai_stop, tts, ai_config, ai_forget, agent_confirm, song_listen, set_autostart, get_autostart, sys_stats, clip_list, clip_action, browser_show, browser_hide, browser_go, set_window_height,
             menu_action, wallpaper, wifi_status, wifi_connect, wifi_disconnect, start_apps, app_icons, launch, power, user_name,
-            intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, web_warm, tts_lang, sounds_set, dialogs_set, osd_set, alttab_set, alttab_list, connect_list, connect_set, connect_forget, connect_linked, ai_merge, connect_pick, connect_file_text, app_task, ui_read, ui_do, teach_start, teach_stop, teach_list, teach_play, teach_forget, dialog_shown, dialog_press, dialog_pass, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, dict_typing_ready, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
+            agent_answer, intro_say, intro_heard, intro_finish, intro_play, intro_due, ai_wake, routines_list, routine_set, call_answer, call_decline, call_reply, pick_start, pick_stop, cloud_status, cloud_connect, cloud_set, cloud_forget, mail_status, mail_connect, mail_list, mail_summary, mail_digest, mail_signout, mail_body, yt_captions, media_icon, bar_reserve, backdrop_now, rec_begin, rec_data, rec_end, rec_keys, rec_sound, rec_click, rec_folder, squeeze_pick, squeeze_go, squeeze_stop, squeeze_folder, squeeze_show, today_weather, wall_list, wall_apply, wall_pick, wall_folder, dock_set, dock_snap, dock_list, dock_act, dock_recent, dock_tile, dock_untile, dock_tile_apps, dock_peek, dock_keep, at_login, notes_reply, wifi_join, dictate_key, dev_show, shelf_list, shelf_add, shelf_remove, shelf_clear, shelf_thumb, shelf_drag, shelf_reveal, shelf_pick, shelf_add_app, cursor_blur, tts_voice, cts_grab, cts_forget, cts_read, cts_ask, cts_lens, cts_copy, wall_picture, start_key, spot_key, dyn_windows, store_save, store_load, wheel_key, cleaner_scan, cleaner_clean, mail_rich, page_idle, page_alive, agent_watch, agent_hooks_state, agent_hooks, signin_wake, login_last, mail_image, web_warm, tts_lang, sounds_set, dialogs_set, osd_set, alttab_set, alttab_list, connect_list, connect_set, connect_forget, connect_linked, ai_merge, connect_pick, connect_file_text, app_task, ui_read, ui_do, teach_start, teach_stop, teach_list, teach_play, teach_forget, dialog_shown, dialog_press, dialog_pass, link_find, link_connect, link_pair, link_command, link_answer, link_state, link_close, dictate_shape, dictate_ai, dictate_erase, words_drag, words_copy, words_type, dict_typing_ready, qs_state, qs_bright, qs_set, memory_edit, memory_add, procs_list, procs_end, holidays, notes_mode, notes_list, notes_press, notes_dismiss, notes_clear, notes_apps, notes_allow, focus_main, focus_back, ai_specs, read_selection, memory_list, memory_forget, backdrop_rate,
         ])
         .on_window_event(|_win, e| {
             // the notch and menu bar never close on their own (Alt+F4 included); quit from the tray
