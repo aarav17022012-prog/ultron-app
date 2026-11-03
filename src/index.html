@@ -4041,6 +4041,9 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
 .fs-o.on i{flex:none; width:7px; height:7px; border-radius:50%; background:#fff; box-shadow:0 0 8px rgba(255,255,255,.7)}
 .fs-o[disabled]{opacity:.35 !important; cursor:default}
 .kw-in .fs-btn{flex:1; min-width:0; height:30px; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:13.5px; padding:0 4px}
+
+/* the playing source's pill: its name only (the app's round logo read as a stray yellow glint) */
+#srcLogo, #srcIcon{display:none !important}
 </style>
 </head>
 <body>
@@ -4776,6 +4779,8 @@ if (TAURI) setTimeout(async () => {
   if (S.dictBest === undefined){ try { S.dictBest = await invoke('dict_best_have'); save(); } catch(_){} }
   // (the second, slower hearing is off for everyone once: it took 4 to 6 seconds a sentence, and got some worse)
   if (!S.bestOff){ S.bestOff = true; S.dictBest = false; save(); }
+  // (the bending glass rims drew rough, stepped edges at the glass's small size: off for everyone once)
+  if (!S.lensOff){ S.lensOff = true; S.glassLens = false; save(); }
   invoke('voice_config', {best:!!S.dictBest});
   // (a weak PC, four threads or fewer or 4 GB or less: the spatial wallpaper and the bending glass rims start off)
   const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
@@ -5795,7 +5800,7 @@ $('flCtl').addEventListener('click', e => {
   b.classList.remove('tap'); void b.offsetWidth; b.classList.add('tap');
   const what = b.dataset.fl;
   if (what === 'menu'){ setOpen(true); selectTab('lyrics'); return; }
-  if (what === 'play'){ if (cur) flyr.classList.toggle('playing', !cur.playing); if (!$('play').disabled) $('play').click(); else invoke('media_control', {action:'toggle'}); return; }
+  if (what === 'play'){ if (cur) flyr.classList.toggle('playing', !cur.playing); if (!$('play').disabled) $('play').dispatchEvent(new MouseEvent('click', {bubbles:false})); else invoke('media_control', {action:'toggle'}); return; }   // (a click that doesn't reach the notch: it opened the notch)
   // (straight to the player: they went by way of the notch's own buttons, and did nothing while those were switched off)
   swipeDir = what === 'next' ? 1 : -1; invoke('media_control', {action:what});
 });

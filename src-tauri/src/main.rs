@@ -744,6 +744,17 @@ fn set_autostart(on: bool) -> bool {
     } else {
         c.args(["delete", RUN_KEY, "/v", "ULTRON", "/f"]);
     }
+    // (and a shortcut in the Startup folder too, a second way in: the Run entry alone didn't bring Sylver back after
+    //  a restart. Should both start it, the second sees the first and goes, see the single-instance check)
+    let link = std::path::PathBuf::from(std::env::var("APPDATA").unwrap_or_default()).join(r"Microsoft\Windows\Start Menu\Programs\Startup\Sylver.lnk");
+    if on {
+        let exe = std::env::current_exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+        let ps = format!("$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{}'); $s.TargetPath = '{}'; $s.Arguments = '--at-login'; $s.Save()",
+            link.to_string_lossy().replace('\'', "''"), exe.replace('\'', "''"));
+        let _ = std::process::Command::new("powershell").args(["-NoProfile", "-NonInteractive", "-Command", &ps]).creation_flags(0x0800_0000).output();
+    } else {
+        let _ = std::fs::remove_file(&link);
+    }
     c.creation_flags(0x0800_0000).output().map(|o| o.status.success()).unwrap_or(false)
 }
 
