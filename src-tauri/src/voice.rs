@@ -276,11 +276,6 @@ fn unrepeat(text: &str) -> String {
 
 fn is_noise(text: &str) -> bool {
     let t = text.trim().trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
-    // (one word said over and over, "needle needle": what Whisper makes of a scrap of noise)
-    let ws: Vec<&str> = t.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).collect();
-    if (2..=4).contains(&ws.len()) && ws.iter().all(|w| *w == ws[0]) {
-        return true;
-    }
     if t.is_empty() || text.trim().starts_with('[') || text.trim().starts_with('(') || text.trim().starts_with('*') {
         return true;
     }
@@ -636,7 +631,9 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
                 let key = |w: &str| w.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
                 let ws: Vec<String> = text.split_whitespace().map(key).filter(|w| !w.is_empty()).collect();
                 let agree = if ws.is_empty() { 0.0 } else { ws.iter().filter(|w| h.words.iter().any(|(x, _)| key(x) == **w)).count() as f32 / ws.len() as f32 };
-                if agree < 0.6 && !(h.text.is_empty() && ws.len() <= 2) {
+                // (only when they barely agree at all: Windows' recognizer is weak, they disagreed on most clips, and
+                //  each second hearing took as long as the speech itself: the lag after every sentence)
+                if agree < 0.25 && ws.len() >= 3 && !h.text.is_empty() {
                     let t1 = std::time::Instant::now();
                     let mut again = String::new();
                     if b.full(steady_params(&prompt, &lang, threads, audio.len()), &audio).is_ok() {
@@ -707,7 +704,8 @@ impl Vad {
         // (how loud a voice has to be: over the room, and never below a floor. That floor was 0.006: a laptop's own
         //  microphone set low, or quiet, gives a voice of about 0.002, and nothing it heard ever started)
         let loud = (self.floor * 2.2).max(0.0015) / sens;
-        let start_p = (0.6 / sens).clamp(0.3, 0.9);
+        // (dictating, a softer start is caught: a quiet sentence that never looked voice-like enough was lost whole)
+        let start_p = (if quiet >= 60 { 0.42 } else { 0.6 } / sens).clamp(0.3, 0.9);
         if !self.speaking {
             self.floor = if rms < self.floor { self.floor * 0.9 + rms * 0.1 } else { self.floor * 0.997 + rms * 0.003 };
             self.pre.push_back(f.to_vec());
@@ -716,7 +714,7 @@ impl Vad {
             }
             // a voice (not a fan, a click or a keyboard) that's loud enough
             self.hot = if voice_p > start_p && rms > loud { self.hot + 1 } else { 0 };
-            if self.hot >= 3 {
+            if self.hot >= if quiet >= 60 { 2 } else { 3 } {
                 self.speaking = true;
                 self.voiced = self.hot;
                 self.silence = 0;
@@ -944,7 +942,7 @@ fn processor(app: AppHandle, raw_rx: Receiver<(Vec<f32>, u32)>) {
                     }
                 }
                 sent = 0;
-            } else if vad.speaking && (voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst)) && vad.seg.len() >= RATE / 2 && vad.seg.len() >= sent + RATE * 3 / 5 {
+            } else if vad.speaking && (voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst)) && vad.seg.len() >= RATE / 2 && vad.seg.len() >= sent + RATE * 6 / 5 && vad.seg.len() < RATE * 9 {
                 // (dictating: what's been said so far, every 0.6 s; dropped if the last one is still being heard)
                 if let Some(tx) = voice.part_tx.lock().unwrap().as_ref() {
                     if tx.try_send(vad.seg.clone()).is_ok() {

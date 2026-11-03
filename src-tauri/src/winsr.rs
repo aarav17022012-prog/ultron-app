@@ -226,7 +226,8 @@ pub fn fuse(whisper: &str, noise: bool, win: Option<&Heard>, names: &[String]) -
     let w_words: Vec<&str> = whisper.split_whitespace().collect();
     let heard_nothing = win.text.trim().is_empty();
     // (a breath or a knock that Whisper made a word or two of)
-    if heard_nothing && w_words.len() <= 2 {
+    // (only an empty clip: Windows' recognizer misses short words often, and a real "Hello" was thrown away)
+    if heard_nothing && w_words.is_empty() {
         if !w_words.is_empty() {
             crate::log_line(&format!("windows speech: heard no speech where Whisper wrote {whisper:?}: dropped"));
         }
@@ -305,7 +306,6 @@ mod tests {
     #[test]
     fn noise_and_silence() {
         let none = heard("", 0.0);
-        assert_eq!(fuse("Digital.", false, Some(&none), &[]), None);
         assert_eq!(fuse("Open the report tomorrow.", false, Some(&none), &[]).as_deref(), Some("Open the report tomorrow."));
         assert_eq!(fuse("Okay.", true, Some(&heard("okay", 0.7)), &[]).as_deref(), Some("Okay."));
         assert_eq!(fuse("Thank you.", true, Some(&heard("open my calendar please", 0.8)), &[]).as_deref(), Some("Open my calendar please."));
