@@ -589,6 +589,8 @@ pub(crate) fn handle(app: AppHandle, text: String) -> commands::Reply {
             if let Some(a) = ai::ask(&app, &text) {
                 return a;
             }
+            // (no brain to answer yet: said, not left to the task agent to do nothing with)
+            return commands::Reply { reply: "My brain is still waking up. Give me a few seconds and ask again.".into(), action: String::new(), icon: "chat", ok: false };
         }
         // "build me ... on Lovable / Bolt / v0 / AI Studio": straight to that builder, with the request
         if let Some(r) = doer::build_online(&app, &text) {

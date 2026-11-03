@@ -4428,8 +4428,6 @@ const DEFAULTS = {setSkin:'ultron', follow:true, blink:true, eye:1, speed:1, sen
 let S = {...DEFAULTS};
 const TALL = Math.round(screen.height || 864) - 2;     // (ULTRON's window's height: see winH)
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
-// (the old web-answer option, answers by way of Gemini, is gone; Cloud will take its place, and isn't ready yet: answers come from this PC)
-if (S.gemini){ S.gemini = false; try { localStorage.setItem('ultron-notch', JSON.stringify(S)); } catch(_){} }
 // ULTRON speaks again (14 Oct 2026), with a woman's voice to start with, as it is (not made deeper). Once; after that
 // what's chosen in Settings, Voice stays as chosen.
 // (live glass had been saved off by a test's switch: it's put back on once. The test switch, devNoGlass, is never saved.)
@@ -4776,6 +4774,8 @@ addEventListener('keydown', e => { if (FS.open && e.key === 'Escape'){ e.stopPro
 document.querySelectorAll('select').forEach(fsMake);
 if (TAURI) setTimeout(async () => {
   if (S.dictBest === undefined){ try { S.dictBest = await invoke('dict_best_have'); save(); } catch(_){} }
+  // (the second, slower hearing is off for everyone once: it took 4 to 6 seconds a sentence, and got some worse)
+  if (!S.bestOff){ S.bestOff = true; S.dictBest = false; save(); }
   invoke('voice_config', {best:!!S.dictBest});
   // (a weak PC, four threads or fewer or 4 GB or less: the spatial wallpaper and the bending glass rims start off)
   const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;

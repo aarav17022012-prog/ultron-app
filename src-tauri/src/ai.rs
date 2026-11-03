@@ -1336,6 +1336,30 @@ fn steps_ready(app: &AppHandle) {
 }
 
 /// "what's 23 x 47", "15% of 240", "square root of 144": worked out exactly (a small brain only guesses at sums).
+/// Everyday chat ("hi", "how are you", "who are you", "thanks"): answered at once, warmly and a little differently
+/// each time, with no brain and no internet needed, in Web and Local alike
+fn quick_chat(q: &str) -> Option<String> {
+    let t: String = q.to_lowercase().chars().filter(|c| c.is_alphanumeric() || c.is_whitespace()).collect();
+    let t = t.split_whitespace().filter(|w| !matches!(*w, "sylver" | "ultron" | "hey" | "hi" | "hello" | "yo" | "please")).collect::<Vec<_>>().join(" ");
+    let pick = |xs: &[&str]| xs[(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0) as usize) % xs.len()].to_string();
+    let greeting = q.to_lowercase().split(|c: char| !c.is_alphanumeric()).any(|w| matches!(w, "hi" | "hello" | "hey" | "yo" | "hii" | "hola"));
+    Some(match t.as_str() {
+        "" if greeting => pick(&["Hey! What can I do for you?", "Hi there. What's on your mind?", "Hello! Ask me anything, or tell me what to do."]),
+        "how are you" | "how r u" | "how are u" | "how are you doing" | "hows it going" | "how is it going" | "whats up" | "sup" | "wassup" =>
+            pick(&["Doing great, thanks for asking. How about you?", "All good here, ready when you are. How are you?", "Running smoothly! What can I help with?"]),
+        "who are you" | "what are you" | "whats your name" | "what is your name" | "your name" =>
+            pick(&["I'm Sylver, your assistant on this PC. I answer questions, run tasks, and take dictation.", "Sylver. I live in your notch and help you get things done."]),
+        "thanks" | "thank you" | "thank you so much" | "thanks a lot" | "thx" | "ty" => pick(&["Anytime!", "You're welcome.", "Happy to help."]),
+        "good morning" => pick(&["Good morning! Hope it's a great day.", "Morning! What's first today?"]),
+        "good night" => pick(&["Good night, sleep well.", "Night! See you tomorrow."]),
+        "good afternoon" | "good evening" => pick(&["Hey, good to see you. What can I do?", "Hello! How's your day going?"]),
+        "im good" | "i am good" | "im fine" | "i am fine" | "good" | "great" | "im great" => pick(&["Glad to hear it! Need anything?", "Nice! Let me know if I can help."]),
+        "ok" | "okay" | "cool" | "nice" | "awesome" | "great job" | "good job" => pick(&["👍", "Glad that works.", "Anytime."]),
+        "bye" | "goodbye" | "see you" | "see ya" | "later" => pick(&["Bye! I'm here when you need me.", "See you!"]),
+        _ => return None,
+    })
+}
+
 fn quick_math(q: &str) -> Option<String> {
     let mut e = q.to_lowercase().trim().trim_end_matches(['?', '.', '!', '=']).trim().to_string();
     for p in ["what is ", "what's ", "whats ", "calculate ", "compute ", "how much is ", "solve ", "evaluate ", "work out "] {
@@ -1405,7 +1429,7 @@ fn small_talk(user: &str) -> bool {
 
 pub fn ask(app: &AppHandle, user: &str) -> Option<Reply> {
     // a sum is worked out exactly, at once
-    if let Some(r) = quick_math(user) {
+    if let Some(r) = quick_math(user).or_else(|| quick_chat(user)) {
         return Some(Reply { reply: r, action: String::new(), icon: "chat", ok: true });
     }
     // (Web mode: the web is asked first, before any brain is waited on. Its answer is usually a sentence from the
