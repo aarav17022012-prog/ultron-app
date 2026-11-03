@@ -1,6 +1,6 @@
 [package]
 name = "ultron"
-version = "1.1.38"
+version = "1.1.39"
 description = "SYLVER notch assistant"
 edition = "2021"
 
