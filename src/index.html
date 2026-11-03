@@ -4111,6 +4111,9 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
 .agc-rep button{width:30px; height:30px; border:0; border-radius:50%; display:grid; place-items:center; background:#fff; cursor:pointer}
 .agc-rep svg{width:15px; height:15px; fill:none; stroke:#111; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round}
 
+/* (the Dock: the apps grid and the drop area aren't in its row; the drop area lies over the whole tray) */
+.dshelf.dock .ds-apps{display:none}
+.dshelf.dock .ds-drop{position:absolute; inset:0; width:auto}
 /* ---------- the Drop Shelf as a Dock ---------- */
 .dshelf.dock .ds-tray{display:flex; flex-direction:row-reverse; align-items:center; justify-content:flex-end; padding:10px 12px; border-radius:24px; overflow:visible}
 .dshelf.dock .ds-head, .dshelf.dock .ds-row{width:auto; translate:none; margin:0}
@@ -4121,7 +4124,7 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
 .dshelf.dock .ds-a span{display:none}
 .dshelf.dock .ds-a.clr::before{content:"✕"; font-size:13px; color:rgba(255,255,255,.7)}
 .dshelf.dock .ds-a svg{width:16px; height:16px}
-.dshelf.dock .ds-row{flex:1; overflow:visible; gap:0; padding:0}
+.dshelf.dock .ds-row{flex:1; height:64px; min-height:0; max-height:64px; overflow:visible; gap:0; padding:0; align-items:center}
 .dshelf.dock .ds-n, .dshelf.dock .ds-x{display:none}
 .dshelf.dock .ds-i{width:64px; height:64px; padding:0; justify-content:center; background:none !important; transform:none !important}
 .dshelf.dock .ds-p{width:52px; height:52px; border-radius:13px; transform-origin:50% 100%; transform:translateY(calc((var(--mag, 1) - 1) * -22px)) scale(var(--mag, 1));
@@ -12745,6 +12748,10 @@ dsRow.addEventListener('pointerleave', () => { for (const el of dsRow.children) 
 function dsGlass(){
   const gw = dsTray.querySelector(':scope > .gw'); if (!gw || !DS.box) return;
   gw.style.setProperty('left', -DS.box.x + 'px', 'important'); gw.style.setProperty('top', -DS.box.y + 'px', 'important');
+  // (the picture is the whole screen, blurred: cut to the tray's own rounded shape. The Dock lets its icons swell out of
+  //  the tray, so the tray itself doesn't cut, and unclipped, the blur covered the whole screen)
+  const sw = screen.width || innerWidth, sh = screen.height || innerHeight, b = DS.box;
+  gw.style.clipPath = `inset(${b.y}px ${Math.max(0, sw - b.x - b.w)}px ${Math.max(0, sh - b.y - b.h)}px ${b.x}px round 24px)`;
   gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px';
   dsTray._lt = 0; glassDraw(gw);
 }
