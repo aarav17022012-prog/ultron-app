@@ -407,6 +407,8 @@ fn threads() -> usize {
 
 /// What the big brain's slot holds right now: "agent" (the task agent's instructions), "chat", or nothing.
 static SLOT_HOLDS: Mutex<&'static str> = Mutex::new("");
+/// the first stretch of what the big brain last read (its memory begins with it)
+static SLOT_HEAD: Mutex<String> = Mutex::new(String::new());
 /// which quick-brain server, and what its memory starts with ("chat": ULTRON's instructions and examples)
 static QUICK_HOLDS: Mutex<(u16, &'static str)> = Mutex::new((0, ""));
 /// the words of the chat opening the quick brain last had ready (their fingerprint)
@@ -573,7 +575,7 @@ fn choose_gpu(app: &AppHandle, exe: &PathBuf, model: &PathBuf, file: &str) -> (b
         let use_gpu = match (g, c) {
             // (the faster; a card set aside is tried again after an hour if it wasn't far behind, its power may be back)
             //  and after six hours whatever it did: if it's still slow, its first long answer moves it back)
-            (Some(g), Some(c)) => g > c * 1.1 || (age > 3600 && g > c * 0.6) || age > 6 * 3600,
+            (Some(g), Some(c)) => g > c * 1.1 || (age > 3600 && g > c * 0.9) || age > 6 * 3600,
             // (only the card known, and slow: the processor gets its turn and is measured)
             (Some(g), None) => g >= 18.0,
             _ => true,
@@ -795,6 +797,12 @@ pub fn warm(app: &AppHandle) {
             if loaded || crate::quick::port().is_none() || free_ram_gb() > 4.5 {
                 *ai.last_used.lock().unwrap() = Instant::now();
                 ensure_loaded(&app);
+                // (something else had the brain read its words since, a translation or a tidied dictation: the chat's
+                //  opening is read again now, while you type, so your question needn't wait for it. Read at the question,
+                //  its first word took 18 s on the processor)
+                if !SLOT_HEAD.lock().unwrap().contains("You are Sylver, a sharp, warm") {
+                    prefill_now(&app);
+                }
                 // (the task agent's instructions are no longer read in here: the brain answers one thing at a time, and
                 //  reading them took from a moment to over a minute, while your question waited behind it. A task reads
                 //  them when one starts)
@@ -1230,8 +1238,12 @@ fn generate_in(app: &AppHandle, messages: &[(String, String)], max: usize, temp:
             ai.server.lock().unwrap().as_ref()?.port
         }
     };
+    let rendered = render(port, messages);
+    if at.is_none() {
+        *SLOT_HEAD.lock().unwrap() = rendered.chars().take(400).collect();
+    }
     let mut body = serde_json::json!({
-        "prompt": render(port, messages),
+        "prompt": rendered,
         "n_predict": max,
         "stream": true,
         "cache_prompt": true,
@@ -1821,9 +1833,14 @@ fn prefill_now(app: &AppHandle) {
         let (a, b) = (render(port, &msgs[..keep]), render(port, &msgs));
         let n = a.char_indices().zip(b.chars()).take_while(|((_, x), y)| x == y).last().map(|((i, c), _)| i + c.len_utf8()).unwrap_or(0);
         let s = &a[..n];
-        let _ = ureq::post(&format!("http://127.0.0.1:{port}/completion"))
+        let head: String = s.chars().take(400).collect();
+        let ok = ureq::post(&format!("http://127.0.0.1:{port}/completion"))
             .timeout(Duration::from_secs(60))
-            .send_json(serde_json::json!({ "prompt": s, "n_predict": 0, "cache_prompt": true }));
+            .send_json(serde_json::json!({ "prompt": s, "n_predict": 0, "cache_prompt": true }))
+            .is_ok();
+        if ok {
+            *SLOT_HEAD.lock().unwrap() = head;
+        }
     }
 }
 

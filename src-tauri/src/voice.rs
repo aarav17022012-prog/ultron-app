@@ -366,7 +366,9 @@ fn has_wake(text: &str) -> bool {
 /// What's been said so far, heard quickly (one pass, no second guesses) while you're still saying it.
 fn partial(state: &mut whisper_rs::WhisperState, audio: &[f32], prompt: &str, lang: &str, threads: i32) -> String {
     let audio = prepare(audio);
-    let mut p = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+    // (what's been said so far, heard as it grows: past about 7 s the one quick pass turned a whole sentence into its
+    //  last word, so a longer stretch is heard the steady way)
+    let mut p = if audio.len() > RATE * 7 { FullParams::new(SamplingStrategy::BeamSearch { beam_size: 2, patience: -1.0 }) } else { FullParams::new(SamplingStrategy::Greedy { best_of: 1 }) };
     p.set_language(Some(lang));
     p.set_n_threads(threads);
     p.set_no_context(true);
@@ -582,9 +584,11 @@ fn transcriber(app: AppHandle, rx: Receiver<Vec<f32>>, parts: Receiver<Vec<f32>>
         let audio = prepare(&seg);
         let mut p = params(&prompt, &lang, threads, audio.len());
         // (dictating: one quick pass, two or three times faster; what you said already showed as you said it)
-        if voice.live.load(Ordering::SeqCst) || (voice.patient.load(Ordering::SeqCst) && audio.len() > RATE * 10) {
+        // (the one quick pass only for a short piece from the notch's mic: on more than about 7 s it lost all but the
+        //  last word. 9.8 s of dictation came out as "Good." where the steady pass heard every word, in the same 2 s)
+        if voice.live.load(Ordering::SeqCst) && audio.len() <= RATE * 7 {
             p = quick_params(&prompt, &lang, threads, audio.len());
-        } else if voice.patient.load(Ordering::SeqCst) {
+        } else if voice.patient.load(Ordering::SeqCst) || voice.live.load(Ordering::SeqCst) {
             p = steady_params(&prompt, &lang, threads, audio.len());
         }
         if wake_only {

@@ -3767,7 +3767,7 @@ html.hazel:not(.vision) .ds-tray.glass::before{background:radial-gradient(130% 7
 .ph-dots i{width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.7); animation:phDot 1s ease-in-out infinite}
 .ph-dots i:nth-child(2){animation-delay:.15s} .ph-dots i:nth-child(3){animation-delay:.3s}
 @keyframes phDot{50%{transform:translateY(-4px); opacity:.4}}
-.wlive{white-space:pre-wrap; opacity:.5}
+.wlive{white-space:pre-wrap; opacity:1; color:inherit}
 .wheld{display:inline-block; opacity:.28; animation:heldPulse 1.3s ease-in-out infinite}
 @keyframes heldPulse{50%{opacity:.55}}
 .wheld.late{animation:heldPulse 1.3s ease-in-out infinite, wwIn .5s cubic-bezier(.2,.8,.25,1) .5s backwards}
@@ -4415,6 +4415,44 @@ html.vision .lpx-bg{background:rgba(16,16,20,.94)}
 .lpx-cx-h .lpx-file svg{width:15px; height:15px}
 .lpx-ctx button span{font-size:13.5px; font-weight:550}
 .lpx-ctx hr{height:.8px; margin:4px 8px; border:0; background:rgba(255,255,255,.1)}
+
+/* ---------- an agent's alert, white and quiet, with its answers on it ---------- */
+.nb:has(.agb){width:min(372px, calc(100vw - 24px)); max-width:min(372px, calc(100vw - 24px)); padding:14px 15px 14px 16px; border-radius:20px; white-space:normal;
+  box-shadow:0 0 0 .8px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.06), 0 18px 40px -16px rgba(0,0,0,.38)}
+.ag-nb.agb{display:flex; flex-direction:column; align-items:stretch; gap:0; min-width:0; max-width:none; cursor:default; text-align:left; --c:#6e56f8; --cb:#efebff}
+.agb[data-m="ask"]{--c:#2f74f0; --cb:#e7f0ff} .agb[data-m="alert"]{--c:#e5484d; --cb:#ffeded} .agb[data-m="limit"]{--c:#c97a00; --cb:#fff3da} .agb[data-m="done"]{--c:#1f9254; --cb:#e5f6ec}
+.agb-top{display:flex; align-items:center; gap:8px; margin-bottom:10px}
+.agb-ic{flex:none; width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:var(--cb); color:var(--c); animation:agPop .55s var(--spring)}
+.agb-ic svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.agb-who{font-size:12.5px; font-weight:650; color:#1d1d1f; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.agb-when{font-size:12px; font-weight:500; color:#8e8e93}
+.agb-go{margin-left:auto; height:24px; padding:0 10px; border:0; border-radius:8px; background:#f1f1f4; color:#1d1d1f; font:inherit; font-size:11.5px; font-weight:650; cursor:default; transition:background .15s}
+.agb-go:hover{background:#e6e6ea}
+.agb-x{display:grid; place-items:center; width:24px; height:24px; padding:0; margin-left:auto; border:0; border-radius:8px; background:none; color:#8e8e93; cursor:default; transition:background .15s, color .15s}
+.agb-go + .agb-x{margin-left:2px}
+.agb-x:hover{background:#f1f1f4; color:#1d1d1f}
+.agb-x svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round}
+.agb-h{font-size:15px; font-weight:700; letter-spacing:-.012em; line-height:1.3; color:#1d1d1f}
+.agb-t{margin-top:3px; font-size:13px; font-weight:450; line-height:1.45; color:#6e6e73; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+.agb-acts{display:flex; gap:7px; margin-top:13px}
+.agb-acts button{flex:1; height:34px; padding:0 8px; border:0; border-radius:10px; background:#f1f1f4; color:#1d1d1f; font:inherit; font-size:13px; font-weight:650; white-space:nowrap; cursor:default;
+  transition:background .15s, color .15s, transform .25s var(--spring)}
+.agb-acts button:hover{background:#e6e6ea} .agb-acts button:active{transform:scale(.95)}
+.agb-acts .pri{background:#1d1d1f; color:#fff} .agb-acts .pri:hover{background:#000}
+.agb-acts .no{color:#d70015}
+.agb-rep{display:flex; gap:7px; margin-top:13px}
+.agb-rep input{flex:1; min-width:0; height:36px; padding:0 12px; border:0; outline:0; border-radius:10px; background:#f1f1f4; color:#1d1d1f; font:inherit; font-size:13px; transition:background .15s, box-shadow .15s}
+.agb-rep input::placeholder{color:#8e8e93}
+.agb-rep input:focus{background:#fff; box-shadow:inset 0 0 0 1.5px var(--c)}
+.agb-rep button{flex:none; display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:10px; background:#1d1d1f; color:#fff; cursor:default; transition:transform .25s var(--spring)}
+.agb-rep button:active{transform:scale(.92)}
+.agb-rep svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round}
+.agb > .agb-h, .agb > .agb-t, .agb > .agb-acts, .agb > .agb-rep{animation:rowIn .42s var(--glide) backwards}
+.agb > .agb-t{animation-delay:.05s} .agb > .agb-acts, .agb > .agb-rep{animation-delay:.1s}
+/* (answered: the choice fills with the alert's colour and ticks, the rest fade) */
+.agb.sent .agb-acts button:not(.chosen), .agb.sent .agb-rep input{opacity:.35; transition:opacity .2s}
+.agb.sent .agb-acts button.chosen, .agb.sent .agb-rep button{background:var(--c); color:#fff}
+.agb.sent .agb-acts button.chosen::before{content:"✓ "}
 </style>
 </head>
 <body>
@@ -5280,7 +5318,8 @@ function faceWant(){
   return '';
 }
 function faceModes(t, dt){
-  const want = reduce ? '' : faceWant();
+  // (a face this character doesn't have is no face: one asked for that wasn't made threw on every frame)
+  const want0 = reduce ? '' : faceWant(), want = want0 && faceGroups[want0] ? want0 : '';
   // swap only once the old one has gone, so nothing ever overlaps
   if (want !== faceCur && faceK < .03){
     if (faceCur) faceGroups[faceCur].visible = false;
@@ -6377,9 +6416,7 @@ function setVoice(st){
 let lastVoice = {state:'loading'};
 listen('voice', st => { lastVoice = st; setVoice(st); wake(); });
 // (the microphone giving almost nothing while you dictate or ask: said plainly, with what fixes it)
-listen('mic-quiet', () => {
-  nbShow('<div class="nb-say"><b>ULTRON can barely hear your microphone.</b> If your laptop has a mic-mute key (often F4, with a little light), press it. Or raise <b>Input volume</b> in Windows Settings › System › Sound.</div>', 9000);
-});
+listen('mic-quiet', () => {});   // (no pop-up: a laptop's own noise filter makes a quiet room read as silence, and it said the mic was off when it wasn't)
 listen('mic-level', l => {
   micTarget = l; if (l > .08) wake();
   // (dictating: the card's bars follow your voice)
@@ -7836,10 +7873,12 @@ async function dictPartNext(){
       const t = dictUnecho(DICT.part); DICT.part = '';
       if (!t){ DICT.prevWords = []; continue; }
       const b = dictBoard();
-      if (b){ boardLive(b, t); continue; }
       const w = t.split(/\s+/).filter(Boolean), key = x => x.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
       let k = 0; while (k < w.length - 1 && k < DICT.prevWords.length && key(w[k]) === key(DICT.prevWords[k])) k++;
       DICT.prevWords = w;
+      // (on a card too, only the words heard the same twice are put down, in the card's own black: no faint guesses
+      //  that change under you; the finished piece then sets the last of it right)
+      if (b){ if (k) boardLive(b, w.slice(0, k).join(' ')); continue; }
       if (!k) continue;
       const s = await invoke('dictate_shape', {text:w.slice(0, k).join(' '), before:DICT.before, held:DICT.held, opts:{...dictOpts(), fixes:false}});
       if (!DICT.on || DICT.final || s.undo || !s.text) continue;
@@ -13917,7 +13956,6 @@ function agCome(n){
   tintTo(AG_TINT[mood]); hop = Math.max(hop, 1); wake();
   agBubble();
   const life = n.kind === 'demo' ? 3600 : mood === 'done' ? 8000 : 180000;
-  agCard(life);
   clearTimeout(AG.t); AG.t = setTimeout(agClear, life);
   clearInterval(AG.nudge);
   if (mood !== 'done' && n.kind !== 'demo') AG.nudge = setInterval(() => { if (AG.cur){ hop = Math.max(hop, .7); wake(); } }, 4500);
@@ -13955,11 +13993,14 @@ function agCard(life){
   syncHit(); setTimeout(syncHit, 600);
 }
 function agCardOff(){ if (!agcEl.classList.contains('on')) return; agcEl.classList.add('off'); agcEl.classList.remove('on'); setTimeout(() => { agcEl.classList.remove('off'); syncHit(); }, 420); }
-function agAnswer(text, enter){
+function agAnswer(text, enter, said){
   const c = AG.cur; if (!c) return;
   const hint = c.who === 'Claude Code' ? 'claude' : (c.key || '');
   invoke('agent_answer', {id:String(c.hwnd || ''), hint, text, enter}).then(ok => { if (!ok) toast(`Couldn't find ${c.who}'s window`); });
-  agClear();
+  // (what you chose stays a moment, ticked, so you see it went; then the card goes)
+  const b = nbIn.querySelector('.agb');
+  if (b && said){ b.classList.add('sent'); b.dataset.said = said; clearTimeout(AG.t); clearInterval(AG.nudge); AG.t = setTimeout(agClear, 850); }
+  else agClear();
 }
 agcEl.addEventListener('submit', e => { e.preventDefault(); e.stopPropagation(); const v = (e.target.querySelector('input') || {}).value || ''; if (v.trim()) agAnswer(v.trim(), true); });
 agcEl.addEventListener('keydown', e => e.stopPropagation());
@@ -13971,9 +14012,24 @@ agcEl.addEventListener('click', e => {
   if (AG.cur && AG.cur.hwnd) invoke('dock_act', {id:String(AG.cur.hwnd), what:'focus'});
   agClear();
 });
+/* An agent's alert: a white card under the notch, in the manner of a well-made document app: a small tinted tile with
+   its sign, who it is and when, what it needs in a few plain words, and what you can do about it right there:
+   Allow, Always allow or Deny a permission; type an answer to a question; or go to it. */
+const AGB_IC = {
+  ask:'<path d="M9.2 9.3a2.9 2.9 0 1 1 3.9 2.7c-.7.3-1.1.9-1.1 1.6v.6"/><path d="M12 17.6v.1"/>',
+  perm:'<rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.3 10.5V8a3.7 3.7 0 0 1 7.4 0v2.5"/><path d="M12 14.4v2"/>',
+  alert:'<path d="M12 4.2l8.4 14.6H3.6z"/><path d="M12 10v3.8"/><path d="M12 16.6v.1"/>',
+  limit:'<path d="M7 3.8h10M7 20.2h10"/><path d="M8 3.8c0 4.2 8 4.6 8 8.2s-8 4-8 8.2"/><path d="M16 3.8c0 4.2-8 4.6-8 8.2s8 4 8 8.2"/>',
+  done:'<path d="M5.5 12.5l4.2 4.2 8.8-9.2"/>'};
 function agBubble(){
-  const c = AG.cur; if (!c || !c.head || !nbCompact() || agcEl.classList.contains('on')) return;
-  nbShow(`<div class="ag-nb" data-m="${c.mood}"><i class="ag-dot">${{ask:'?', alert:'!', done:'✓'}[c.mood]}</i><div class="ag-tx"><b>${esc(c.head)}</b><span>${esc(c.text)}</span></div>${c.hwnd ? '<em class="ag-go">Show</em>' : ''}</div>`,
+  const c = AG.cur; if (!c || !c.head) return;
+  const what = c.who && c.head.startsWith(c.who) ? c.head.slice(c.who.length).trim() : c.head;
+  const acts = c.mood === 'perm'
+    ? '<div class="agb-acts"><button type="button" data-ans="1" data-said="Allowed" class="pri">Allow</button><button type="button" data-ans="2" data-said="Always allowed">Always allow</button><button type="button" data-ans="3" data-said="Denied" class="no">Deny</button></div>'
+    : c.mood === 'ask' ? `<form class="agb-rep"><input placeholder="Reply to ${esc(c.who || 'it')}…" spellcheck="false" autocomplete="off" aria-label="Your answer"><button type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg></button></form>` : '';
+  nbShow(`<div class="ag-nb agb" data-m="${c.mood}"><div class="agb-top"><i class="agb-ic"><svg viewBox="0 0 24 24">${AGB_IC[c.mood] || '<circle cx="12" cy="12" r="3"/>'}</svg></i>`
+    + `<span class="agb-who">${esc(c.who || 'Your agent')}</span><span class="agb-when">now</span>${c.hwnd ? '<button type="button" class="agb-go">Show</button>' : ''}<button type="button" class="agb-x" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></div>`
+    + `<b class="agb-h">${esc(what.charAt(0).toUpperCase() + what.slice(1))}</b><span class="agb-t">${esc(c.text)}</span>${acts}</div>`,
     c.mood === 'done' ? 7000 : 0);
 }
 function agClear(){
@@ -13985,9 +14041,16 @@ function agClear(){
 nbIn.addEventListener('click', e => {
   if (!AG.cur || !nbIn.querySelector('.ag-nb')) return;
   e.stopPropagation();
+  if (e.target.closest('.agb-x')) return agClear();
+  const ans = e.target.closest('[data-ans]'); if (ans){ ans.classList.add('chosen'); return agAnswer(ans.dataset.ans, false, ans.dataset.said); }
+  if (e.target.closest('.agb-rep')) return;
+  if (e.target.closest('.agb-acts')) return;
   if (AG.cur.hwnd) invoke('dock_act', {id:String(AG.cur.hwnd), what:'focus'});
   agClear();
 });
+nbIn.addEventListener('submit', e => { if (!e.target.closest('.agb-rep')) return; e.preventDefault(); e.stopPropagation(); const v = (e.target.querySelector('input') || {}).value || ''; if (v.trim()) agAnswer(v.trim(), true, 'Sent'); });
+nbIn.addEventListener('keydown', e => { if (e.target.closest && e.target.closest('.agb-rep')) e.stopPropagation(); });
+nbIn.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('.agb-rep')) invoke('focus_main'); });
 listen('agent', agCome);
 // (its window brought to the front: seen. The notch closed again while it still waits: the bubble comes back)
 listen('front-app', name => { const k = AG.cur && AG.cur.key; if (k && String(name || '').toLowerCase().includes(k)) agClear(); });
