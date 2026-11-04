@@ -4114,41 +4114,78 @@ html[data-tbt] .mbar, html[data-tbt] #wheel, html[data-tbt] .wh-q input, html[da
 /* (the Dock: the apps grid and the drop area aren't in its row; the drop area lies over the whole tray) */
 .dshelf.dock .ds-apps{display:none}
 .dshelf.dock .ds-drop{position:absolute; inset:0; width:auto}
-/* ---------- the Drop Shelf as a Dock (a Mac's, in liquid glass) ---------- */
-.dshelf.dock .ds-tray{display:flex; flex-direction:row-reverse; align-items:center; justify-content:flex-end; padding:10px 12px; border-radius:24px; overflow:visible; isolation:isolate}
-html .dshelf.dock .ds-tray.glass::before{left:calc(-1 * var(--grow, 0px)) !important; right:calc(-1 * var(--grow, 0px)) !important; border-radius:24px;
-  background:linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.08)) !important}
-html .dshelf.dock .ds-tray.glass::after{left:calc(-1 * var(--grow, 0px)); right:calc(-1 * var(--grow, 0px))}
-.dshelf.dock .ds-tray.glass.panel-glass{box-shadow:0 18px 40px -14px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.15)}
+/* ---------- pinned apps at the bottom: no tray, each app its own bubble of glass, risen in an arc ---------- */
+.dshelf.dock .ds-tray{display:flex; flex-direction:row-reverse; align-items:flex-end; justify-content:flex-end; padding:0 8px 6px; overflow:visible; background:none; box-shadow:none !important}
+html .dshelf.dock .ds-tray.glass::before, html .dshelf.dock .ds-tray.glass::after, .dshelf.dock .ds-tray > .gw{display:none !important}
 .dshelf.dock .ds-head, .dshelf.dock .ds-row{width:auto; translate:none; margin:0}
-.dshelf.dock .ds-head{height:auto; padding-left:12px; margin-left:6px; border-left:1px solid rgba(255,255,255,.28)}
+.dshelf.dock .ds-head{height:auto; padding:0 0 9px 10px; border:0}
 .dshelf.dock .ds-t{display:none}
 .dshelf.dock .ds-acts{gap:6px}
-.dshelf.dock .ds-a{width:36px; height:36px; padding:0; border-radius:11px; display:grid; place-items:center; font-size:0; background:rgba(255,255,255,.12); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.2)}
-.dshelf.dock .ds-a:hover{background:rgba(255,255,255,.22)}
+.dshelf.dock .ds-a{width:38px; height:38px; padding:0; border-radius:50%; display:grid; place-items:center; font-size:0; background:rgba(255,255,255,.16);
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.4), inset 0 1px 0 rgba(255,255,255,.5)}
+.dshelf.dock .ds-a:hover{background:rgba(255,255,255,.28)}
 .dshelf.dock .ds-a span{display:none}
-.dshelf.dock .ds-a.clr::before{content:"✕"; font-size:13px; color:rgba(255,255,255,.75)}
+.dshelf.dock .ds-a.clr::before{content:"✕"; font-size:13px; color:rgba(255,255,255,.85)}
 .dshelf.dock .ds-a svg{width:17px; height:17px}
 .dshelf.dock .ds-row{flex:1; height:64px; min-height:0; max-height:64px; overflow:visible; gap:0; padding:0; align-items:flex-end}
 .dshelf.dock .ds-n, .dshelf.dock .ds-x{display:none}
 .dshelf.dock .ds-i{width:64px; height:64px; padding:0; display:flex; align-items:flex-end; justify-content:center; background:none !important; transform:none !important}
-.dshelf.dock .ds-p{width:52px; height:52px; margin-bottom:6px; border-radius:13px; transform-origin:50% 100%; will-change:transform; box-shadow:0 5px 12px -4px rgba(0,0,0,.45)}
-.dshelf.dock .ds-p.app{box-shadow:none}
-.dshelf.dock .ds-i.in{animation:dkIcIn .5s cubic-bezier(.2,1.3,.3,1) both; animation-delay:calc(min(var(--k, 0), 12) * 35ms + 140ms)}
-@keyframes dkIcIn{from{opacity:0; translate:0 14px; scale:.6}}
-.dshelf.dock .ds-i::before{content:""; position:absolute; left:50%; bottom:-3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:rgba(255,255,255,.85); opacity:0}
-.dshelf.dock .ds-i.app::before{opacity:1}
+/* (the bubble: a clear disc of glass, a bright rim, light along its top; the app sits inside) */
+.dshelf.dock .ds-p{width:54px; height:54px; margin-bottom:5px; border-radius:50%; transform-origin:50% 100%; will-change:transform; overflow:hidden;
+  background:radial-gradient(120% 100% at 30% 15%, rgba(255,255,255,.34), rgba(255,255,255,.1) 55%, rgba(255,255,255,.16));
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.55), inset 0 1.5px 0 rgba(255,255,255,.55), inset 0 -6px 12px rgba(255,255,255,.08)}
+.dshelf.dock .ds-p img, .dshelf.dock .ds-p .ds-ic{width:34px !important; height:34px !important; border-radius:9px}
+.dshelf.dock .ds-p.photo img{width:100% !important; height:100% !important; border-radius:50%; object-fit:cover}
+.dshelf.dock .ds-i.in{animation:dkRise .62s cubic-bezier(.2,1.25,.3,1) both; animation-delay:calc(var(--d, 0) * 45ms + 60ms)}
+@keyframes dkRise{from{opacity:0; translate:0 70px; scale:.5}}
+.dshelf.dock .ds-i::before{content:""; position:absolute; left:50%; bottom:-4px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:rgba(255,255,255,.9); opacity:0}
+.dshelf.dock .ds-i.app::before{opacity:.9}
 .dk-tip{position:fixed; z-index:120; padding:5px 11px; border-radius:8px; font-size:12.5px; font-weight:600; color:#fff; white-space:nowrap; pointer-events:none;
   background:rgba(30,30,36,.88); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14), 0 8px 18px -8px rgba(0,0,0,.6); transform:translate(-50%, 6px); opacity:0;
   transition:opacity .14s, transform .22s cubic-bezier(.2,1.3,.3,1)}
 .dk-tip::after{content:""; position:absolute; left:50%; bottom:-4px; width:9px; height:9px; margin-left:-4.5px; background:inherit; transform:rotate(45deg); border-radius:2px; z-index:-1}
 .dk-tip.on{opacity:1; transform:translate(-50%, 0)}
 
-/* ---------- the chat: a whole answer eases in at once, on a soft bar of glass ---------- */
-.pane[data-pane="assistant"] .reply:not(:empty){position:relative; padding:10px 14px 10px 18px; border-radius:14px; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.08);
-  color:rgba(255,255,255,.88); animation:msgIn .45s var(--glide)}
-.pane[data-pane="assistant"] .reply:not(:empty)::before{content:""; position:absolute; left:7px; top:11px; bottom:11px; width:3px; border-radius:2px; background:linear-gradient(180deg, #9cc4ff, #c7a6ff); opacity:.85}
+/* ---------- the chat: yours in a black bubble on the right, Sylver's in a white one on the left; this session's
+   earlier ones above, scrollable ---------- */
+.thread{display:none; flex-direction:column; gap:6px; max-height:min(26vh, 200px); overflow-y:auto; overscroll-behavior:contain; margin:2px 0 8px; padding-right:4px;
+  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.22) transparent; -webkit-mask:linear-gradient(180deg, transparent, #000 18px); mask:linear-gradient(180deg, transparent, #000 18px)}
+.thread.on{display:flex}
+.th-q, .pane[data-pane="assistant"] .you:not(.hint){align-self:flex-end; max-width:82%; width:fit-content; margin-left:auto; padding:8px 13px; border-radius:16px 16px 4px 16px;
+  background:#0d0d11; color:#fff; box-shadow:inset 0 0 0 .8px rgba(255,255,255,.12), 0 6px 14px -8px rgba(0,0,0,.6)}
+.th-q{font-size:13px; line-height:1.38}
+.th-a, .pane[data-pane="assistant"] .reply:not(:empty){align-self:flex-start; max-width:88%; width:fit-content; padding:9px 14px; border-radius:16px 16px 16px 4px;
+  background:#fff; color:#141418; box-shadow:0 6px 16px -8px rgba(0,0,0,.45)}
+.th-a{font-size:13px; line-height:1.42}
+.pane[data-pane="assistant"] .you:not(.hint){font-size:15px; line-height:1.35; font-weight:600; min-height:0; text-shadow:none}
+.pane[data-pane="assistant"] .reply:not(:empty){position:relative; display:block; font-size:14px; line-height:1.45; text-shadow:none !important; animation:msgIn .4s var(--glide)}
+.pane[data-pane="assistant"] .reply:not(:empty) *{color:inherit; text-shadow:none !important}
+.pane[data-pane="assistant"] .reply:not(:empty)::before{content:none}
 @keyframes msgIn{from{opacity:0; transform:translateY(6px)}}
+
+.dshelf.dock .ds-tray{transition:transform .5s cubic-bezier(.3,0,.8,.15), opacity .25s ease .2s !important}
+.dshelf.dock.on .ds-tray{transition:transform .6s cubic-bezier(.2,.9,.25,1), opacity .15s ease !important}
+
+/* ---------- the lock screen's date: clean words, no pill of glass (it smudged grey behind them) ---------- */
+.lock .lk-date.lk-glass{background:none !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; box-shadow:none !important;
+  -webkit-mask-image:none !important; padding:0 !important; font-weight:550; letter-spacing:.005em; text-shadow:0 1px 14px rgba(0,0,0,.28)}
+
+/* ---------- agent alerts: flat and clean, no shadow or glow behind ---------- */
+.agc-glow{display:none !important}
+.agc-in{box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.08) !important;
+  background:linear-gradient(180deg, rgba(30,30,38,.97), rgba(20,20,26,.98)) !important}
+.agc-in::before{display:none !important}
+.agc-ic{box-shadow:none !important}
+.agc-acts > button, .agc-go{box-shadow:none !important}
+.agc-acts > button{background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.1) !important}
+.agc-acts > button.pri{background:#fff}
+.agc-rep{box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14) !important; background:rgba(255,255,255,.06)}
+
+/* ---------- the calendar: opens softly (no overshoot snapping back), every row easing in after the last ---------- */
+.cal.open{transition:opacity .22s, transform .55s cubic-bezier(.2,.85,.25,1), visibility 0s !important}
+.cal.open .ca-in > *{animation:rowIn .5s var(--glide) backwards}
+.cal.open .ca-in > :nth-child(1){animation-delay:.04s} .cal.open .ca-in > :nth-child(2){animation-delay:.08s} .cal.open .ca-in > :nth-child(3){animation-delay:.12s}
+.cal.open .ca-in > :nth-child(4){animation-delay:.16s} .cal.open .ca-in > :nth-child(5){animation-delay:.2s} .cal.open .ca-in > :nth-child(n+6){animation-delay:.24s}
 </style>
 </head>
 <body>
@@ -4367,6 +4404,7 @@ html .dshelf.dock .ds-tray.glass::after{left:calc(-1 * var(--grow, 0px)); right:
     <div class="panes">
       <section class="pane active" data-pane="assistant" role="tabpanel">
         <div class="status" id="status" data-s="loading"><span class="sic"><svg viewBox="0 0 24 24"><circle class="r r1" cx="12" cy="12" r="10"/><circle class="r r2" cx="12" cy="12" r="10"/><circle class="arc" cx="12" cy="12" r="10"/><rect class="body" x="9.2" y="4.5" width="5.6" height="9.5" rx="2.8"/><path class="stand" d="M7 11.5a5 5 0 0 0 10 0M12 16.5v3"/><path class="slash" d="M5 5l14 14"/></svg></span><span id="stxt">Starting up</span><span class="sbar"><b id="sfill"></b></span></div>
+        <div class="thread" id="thread"></div>
         <div class="you hint" id="you">Say “Ultron, open Spotify”</div>
         <div class="reply" id="reply"></div>
         <div class="acard" id="acard"></div>
@@ -8388,6 +8426,9 @@ async function sendTyped(){
   askIn.value = '';
   setTimeout(() => vbar.classList.remove('typing'), 300);
   clearTimeout(autoClose); hop = .8;
+  // (the last exchange moves up into the thread: yours in black, Sylver's in white, scrollable for this session)
+  { const q = you.classList.contains('hint') ? '' : you.textContent.trim(), a = reply.textContent.trim(), th = $('thread');
+    if (q && a){ th.insertAdjacentHTML('beforeend', `<div class="th-q">${esc(q)}</div><div class="th-a">${esc(a)}</div>`); while (th.children.length > 60) th.firstElementChild.remove(); th.classList.add('on'); th.scrollTop = th.scrollHeight; } }
   you.classList.remove('hint'); reply.classList.remove('bad'); reply.innerHTML = ''; acClear();
   reveal(you, text, 45);
   const res = await runAssist(text);
@@ -12668,7 +12709,7 @@ async function dsShow(kind, force){
     void dsRow.offsetWidth;
     for (const el of dsRow.children) el.classList.add('in');
   }
-  dsLay();
+  dsLay(); if (dsEl.classList.contains('dock')){ DKM.cur = []; dkStep(); }
   dsEl.classList.toggle('dragging', kind === 'drop');
   void dsTray.offsetWidth; dsEl.classList.add('on');
   syncHit(); glassAim(); wake();
@@ -12763,7 +12804,10 @@ function dkStep(){
     const n = v + (t - v) * .28; if (Math.abs(n - t) > .002) moving = true; return n;
   });
   const ext = DKM.cur.map(s => DKM.SLOT * (s - 1)), tot = ext.reduce((a, b) => a + b, 0); let acc = 0;
-  its.forEach((el, i) => { const p = el.querySelector('.ds-p'); if (p) p.style.transform = `translateX(${(acc + ext[i] / 2 - tot / 2).toFixed(1)}px) scale(${DKM.cur[i].toFixed(3)})`; acc += ext[i]; });
+  // (an arc, highest in the middle, the ends a little lower, like a smile)
+  const mid = (its.length - 1) / 2;
+  its.forEach((el, i) => { const p = el.querySelector('.ds-p'); const arc = 2.4 * (i - mid) ** 2; el.style.setProperty('--d', Math.abs(i - mid).toFixed(1));
+    if (p) p.style.transform = `translate(${(acc + ext[i] / 2 - tot / 2).toFixed(1)}px, ${arc.toFixed(1)}px) scale(${DKM.cur[i].toFixed(3)})`; acc += ext[i]; });
   dsTray.style.setProperty('--grow', (tot / 2).toFixed(1) + 'px');
   const gw = dsTray.querySelector(':scope > .gw'), b = DS.box;
   if (gw && b){ const sw = screen.width || innerWidth, sh = screen.height || innerHeight, g = tot / 2;
