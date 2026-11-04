@@ -29,8 +29,8 @@ pub fn keep(keyboard: HOOKPROC, mouse: HOOKPROC) {
                 let _ = TranslateMessage(&msg);
                 DispatchMessageW(&msg);
             }
-            MsgWaitForMultipleObjects(None, false, 1000, QS_ALLINPUT);
-            if at.elapsed() > Duration::from_secs(3) {
+            MsgWaitForMultipleObjects(None, false, 500, QS_ALLINPUT);
+            if at.elapsed() > Duration::from_secs(1) {
                 at = Instant::now();
                 // (the new one first, then the old one let go: no moment without one)
                 for (id, p, h) in [(WH_KEYBOARD_LL, keyboard, &mut k), (WH_MOUSE_LL, mouse, &mut m)] {

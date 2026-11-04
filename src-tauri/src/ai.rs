@@ -715,7 +715,9 @@ pub fn warm(app: &AppHandle) {
             if loaded || crate::quick::port().is_none() || free_ram_gb() > 4.5 {
                 *ai.last_used.lock().unwrap() = Instant::now();
                 ensure_loaded(&app);
-                crate::doer::prefill(&app); // so a task can start planning at once
+                // (the task agent's instructions are no longer read in here: the brain answers one thing at a time, and
+                //  reading them took from a moment to over a minute, while your question waited behind it. A task reads
+                //  them when one starts)
             }
         }
     });

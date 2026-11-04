@@ -37,7 +37,10 @@ unsafe extern "system" fn keyboard(code: i32, wp: WPARAM, lp: LPARAM) -> LRESULT
             let k = &*(lp.0 as *const KBDLLHOOKSTRUCT);
             let volume_key = (MUTE..=UP).contains(&k.vkCode);
             let brightness_key = matches!(k.vkCode, BRIGHT_DOWN | BRIGHT_UP);
-            if (volume_key || brightness_key) && k.flags.0 & LLKHF_INJECTED.0 == 0 {
+            // (sent keys too: the laptop's own hotkey service sends its volume keys that way, and those got by to Windows,
+            //  whose box then came up beside SYLVER's. SYLVER itself never sends them, so nothing loops)
+            let _ = LLKHF_INJECTED;
+            if volume_key || brightness_key {
                 let m = wp.0 as u32;
                 if m == WM_KEYDOWN || m == WM_SYSKEYDOWN {
                     if let Some(t) = TELL.get() {
