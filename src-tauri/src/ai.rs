@@ -449,7 +449,9 @@ fn spawn(exe: &PathBuf, model: &PathBuf, gpu: bool, port: u16) -> Option<Child> 
         c.args(["-b", "256", "-ub", "256"]);
     }
     // with a GPU, --fit (on by default) puts as much of the model on it as there's free memory for
-    c.spawn().ok()
+    let child = c.spawn().ok()?;
+    crate::smooth::full_speed(child.id());
+    Some(child)
 }
 
 fn wait_healthy(port: u16, child: &mut Child) -> bool {
@@ -487,13 +489,75 @@ fn gpu_name(exe: &PathBuf) -> Option<String> {
     })
 }
 
-/// GPU or CPU for this brain on this PC: measured once and remembered.
+static GPU_NAME: Mutex<String> = Mutex::new(String::new());
+static SWITCHING: AtomicBool = AtomicBool::new(false);
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// How fast the brain really writes, answer by answer, on the device it's on, kept beside the other device's last
+/// figure. A laptop's graphics card is held to low power some of the time (its power mode, heat): measured once, the
+/// card here looked faster (27.6 tokens a second against the processor's 17.8), and later wrote at 13 while the
+/// processor would have written 24, so a question took most of a minute. Now, when the device in use writes well
+/// below what the other did, the brain moves there as soon as the answer is finished.
+fn observe_speed(app: &AppHandle, tps: f64, written: f64) {
+    if written < 16.0 || tps <= 0.0 {
+        return; // (a few words say little about speed)
+    }
+    let gpu = GPU_NAME.lock().unwrap().clone();
+    let file = *LOADED.lock().unwrap();
+    if gpu.is_empty() || file.is_empty() || config(app).gpu == "off" {
+        return;
+    }
+    let on_gpu = app.state::<Ai>().status().device != "CPU";
+    let memo = data_dir(app).join("brain-device.json");
+    let mut known: serde_json::Map<String, serde_json::Value> =
+        std::fs::read(&memo).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+    let skey = format!("{file}|{gpu}|speed");
+    let mut sp = known.get(&skey).cloned().unwrap_or_else(|| serde_json::json!({}));
+    let (mine, other) = if on_gpu { ("gpu", "cpu") } else { ("cpu", "gpu") };
+    let seen = sp.get(mine).and_then(|v| v.as_f64()).map(|o| o * 0.4 + tps * 0.6).unwrap_or(tps);
+    sp[mine] = serde_json::json!(seen);
+    if on_gpu {
+        sp["gpu_at"] = serde_json::json!(now_secs());
+    }
+    let them = sp.get(other).and_then(|v| v.as_f64());
+    known.insert(skey, sp);
+    let _ = std::fs::write(&memo, serde_json::to_vec(&known).unwrap_or_default());
+    let move_it = match them {
+        Some(t) => seen < t * 0.8,
+        None => on_gpu && seen < 18.0,
+    };
+    if !move_it || SWITCHING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    crate::log_line(&format!("brain: writing {seen:.1} t/s on the {}, the {} did {:.1}: moving it", if on_gpu { "graphics card" } else { "processor" }, if on_gpu { "processor" } else { "graphics card" }, them.unwrap_or(0.0)));
+    let app = app.clone();
+    std::thread::spawn(move || {
+        // (once this answer is done: the turn is taken, so no question is cut off)
+        std::thread::sleep(Duration::from_millis(400));
+        let ai = app.state::<Ai>();
+        {
+            let _turn = ai.talk.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(mut s) = ai.server.lock().unwrap().take() {
+                let _ = s.child.kill();
+                let _ = s.child.wait();
+            }
+        }
+        ensure_loaded(&app);
+        SWITCHING.store(false, Ordering::SeqCst);
+    });
+}
+
+/// GPU or CPU for this brain on this PC: measured once, then by how fast it really writes.
 fn choose_gpu(app: &AppHandle, exe: &PathBuf, model: &PathBuf, file: &str) -> (bool, String) {
     let cfg = config(app);
     if cfg.gpu == "off" {
         return (false, "CPU".into());
     }
     let Some(gpu) = gpu_name(exe) else { return (false, "CPU".into()) };
+    *GPU_NAME.lock().unwrap() = gpu.clone();
     let gb = std::fs::metadata(model).map(|m| m.len() as f64 / (1u64 << 30) as f64).unwrap_or(0.0);
     if gb > crate::router::specs().vram_gb * 0.55 {
         return (false, "CPU".into()); // the card (which also drives the screen) can't hold it: half on it is slower than none
@@ -502,6 +566,21 @@ fn choose_gpu(app: &AppHandle, exe: &PathBuf, model: &PathBuf, file: &str) -> (b
     let mut known: serde_json::Map<String, serde_json::Value> =
         std::fs::read(&memo).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
     let key = format!("{file}|{gpu}");
+    // (the speeds really seen, answer by answer, come first: see observe_speed)
+    if let Some(sp) = known.get(&format!("{key}|speed")) {
+        let (g, c) = (sp.get("gpu").and_then(|v| v.as_f64()), sp.get("cpu").and_then(|v| v.as_f64()));
+        let age = now_secs().saturating_sub(sp.get("gpu_at").and_then(|v| v.as_u64()).unwrap_or(0));
+        let use_gpu = match (g, c) {
+            // (the faster; a card set aside is tried again after an hour if it wasn't far behind, its power may be back)
+            //  and after six hours whatever it did: if it's still slow, its first long answer moves it back)
+            (Some(g), Some(c)) => g > c * 1.1 || (age > 3600 && g > c * 0.6) || age > 6 * 3600,
+            // (only the card known, and slow: the processor gets its turn and is measured)
+            (Some(g), None) => g >= 18.0,
+            _ => true,
+        };
+        crate::log_line(&format!("brain device: {} (seen: card {:.1} t/s, processor {:.1} t/s)", if use_gpu { "graphics card" } else { "processor" }, g.unwrap_or(0.0), c.unwrap_or(0.0)));
+        return (use_gpu, if use_gpu { gpu } else { "CPU".into() });
+    }
     if let Some(v) = known.get(&key).and_then(|v| v.as_bool()) {
         return (v, if v { gpu } else { "CPU".into() });
     }
@@ -518,6 +597,7 @@ fn choose_gpu(app: &AppHandle, exe: &PathBuf, model: &PathBuf, file: &str) -> (b
     let c = speed(false);
     crate::log_line(&format!("brain speed {file}: gpu {g:.1} t/s, cpu {c:.1} t/s"));
     let use_gpu = g > c * 1.15;
+    known.insert(format!("{key}|speed"), serde_json::json!({"gpu": g, "cpu": c, "gpu_at": now_secs()}));
     known.insert(key, serde_json::Value::Bool(use_gpu));
     let _ = std::fs::write(&memo, serde_json::to_vec(&known).unwrap_or_default());
     (use_gpu, if use_gpu { gpu } else { "CPU".into() })
@@ -1168,6 +1248,7 @@ fn generate_in(app: &AppHandle, messages: &[(String, String)], max: usize, temp:
     let mut text = String::new();
     // how fast it writes (the quick brain moves to the processor when the card has slowed down)
     let (mut pieces, mut first, mut latest) = (0usize, None::<Instant>, Instant::now());
+    let t_asked = Instant::now();
     let reached = stream_post(port, "/completion", &body, Duration::from_secs(240), |v| {
         if cancelled() || stale_translation() {
             return false; // closing the connection stops the brain mid-sentence
@@ -1208,6 +1289,14 @@ fn generate_in(app: &AppHandle, messages: &[(String, String)], max: usize, temp:
         let secs = first.map(|f| (latest - f).as_secs_f64()).unwrap_or(0.0);
         let tps = if secs > 0.05 { pieces.saturating_sub(1) as f64 / secs } else { 999.0 };
         crate::quick::observe(port, tps, pieces);
+    } else if at.is_none() && max > 8 {
+        // (the big brain's speed, from the words as they came: an answer cut off after its last sentence never gets
+        //  the server's own figures, so they can't be waited for)
+        let secs = first.map(|f| (latest - f).as_secs_f64()).unwrap_or(0.0);
+        if let (Some(f), true) = (first, secs > 0.3) {
+            crate::log_line(&format!("smart brain: first word after {} ms, then {} pieces in {:.0} ms", (f - t_asked).as_millis(), pieces, secs * 1000.0));
+            observe_speed(app, pieces.saturating_sub(1) as f64 / secs, pieces as f64);
+        }
     }
     *ai.last_used.lock().unwrap() = Instant::now();
     Some(text)
@@ -2084,7 +2173,7 @@ pub fn translate(app: &AppHandle, text: &str, from: &str, to: &str, id: u64) -> 
             Err(e) => crate::log_line(&format!("your own key: {e} Translating on this PC instead.")),
         }
     }
-    if out.is_none() && config(app).web && !stale_translation() {
+    if out.is_none() && !stale_translation() {
         if let Some(t) = crate::web::translate(text, from, to) {
             out = Some(t);
             by = "web's";

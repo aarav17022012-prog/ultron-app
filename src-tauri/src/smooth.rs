@@ -30,6 +30,22 @@ pub fn proc_addr(dll: &str, name: &str) -> Option<unsafe extern "system" fn() ->
     }
 }
 
+/// Keep Windows' efficiency mode off a brain's process. A process with no window and a lower priority is taken for
+/// background work and run slowly on purpose (EcoQoS): the brain read 101 tokens a second that way and 149 without it,
+/// measured on this PC. Its priority stays lower, so the interface still goes first.
+pub fn full_speed(pid: u32) {
+    use windows::Win32::System::Threading::{
+        ProcessPowerThrottling, SetProcessInformation, PROCESS_POWER_THROTTLING_CURRENT_VERSION, PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
+        PROCESS_POWER_THROTTLING_STATE,
+    };
+    let state = PROCESS_POWER_THROTTLING_STATE { Version: PROCESS_POWER_THROTTLING_CURRENT_VERSION, ControlMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED, StateMask: 0 };
+    unsafe {
+        let Ok(h) = OpenProcess(PROCESS_SET_INFORMATION, false, pid) else { return };
+        let _ = SetProcessInformation(h, ProcessPowerThrottling, &state as *const _ as *const core::ffi::c_void, std::mem::size_of::<PROCESS_POWER_THROTTLING_STATE>() as u32);
+        let _ = CloseHandle(h);
+    }
+}
+
 /// Set a process's priority on the graphics card. Returns true when Windows accepted it.
 pub fn gpu_priority(pid: u32, class: i32) -> bool {
     let Some(f) = proc_addr("gdi32.dll", "D3DKMTSetProcessSchedulingPriorityClass") else { return false };

@@ -94,6 +94,7 @@ fn start(app: &AppHandle, gpu: bool, kind: &'static str) -> Option<(Child, u16)>
         c.args(["-dev", "none"]);
     }
     let mut child = c.spawn().ok()?;
+    crate::smooth::full_speed(child.id());
     let t0 = Instant::now();
     while t0.elapsed() < Duration::from_secs(90) {
         if child.try_wait().ok().flatten().is_some() {

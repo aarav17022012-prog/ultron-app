@@ -142,6 +142,7 @@ fn launch(app: &AppHandle, gpu: bool) -> Option<(Child, u16, f64)> {
         cmd.args(["-dev", "none", "-tb", &(n / 2).max(2).to_string(), "--poll", "0"]).creation_flags(NO_WINDOW | BELOW_NORMAL);
     }
     let mut child = cmd.spawn().ok()?;
+    crate::smooth::full_speed(child.id());
     if gpu {
         crate::smooth::gpu_priority(child.id(), crate::smooth::GPU_BELOW_NORMAL); // the screen's frames go first
     }

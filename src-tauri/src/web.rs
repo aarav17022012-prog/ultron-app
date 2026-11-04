@@ -137,10 +137,62 @@ pub fn weather_now() -> Option<(String, String, String)> {
     (temp.ends_with('°') && temp.chars().count() <= 5 && !sky.is_empty() && sky.len() < 40).then(|| (temp.to_string(), sky.to_string(), place.to_string()))
 }
 
-/// A translation from the web (MyMemory's free service: about a second, and right in the languages the
-/// brains on this PC are slow or shaky in: measured, Hindi took 8 s here and Tamil and Urdu came out wrong).
-/// Only used when "Look things up online" is on; the text is sent to that service to be translated.
+/// A translation from the web: Google Translate first (quick, and right in the languages the brains on this PC are slow
+/// or shaky in: measured, Hindi took 8 s here and Tamil and Urdu came out wrong), MyMemory if Google doesn't answer.
+/// With no internet both fail at once and the brains on this PC translate instead. The text is sent to the service.
 pub fn translate(text: &str, from: &str, to: &str) -> Option<String> {
+    google_translate(text, from, to).or_else(|| mymemory(text, from, to))
+}
+
+fn lang_code(l: &str) -> Option<&'static str> {
+    Some(match l {
+        "English" => "en", "Hindi" => "hi", "Spanish" => "es", "French" => "fr", "German" => "de", "Italian" => "it", "Portuguese" => "pt", "Russian" => "ru", "Japanese" => "ja", "Korean" => "ko",
+        "Chinese" => "zh-CN", "Arabic" => "ar", "Bengali" => "bn", "Urdu" => "ur", "Tamil" => "ta", "Telugu" => "te", "Marathi" => "mr", "Gujarati" => "gu", "Punjabi" => "pa", "Turkish" => "tr",
+        "Indonesian" => "id", "Dutch" => "nl", "Kannada" => "kn", "Malayalam" => "ml", "Nepali" => "ne", "Thai" => "th", "Vietnamese" => "vi", "Polish" => "pl", "Ukrainian" => "uk",
+        "Greek" => "el", "Hebrew" => "iw", "Persian" => "fa", "Swedish" => "sv", "Malay" => "ms", "Filipino" => "tl", "Swahili" => "sw", "Auto" | "" => "auto", _ => return None,
+    })
+}
+
+/// Google Translate's own free endpoint (the one its web page uses): no key, about half a second. Long text goes in
+/// pieces, cut at the end of a sentence, so each request stays short.
+fn google_translate(text: &str, from: &str, to: &str) -> Option<String> {
+    let (f, t) = (lang_code(from)?, lang_code(to)?);
+    if t == "auto" || text.trim().is_empty() {
+        return None;
+    }
+    let mut pieces: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    for ch in text.trim().chars() {
+        cur.push(ch);
+        if cur.len() > 1400 && matches!(ch, '.' | '!' | '?' | '\n' | '।' | '。') || cur.len() > 1900 {
+            pieces.push(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.trim().is_empty() {
+        pieces.push(cur);
+    }
+    let mut out = String::new();
+    for piece in pieces.iter().take(8) {
+        let body = crate::net::get_text(&format!("https://translate.googleapis.com/translate_a/single?client=gtx&sl={f}&tl={t}&dt=t&q={}", enc(piece.trim())), Duration::from_millis(3000))?;
+        let v: serde_json::Value = serde_json::from_str(&body).ok()?;
+        let mut said = String::new();
+        for s in v.get(0)?.as_array()? {
+            if let Some(x) = s.get(0).and_then(|x| x.as_str()) {
+                said.push_str(x);
+            }
+        }
+        if said.trim().is_empty() {
+            return None;
+        }
+        if !out.is_empty() && !out.ends_with(char::is_whitespace) {
+            out.push(' ');
+        }
+        out.push_str(said.trim());
+    }
+    (!out.trim().is_empty()).then(|| out.trim().to_string())
+}
+
+fn mymemory(text: &str, from: &str, to: &str) -> Option<String> {
     let code = |l: &str| Some(match l {
         "English" => "en", "Hindi" => "hi", "Spanish" => "es", "French" => "fr", "German" => "de", "Italian" => "it", "Portuguese" => "pt", "Russian" => "ru", "Japanese" => "ja", "Korean" => "ko",
         "Chinese" => "zh-CN", "Arabic" => "ar", "Bengali" => "bn", "Urdu" => "ur", "Tamil" => "ta", "Telugu" => "te", "Marathi" => "mr", "Gujarati" => "gu", "Punjabi" => "pa", "Turkish" => "tr",
