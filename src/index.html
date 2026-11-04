@@ -4255,6 +4255,166 @@ html .dshelf.dock .ds-tray.glass::before, html .dshelf.dock .ds-tray.glass::afte
 @keyframes dkPop{from{opacity:0; transform:scale(.55)}}
 .pane[data-pane="assistant"] .reply.grow:not(:empty){animation:dkGrow .6s cubic-bezier(.2,.9,.25,1)}
 @keyframes dkGrow{from{clip-path:inset(0 calc(100% - 96px) calc(100% - 38px) 0 round 6px 19px 19px 19px)} to{clip-path:inset(0 0 0 0 round 6px 22px 22px 22px)}}
+
+/* ---------- the Launchpad: up from the bottom of the screen, your apps and your files, each in a dropdown ---------- */
+.lp-t, .lp-sec, .lp-add{display:none}
+.dshelf.lp .ds-tray{display:flex; flex-direction:column; padding:18px 20px 14px; border-radius:30px; --tint:rgba(13,13,18,.66)}
+html .dshelf.lp .ds-tray.glass::before{border-radius:30px}
+.dshelf.lp .ds-head, .dshelf.lp .ds-row, .dshelf.lp .ds-apps, .dshelf.lp .ds-drop, .dshelf.lp .lp-sec{width:auto; translate:none; flex:none}
+.dshelf.lp .ds-head{order:0; height:44px; margin:0 0 2px; padding:0 4px; align-items:center}
+.dshelf.lp .ds-t, .dshelf.lp .ds-acts{display:none}
+.dshelf.lp .lp-t{display:flex; align-items:center; gap:10px; font-size:19px; letter-spacing:-.018em}
+.dshelf.lp .lp-t b{font-weight:700}
+.dshelf.lp .lp-t svg{width:22px; height:22px; fill:none; stroke:#fff; stroke-width:1.7; stroke-linejoin:round; opacity:.9}
+/* (the search, at the top right of the panel) */
+.dshelf.lp .ds-apps{order:2; position:static; height:auto; margin:0; padding:0 2px; transform:none !important; opacity:1; overflow:hidden;
+  max-height:var(--lpA); transition:max-height .5s cubic-bezier(.2,.85,.25,1), opacity .3s ease .08s}
+.dshelf.lp .ds-q{position:absolute; z-index:2; top:21px; right:22px; width:min(260px, 38%); height:36px; border-radius:18px; padding-left:36px; font-size:13.5px;
+  background-color:rgba(255,255,255,.1); background-position:12px 50%; background-size:15px; box-shadow:inset 0 0 0 .8px rgba(255,255,255,.16)}
+.dshelf.lp .ds-q:focus{background-color:rgba(255,255,255,.16); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.4)}
+.dshelf.lp .ds-grid{height:var(--lpA); grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); grid-auto-rows:100px; gap:4px 6px; padding:2px 0 14px;
+  -webkit-mask:linear-gradient(#000 88%, transparent); mask:linear-gradient(#000 88%, transparent)}
+.dshelf.lp .ds-ap{padding:11px 4px 0; gap:8px; border-radius:18px; transition:background .2s, transform .35s cubic-bezier(.2,1.3,.3,1)}
+.dshelf.lp .ds-ap:hover{background:rgba(255,255,255,.09)}
+.dshelf.lp .ds-ap:hover .ds-ic{transform:translateY(-3px) scale(1.07)}
+.dshelf.lp .ds-ap .ds-ic{width:48px; height:48px; transition:transform .4s cubic-bezier(.2,1.4,.3,1)}
+.dshelf.lp .ds-ap b{max-width:90px; font-size:11.5px; font-weight:550; color:rgba(255,255,255,.9)}
+.dshelf.lp .ds-ap.go{transform:scale(.9); opacity:.6}
+/* (pinned apps come first, each with a small dot) */
+.dshelf.lp .ds-ap.on{order:-1}
+.dshelf.lp .ds-ap::after{top:9px; right:calc(50% - 30px); width:7px; height:7px; background:#fff; box-shadow:0 0 8px rgba(255,255,255,.7)}
+.dshelf.lp .ds-none{position:absolute; left:0; right:0; top:50%; text-align:center}
+/* (a dropdown's heading: a chevron that turns, its name, how many) */
+.dshelf.lp .lp-sec{display:flex; align-items:center; gap:8px; height:40px; margin:6px 0 0; padding:0 10px 0 6px; border-radius:13px; font-size:13.5px; cursor:default; outline:none;
+  color:rgba(255,255,255,.92); transition:background .2s; opacity:0; transform:translateY(8px)}
+.dshelf.lp .lp-sec:hover, .dshelf.lp .lp-sec:focus-visible{background:rgba(255,255,255,.07)}
+.dshelf.lp .lp-sec b{font-weight:650; letter-spacing:-.005em}
+.dshelf.lp .lp-sec em{font-style:normal; font-size:11.5px; font-weight:600; padding:1px 8px; border-radius:10px; background:rgba(255,255,255,.1); color:rgba(255,255,255,.62)}
+.dshelf.lp .lp-sec em:empty{display:none}
+.dshelf.lp .lp-chev{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; opacity:.7; transition:transform .45s cubic-bezier(.2,1.2,.3,1)}
+.dshelf.lp .lp-sec[aria-expanded="false"] .lp-chev{transform:rotate(-90deg)}
+.dshelf.lp .lp-sec[data-lp="apps"]{order:1}
+.dshelf.lp .lp-sec[data-lp="files"]{order:3}
+.dshelf.lp .lp-add{display:inline-flex; align-items:center; gap:6px; margin-left:auto; height:28px; padding:0 13px; border:0; border-radius:14px; font:inherit; font-size:12px; font-weight:650;
+  color:#0c0c10; background:#fff; cursor:default; transition:transform .3s cubic-bezier(.2,1.4,.3,1), background .2s}
+.dshelf.lp .lp-add:hover{transform:translateY(-1px)} .dshelf.lp .lp-add:active{transform:scale(.95)}
+.dshelf.lp .lp-add svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round}
+/* (the files: your added files in a row; with none, a place to drop or pick them) */
+.dshelf.lp .ds-row{order:4; height:var(--lpF); max-height:var(--lpF); margin:4px 0 0; padding:4px 2px 0; gap:8px; transition:max-height .5s cubic-bezier(.2,.85,.25,1), opacity .3s ease .08s, margin .5s}
+.dshelf.lp .ds-row .ds-i.app{display:none}
+.dshelf.lp .ds-drop{order:5; position:relative; inset:auto; top:auto; height:calc(var(--lpF) - 10px); max-height:calc(var(--lpF) - 10px); margin:4px 0 0; display:none;
+  border-radius:18px; transition:max-height .5s cubic-bezier(.2,.85,.25,1), opacity .3s ease .08s}
+.dshelf.lp.lp-nof .ds-row, .dshelf.lp.dragging .ds-row{display:none}
+.dshelf.lp.lp-nof .ds-drop, .dshelf.lp.dragging .ds-drop{display:flex; opacity:1; pointer-events:auto}
+/* (a dropdown folded: what's in it slides up and fades as the panel's height closes over it) */
+.dshelf.lp.lp-a0 .ds-apps{max-height:0; opacity:0; transition:max-height .42s cubic-bezier(.4,0,.2,1), opacity .18s ease}
+.dshelf.lp.lp-f0 .ds-row, .dshelf.lp.lp-f0 .ds-drop{max-height:0; margin-top:0; opacity:0; overflow:hidden; transition:max-height .42s cubic-bezier(.4,0,.2,1), opacity .18s ease, margin .42s}
+/* (coming up: the panel rises, then its headings and contents follow one after another) */
+.dshelf.lp.on .lp-sec{opacity:1; transform:none; transition:opacity .35s ease, transform .55s var(--glide), background .2s}
+.dshelf.lp.on .lp-sec[data-lp="apps"]{transition-delay:.12s, .12s, 0s}
+.dshelf.lp.on .lp-sec[data-lp="files"]{transition-delay:.2s, .2s, 0s}
+.dshelf.lp .ds-head{opacity:0; transform:translateY(8px)}
+.dshelf.lp.on .ds-head{opacity:1; transform:none; transition:opacity .35s ease .06s, transform .55s var(--glide) .06s}
+.dshelf.lp.on .ds-q{animation:lpIn .5s var(--glide) .1s backwards}
+@keyframes lpIn{from{opacity:0; transform:translateY(8px)}}
+.sw-row.lp-need.dis{opacity:.45; pointer-events:none}
+.sw-row.lp-need.dis .tg{filter:grayscale(1)}
+
+/* ---------- the Launchpad holds apps only: the shelf's files are gone ---------- */
+/* (the search sits at the panel's top right: the apps area mustn't hold it, which a will-change of its own made it do;
+    and the glass is smoked dark, so the apps read clearly over a white page) */
+.dshelf.lp .ds-apps{will-change:auto}
+html .dshelf.lp .ds-tray.glass::before{background:linear-gradient(180deg, rgba(34,34,42,.86), rgba(15,15,20,.92)) !important}
+.dshelf.lp .ds-tray{box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.12) !important}
+.dshelf.lp .lp-sec[data-lp="files"], .dshelf.lp .ds-row, .dshelf.lp .ds-drop, .dshelf .ds-drop{display:none !important}
+
+/* ---------- the Launchpad: the whole screen blurred behind it, your apps rising into it ---------- */
+.lpx{position:fixed; inset:0; z-index:90; visibility:hidden; pointer-events:none; color:#fff}
+.lpx.on, .lpx.off{visibility:visible}
+.lpx.on{pointer-events:auto}
+.lpx-bg{position:absolute; inset:0; border-radius:0 !important; opacity:0; transition:opacity .28s ease}
+.lpx-bg.glass::before{border-radius:0 !important; background:radial-gradient(120% 95% at 50% 35%, rgba(12,12,18,.46), rgba(6,6,10,.7)) !important}
+.lpx-bg.glass::after{display:none !important}
+.lpx-bg > .gw{transform:scale(1.07); transition:transform .32s ease}
+.lpx.on .lpx-bg{opacity:1; transition:opacity .38s ease}
+.lpx.on .lpx-bg > .gw{transform:none; transition:transform .7s cubic-bezier(.2,.8,.2,1)}
+html.vision .lpx-bg{background:rgba(16,16,20,.94)}
+.lpx-in{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; padding:7vh 6vw 0; transition:opacity .2s ease, transform .3s ease}
+.lpx.off .lpx-in{opacity:0; transform:scale(1.035)}
+.lpx-q{flex:none; display:flex; align-items:center; gap:9px; width:min(340px, 60vw); height:40px; padding:0 15px; border-radius:20px; cursor:text;
+  background:rgba(255,255,255,.13); box-shadow:inset 0 0 0 .8px rgba(255,255,255,.24), inset 0 1px 0 rgba(255,255,255,.12); opacity:0; transform:translateY(-12px) scale(.95)}
+.lpx.on .lpx-q{opacity:1; transform:none; transition:opacity .35s ease .04s, transform .6s cubic-bezier(.2,1.25,.3,1) .04s, background .2s}
+.lpx-q:focus-within{background:rgba(255,255,255,.18)}
+.lpx-q svg{flex:none; width:16px; height:16px; fill:none; stroke:#fff; stroke-width:2.2; stroke-linecap:round; opacity:.7}
+.lpx-q input{flex:1; min-width:0; border:0; outline:0; background:none; color:#fff; font:inherit; font-size:15px}
+.lpx-q input::placeholder{color:rgba(255,255,255,.62)}
+.lpx-pin{flex:none; width:min(1080px, 100%); margin-top:24px; opacity:0; transform:translateY(-8px)}
+.lpx.on .lpx-pin{opacity:1; transform:none; transition:opacity .35s ease .1s, transform .55s var(--glide) .1s}
+.lpx.q .lpx-pin{display:none}
+.lpx-ph{position:relative; z-index:4; display:flex; align-items:center; gap:10px; height:32px; padding:0 10px}
+.lpx-ph > b{font-size:13px; font-weight:650; letter-spacing:.01em; color:rgba(255,255,255,.78); text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.lpx-plus{display:grid; place-items:center; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:rgba(255,255,255,.15); color:#fff; cursor:default;
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.22); transition:transform .5s cubic-bezier(.2,1.4,.3,1), background .2s, color .2s}
+.lpx-plus:hover{background:rgba(255,255,255,.24)}
+.lpx-plus.on{transform:rotate(45deg); background:#fff; color:#111}
+.lpx-plus svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round}
+.lpx-done{display:none; height:28px; padding:0 14px; border:0; border-radius:14px; background:#fff; color:#111; font:inherit; font-size:12.5px; font-weight:700; cursor:default}
+.lpx.pick .lpx-done{display:inline-block; animation:lpxPop .45s cubic-bezier(.2,1.4,.3,1)}
+.lpx-menu{position:absolute; top:38px; left:62px; width:252px; padding:6px; border-radius:18px; background:rgba(30,30,36,.94); transform-origin:16px 0;
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.08), 0 22px 44px -16px rgba(0,0,0,.7);
+  opacity:0; transform:translateY(-6px) scale(.9); pointer-events:none; transition:opacity .15s ease, transform .3s cubic-bezier(.2,1.3,.3,1)}
+.lpx-menu.on{opacity:1; transform:none; pointer-events:auto}
+.lpx-menu button, .lpx-ctx button{display:flex; align-items:center; gap:12px; width:100%; padding:9px 11px; border:0; border-radius:12px; background:none; color:#fff; font:inherit; text-align:left; cursor:default;
+  opacity:0; transform:translateY(-5px)}
+.lpx-menu.on button, .lpx-ctx.on button{opacity:1; transform:none; transition:opacity .22s ease calc(var(--i) * 32ms + 30ms), transform .4s cubic-bezier(.2,1.2,.3,1) calc(var(--i) * 32ms + 30ms), background .14s}
+.lpx-menu button:hover, .lpx-ctx button:hover{background:rgba(255,255,255,.1)}
+.lpx-menu svg, .lpx-ctx svg{flex:none; width:18px; height:18px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; opacity:.85}
+.lpx-menu span{display:flex; flex-direction:column; gap:1px; font-size:13.5px; font-weight:620}
+.lpx-menu small{font-size:11.5px; font-weight:450; color:rgba(255,255,255,.56)}
+.lpx-row{display:flex; flex-wrap:wrap; gap:4px; min-height:24px; padding:4px 0 2px}
+.lpx.nopins .lpx-row::before{content:"Pin apps and files here with +"; padding:6px 10px; font-size:12.5px; color:rgba(255,255,255,.55); text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.lpx-grid{flex:1; min-height:0; width:min(1080px, 100%); margin-top:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); grid-auto-rows:118px; gap:6px 4px;
+  overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; padding:6px 0 9vh; -webkit-mask:linear-gradient(transparent, #000 16px, #000 calc(100% - 70px), transparent); mask:linear-gradient(transparent, #000 16px, #000 calc(100% - 70px), transparent)}
+.lpx-grid::-webkit-scrollbar{display:none}
+.lpx-none{position:absolute; left:0; right:0; top:42%; text-align:center; font-size:14px; color:rgba(255,255,255,.7); pointer-events:none}
+.lpx-t{position:relative; display:flex; flex-direction:column; align-items:center; gap:9px; width:112px; min-width:0; padding:10px 4px 0; border:0; border-radius:20px; background:none; color:#fff; font:inherit; cursor:default}
+.lpx-grid .lpx-t{width:auto}
+.lpx-t[hidden]{display:none}
+.lpx.on .lpx-t{animation:lpxIn .62s cubic-bezier(.2,1.05,.3,1) backwards; animation-delay:calc(var(--d, 0) * 12ms + 70ms)}
+.lpx.on .lpx-row .lpx-t{animation-delay:calc(var(--d, 0) * 25ms + 40ms)}
+@keyframes lpxIn{from{opacity:0; transform:translateY(30px) scale(.84)}}
+.lpx-t .ds-ic, .lpx-file{width:60px !important; height:60px !important; border-radius:15px; filter:drop-shadow(0 8px 14px rgba(0,0,0,.32)); transition:transform .45s cubic-bezier(.2,1.4,.3,1), opacity .25s}
+.lpx-t .ds-ic img{width:100%; height:100%}
+.lpx-t:hover .ds-ic, .lpx-t:hover .lpx-file{transform:translateY(-5px) scale(1.08)}
+.lpx-t:active .ds-ic, .lpx-t:active .lpx-file{transform:scale(.92); transition-duration:.12s}
+.lpx-t.go .ds-ic, .lpx-t.go .lpx-file{transform:scale(1.3); opacity:0; transition:transform .3s ease-out, opacity .25s}
+.lpx-t > b{max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; font-weight:560; text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.lpx-grid .lpx-t.on > b::before{content:""; display:inline-block; width:5px; height:5px; margin:0 6px 2px 0; border-radius:50%; background:#fff; box-shadow:0 0 6px rgba(255,255,255,.8)}
+.lpx-file{display:grid; place-items:center; background:rgba(255,255,255,.15) center/cover no-repeat; box-shadow:inset 0 0 0 .8px rgba(255,255,255,.24)}
+.lpx-file svg{width:28px; height:28px; fill:none; stroke:#fff; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.lpx-file.has svg{display:none}
+.lpx-t.pop{animation:lpxPop .6s cubic-bezier(.2,1.4,.3,1) !important}
+@keyframes lpxPop{from{opacity:0; transform:scale(.4)}}
+/* (pinning apps: each wobbles a little, as icons waiting to be moved do, and wears a ring that fills when it's pinned) */
+.lpx-pk{position:absolute; top:5px; right:calc(50% - 39px); width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,.3); box-shadow:inset 0 0 0 1.6px rgba(255,255,255,.85);
+  opacity:0; transform:scale(.4); transition:opacity .2s, transform .4s cubic-bezier(.2,1.4,.3,1), background .2s; pointer-events:none}
+.lpx.pick .lpx-pk{opacity:1; transform:none}
+.lpx-t.on .lpx-pk{background:#fff; box-shadow:none}
+.lpx-t.on .lpx-pk::after{content:""; position:absolute; left:7px; top:3.5px; width:5px; height:9px; border:solid #111; border-width:0 2.2px 2.2px 0; transform:rotate(45deg)}
+.lpx.pick .lpx-grid .ds-ic{animation:lpxWig .3s ease-in-out infinite alternate; animation-delay:calc(var(--d, 0) * -41ms)}
+@keyframes lpxWig{from{rotate:-1.6deg} to{rotate:1.6deg}}
+.lpx-t.bump .lpx-pk{animation:lpxPop .45s cubic-bezier(.2,1.6,.3,1)}
+/* (a right click: a menu like a taskbar's, unfolding from the pointer) */
+.lpx-ctx{position:absolute; z-index:6; min-width:232px; padding:6px; border-radius:16px; background:rgba(28,28,34,.95);
+  box-shadow:inset 0 0 0 .8px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.08), 0 22px 46px -16px rgba(0,0,0,.72);
+  opacity:0; transform:scale(.86); pointer-events:none; transition:opacity .13s ease, transform .28s cubic-bezier(.2,1.3,.3,1)}
+.lpx-ctx.on{opacity:1; transform:none; pointer-events:auto}
+.lpx-cx-h{display:flex; align-items:center; gap:10px; padding:7px 10px 10px; margin-bottom:4px; border-bottom:.8px solid rgba(255,255,255,.1); font-size:13px}
+.lpx-cx-h b{font-weight:650; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.lpx-cx-h .ds-ic, .lpx-cx-h .lpx-file{width:26px !important; height:26px !important; border-radius:7px; filter:none}
+.lpx-cx-h .lpx-file svg{width:15px; height:15px}
+.lpx-ctx button span{font-size:13.5px; font-weight:550}
+.lpx-ctx hr{height:.8px; margin:4px 8px; border:0; background:rgba(255,255,255,.1)}
 </style>
 </head>
 <body>
@@ -4292,7 +4452,7 @@ html .dshelf.dock .ds-tray.glass::before, html .dshelf.dock .ds-tray.glass::afte
     <div class="wh-row"><button class="wh-t" id="whTile" aria-label="Tile the windows"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="9" height="15" rx="2.2"/><rect x="15" y="4.5" width="5.5" height="6.3" rx="1.8"/><rect x="15" y="13.2" width="5.5" height="6.3" rx="1.8"/></svg></button>
       <label class="wh-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="whQ" placeholder="Search apps" autocomplete="off" spellcheck="false" aria-label="Search apps"></label>
       <button class="wh-back" id="whBack" aria-label="Back to every app"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg><span id="whBackName"></span></button>
-      <button class="wh-t" id="whShelf" aria-label="Drop Shelf"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg></button>
+      <button class="wh-t" id="whShelf" aria-label="Launchpad"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg></button>
       <button class="wh-t" id="whGroups" aria-label="Groups" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="2"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="2"/></svg></button></div>
     <button class="wh-mas" id="whMas" aria-label="Ask Sylver"><canvas id="whMasCv" width="90" height="90"></canvas></button>
     <div class="wh-grip"></div></div>
@@ -4303,7 +4463,7 @@ html .dshelf.dock .ds-tray.glass::before, html .dshelf.dock .ds-tray.glass::afte
   <div class="wc-text" id="wcText" aria-live="polite"></div>
   <div class="wc-foot"><span class="wc-hint"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></svg>Drag the words into any text box</span><button class="wc-b" id="wcType" type="button">Type it</button><button class="wc-b wc-copy" id="wcCopy" type="button">Copy</button></div>
 </div></div>
-<div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div><p class="ds-none" id="dsNone" aria-live="polite"></p></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
+<div class="lpx" id="lpx" aria-label="Launchpad" inert><div class="lpx-bg glass" id="lpxBg"><i class="gw"></i></div><div class="lpx-in"><label class="lpx-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input id="lpxQ" placeholder="Search" spellcheck="false" autocomplete="off" aria-label="Search apps"></label><div class="lpx-pin"><div class="lpx-ph"><b>Pinned</b><button class="lpx-plus" id="lpxPlus" type="button" aria-label="Pin apps or add files" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button class="lpx-done" id="lpxDone" type="button">Done</button><div class="lpx-menu" id="lpxMenu" role="menu"><button type="button" data-lx="pinapps" role="menuitem" style="--i:0"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg><span>Pin apps<small>Tap apps below to keep them here</small></span></button><button type="button" data-lx="files" role="menuitem" style="--i:1"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5z"/><path d="M14 3.5V8h4.5M12 11.5v6M9 14.5h6"/></svg><span>Add files<small>Keep files and folders at hand</small></span></button></div></div><div class="lpx-row" id="lpxPins"></div></div><div class="lpx-grid" id="lpxGrid"></div><p class="lpx-none" id="lpxNone" aria-live="polite"></p></div><div class="lpx-ctx" id="lpxCtx" role="menu"></div></div><div class="dshelf" id="dshelf" aria-label="Drop Shelf"><div class="ds-tray glass panel-glass" id="dsTray"><i class="gw"></i><div class="ds-head"><span class="lp-t"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg><b>Launchpad</b></span><span class="ds-t"><svg viewBox="0 0 24 24"><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/><path d="M4 14l2.2-7.2A2.5 2.5 0 0 1 8.6 5h6.8a2.5 2.5 0 0 1 2.4 1.8L20 14h-4.5l-1 2h-5l-1-2z"/></svg>Shelf<em id="dsCount"></em></span><span class="ds-acts"><button class="ds-a" data-ds="add" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button><button class="ds-a" data-ds="apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Apps</span></button><button class="ds-a clr" data-ds="clear">Clear</button></span></div><div class="lp-sec" data-lp="apps" role="button" tabindex="0" aria-expanded="true"><svg class="lp-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg><b>Apps</b><em id="lpAppsN"></em></div><div class="lp-sec" data-lp="files" role="button" tabindex="0" aria-expanded="true"><svg class="lp-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg><b>Files</b><em id="lpFilesN"></em><button class="lp-add" data-ds="add" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add files</button></div><div class="ds-row" id="dsRow"></div><div class="ds-apps"><input class="ds-q" id="dsQ" placeholder="Search apps" spellcheck="false" autocomplete="off" aria-label="Search apps"><div class="ds-grid" id="dsGrid"></div><p class="ds-none" id="dsNone" aria-live="polite"></p></div><div class="ds-drop"><svg viewBox="0 0 24 24"><path class="dr" d="M12 3v9M8.5 8.5L12 12l3.5-3.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14h-4.5l-1 2h-5l-1-2z"/></svg><b><span class="dw-e">Drop files here, or click to choose them</span><span class="dw-d">Drop here to keep it at hand</span></b><small>Drag them out again into any app, whenever you need them</small></div></div></div>
 <div class="spot glass panel-glass" id="spot" role="dialog" aria-label="Search" inert><i class="gw"></i>
   <div class="sp-pic"><img id="spPic" alt=""><div class="sp-when"><b id="spTime"></b><span id="spDate"></span></div></div>
   <div class="sp-side"><label class="sp-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="spQ" placeholder="Search apps, or ask anything" autocomplete="off" spellcheck="false" aria-label="Search apps, or ask anything"></label>
@@ -4404,8 +4564,8 @@ html .dshelf.dock .ds-tray.glass::before, html .dshelf.dock .ds-tray.glass::afte
     </section>
     <section class="sw-sec" data-sec="brain"><h2>Brain</h2><p class="sw-sub" id="swBrainSub">The AI that runs on this PC. Nothing you say leaves it.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Fix-it buttons under answers<small>Try again, or say what you wanted (typed, or said without “Ultron” for 20 seconds), and the answer or task is put right</small></span><button class="tg" role="switch" data-set="fixBar" aria-label="Fix-it buttons under answers"></button></div><div class="sw-key" id="swKey"><div class="kw" id="kwSet" role="radiogroup" aria-label="Where answers come from"><i class="kw-pill"></i><button data-kw="local" role="radio"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg><span>On this PC</span></button><button data-kw="gem" role="radio" title="Answers from Brave Search, in a few seconds"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5S9.4 5.9 12 3.5z"/></svg><span>Web</span></button><button data-kw="key" role="radio"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><span>My own key</span></button></div><div class="kw-say" id="kwSay"><i></i><span></span></div><div class="ai-extra kw-form" id="kwForm"><div><div class="kw-in" id="kwIn"><div class="kw-chips" id="kwProv"></div><div class="ai-extra" id="kwBaseX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="kwBase" placeholder="Where it lives, like https://api.example.com/v1" spellcheck="false" autocomplete="off"></label><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><input id="kwModelName" placeholder="Model name, as the service lists it" spellcheck="false" autocomplete="off"></label></div></div><label class="ml-f"><svg class="kw-keyico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l3 3M13.5 9.5l2 2"/></svg><input id="kwKey" type="password" placeholder="Paste your key" spellcheck="false" autocomplete="new-password"></label><div class="ai-extra" id="kwModelX"><div><label class="ml-f"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.9 2.1 5.4 6 6-3.9.6-5.4 2.1-6 6-.6-3.9-2.1-5.4-6-6 3.9-.6 5.4-2.1 6-6z"/></svg><select id="kwModel" aria-label="Model"></select></label></div></div><div class="ai-extra" id="kwErrX"><div><div class="ml-err" id="kwErr"></div></div></div><div class="kw-acts"><button class="ml-go kw-go" id="kwGo" type="button"><span>Connect</span><i></i></button><button class="ml-link" id="kwForget" type="button" hidden>Remove this key</button></div><p class="kw-note" id="kwNote"></p></div></div></div></div><div class="sw-row"><span class="sw-l">Brain<small>Smart writes and plans far better; Fast answers quickest on small PCs</small></span><span class="seg" data-set="brain" role="radiogroup"><button data-v="smart" role="radio">Smart</button><button data-v="fast" role="radio">Fast</button></span></div><div class="sw-row"><span class="sw-l">Use graphics card<small>Auto checks once which is faster on this PC</small></span><span class="seg" data-set="gpu" role="radiogroup"><button data-v="auto" role="radio">Auto</button><button data-v="off" role="radio">Off</button></span></div><div class="sw-row"><span class="sw-l">Keep the brain ready<small>Instant answers; uses about 3 GB of memory while Sylver runs</small></span><button class="tg" role="switch" data-set="keepAI" aria-label="Keep the brain ready"></button></div><div class="sw-row"><span class="sw-l">Web answers<small>Questions about the world are looked up on Brave Search in the background and answered in a sentence</small></span><button class="tg" role="switch" data-set="web" aria-label="Web answers"></button></div><div class="sw-row"><span class="sw-l">Answer length</span><span class="seg" data-set="length" role="radiogroup"><button data-v="short" role="radio">Short</button><button data-v="normal" role="radio">Normal</button><button data-v="detailed" role="radio">Detailed</button></span></div><div class="sw-info"><i></i><span id="swBrainInfo">Loads when you ask something</span></div><div class="sw-slow" id="swSlow" hidden><span id="swSlowSay"></span><button type="button" id="swSlowGo">Open power settings</button></div><div class="sw-info dim" id="swSpecs"></div><div class="sw-info dim" id="swUpgrade"></div></div></section>
     <section class="sw-sec" data-sec="tasks"><h2>Tasks</h2><p class="sw-sub">How Sylver works on your PC for you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Typing speed</span><span class="seg" data-set="typeSpeed" role="radiogroup"><button data-v="natural" role="radio">Natural</button><button data-v="fast" role="radio">Fast</button><button data-v="instant" role="radio">Instant</button></span></div><div class="sw-row"><span class="sw-l">Messages<small>Sylver writes the message, then always asks before sending</small></span><span class="sw-lock">Always asks</span></div><div class="sw-row"><span class="sw-l">Stop anything<small>The red button or Escape stops talking and tasks at once</small></span><span class="sw-lock">On</span></div><div class="sw-row"><span class="sw-l">Routines<small>Things Sylver does by itself at set times. Say “every weekday at 9, open my work apps and read me the news”</small></span></div><div class="sw-mem sw-rt" id="swRt"></div></div></section>
-    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">How Sylver looks, and the character in the notch.</p><div class="ui-pick" id="uiPick" role="radiogroup" aria-label="Look"><button data-ui="ultron" role="radio"><span class="ui-pv pv-u"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-glint"></i></span><span class="ui-nm"><b>Sylver</b><small>Liquid glass</small></span></button><button data-ui="vision" role="radio"><span class="ui-pv pv-v"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-fab"></i></span><span class="ui-nm"><b>VISION</b><small>Solid and quick, for lighter PCs</small></span></button></div><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="Follow cursor"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="Blinking"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="Eye size"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="Eye speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="Show name when minimized"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: Sylver’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">Sylver</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Glass dialogs<small>Windows’ message boxes (“Save changes?”) appear as Sylver’s own glass ones</small></span><button class="tg" role="switch" data-set="glassDlg" aria-label="Glass dialogs"></button></div><div class="sw-row"><span class="sw-l">Sylver’s volume and brightness<small>Shown under the notch instead of Windows’ own box when you press the volume keys</small></span><button class="tg" role="switch" data-set="osd" aria-label="Sylver’s volume and brightness"></button></div><div class="sw-row"><span class="sw-l">Four-finger swipe<small>Swipe four fingers left or right to slide between windows: in Windows’ touchpad settings, under Four-finger gestures, choose Custom shortcut and press Ctrl+Alt+→ (right) and Ctrl+Alt+← (left). Needs Sylver’s Alt+Tab on.</small></span><button class="chipb" id="fourSet">Open touchpad settings</button></div><div class="sw-row"><span class="sw-l">Sylver’s Alt+Tab<small>Your open windows as glass cards. Alt+Tab, or hold Alt and scroll (mouse or two fingers on the touchpad); Ctrl+Alt+← / → hops to the next window. Full-screen games keep Windows’ own.</small></span><button class="tg" role="switch" data-set="altTab" aria-label="Sylver’s Alt+Tab"></button></div><div class="sw-row"><span class="sw-l">Desktop switch<small>Moving to another of Windows’ desktops, or making a new one, shows which one you’re on</small></span><button class="tg" role="switch" data-set="deskHud" aria-label="Desktop switch"></button></div><div class="sw-row"><span class="sw-l">Sylver's cursor<small>While Sylver does a task, its own pointer goes where each click lands. Esc sends it away</small></span><button class="tg" role="switch" data-set="ghost" aria-label="Sylver's cursor"></button></div><div class="sw-row"><span class="sw-l">Spatial wallpaper<small>Your wallpaper as a scene with depth, leaning as you move the pointer, on the desktop and the lock screen (the nearest part comes in front of the clock). Worked out on this PC, once per wallpaper</small></span><button class="tg" role="switch" data-set="spatial" aria-label="Spatial wallpaper"></button></div><div class="sw-row"><span class="sw-l">Glass edges bend light<small>Like real glass, and Apple's: what passes under a panel's rim curves into it. Costs next to nothing</small></span><button class="tg" role="switch" data-set="glassLens" aria-label="Glass edges bend light"></button></div><div class="sw-row"><span class="sw-l">Glass<small>Hazelnut is deep and vivid, the colours behind glowing through, and white words read over anything; Clear shows more of what's behind, and its words turn dark over bright pages</small></span><span class="seg" data-set="glassStyle" role="radiogroup"><button data-v="hazel" role="radio">Hazelnut</button><button data-v="clear" role="radio">Clear</button></span></div><div class="sw-row"><span class="sw-l">Creamy keys<small>Everything you type and every click sounds like a keyboard with creamy switches (real recordings of NovelKeys Creams)</small></span><button class="tg" role="switch" data-set="keySounds" aria-label="Creamy keys"></button></div><div class="sw-row"><span class="sw-l">Sound volume</span><input class="rng" type="range" min="0.1" max="1" step="0.01" data-set="keyVol" aria-label="Key sound volume"></div><div class="sw-row"><span class="sw-l">Pointer motion blur<small>A soft streak trails the pointer when it moves fast</small></span><button class="tg" role="switch" data-set="cursorBlur" aria-label="Pointer motion blur"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>Sylver’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the Sylver menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row lk-only lkp-row"><div class="lkp" id="lkPrev"><div class="lkp-in"><div class="lk-date" id="lkpDate"></div><div class="lk-time" id="lkpTime"></div></div></div></div><div class="sw-row lk-only"><span class="sw-l">Clock<small>Glass shows your wallpaper through the figures</small></span><span class="seg" data-set="lkClock" role="radiogroup"><button data-v="glass" role="radio">Glass</button><button data-v="solid" role="radio">Solid</button></span></div><div class="sw-row lk-only"><span class="sw-l">Glass<small>How frosted the clock, the date and the widgets are</small></span><input class="rng" type="range" min="0.04" max="0.4" step="0.01" data-set="lkGlassA" aria-label="Lock screen glass"></div><div class="sw-row lk-only"><span class="sw-l">Clock weight</span><span class="seg" data-set="lkWeight" role="radiogroup"><button data-v="thin" role="radio">Thin</button><button data-v="regular" role="radio">Regular</button><button data-v="bold" role="radio">Bold</button></span></div><div class="sw-row lk-only"><span class="sw-l">Clock colour</span><span class="seg" data-set="lkTint" role="radiogroup"><button data-v="white" role="radio">White</button><button data-v="warm" role="radio">Warm</button><button data-v="ice" role="radio">Ice</button><button data-v="rose" role="radio">Rose</button></span></div><div class="sw-row lk-only"><span class="sw-l">Battery and weather<small>Under the clock, in small pieces of glass</small></span><button class="tg" role="switch" data-set="lkWid" aria-label="Battery and weather on the lock screen"></button></div><div class="sw-row lk-only"><span class="sw-l">Only Sylver’s lock screen<small id="lkWinSay">When the PC wakes, Windows won’t ask for its own sign-in first: Sylver’s comes up instead. Restarts and Win L still use Windows’ sign-in.</small></span><button class="tg" role="switch" data-set="lkWin" aria-label="Only Sylver’s lock screen"></button></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on Sylver’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows Sylver’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="Reduce motion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="Live glass"></button></div></div></section>
-    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">Sylver’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or Sylver closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>Sylver’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens Sylver’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row"><span class="sw-l">Font<small>For the bar along the top and the wheel</small></span><span class="seg" data-set="tbFont" role="radiogroup"><button data-v="inter" role="radio">Inter</button><button data-v="segoe" role="radio">Segoe</button><button data-v="serif" role="radio">Serif</button><button data-v="mono" role="radio">Mono</button></span></div><div class="sw-row"><span class="sw-l">Weight</span><span class="seg" data-set="tbWeight" role="radiogroup"><button data-v="light" role="radio">Light</button><button data-v="regular" role="radio">Regular</button><button data-v="bold" role="radio">Bold</button></span></div><div class="sw-row"><span class="sw-l">Colour</span><span class="seg" data-set="tbTint" role="radiogroup"><button data-v="white" role="radio">White</button><button data-v="warm" role="radio">Warm</button><button data-v="ice" role="radio">Ice</button><button data-v="rose" role="radio">Rose</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="Pinned apps on the rim"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="Space between tiled windows"></div><div class="sw-row"><span class="sw-l">Drop Shelf edge<small>Where it comes out: rest the pointer on that edge, or drag a file to it</small></span><span class="seg" data-set="dsSide" role="radiogroup"><button data-v="bottom" role="radio">Bottom</button><button data-v="left" role="radio">Left</button><button data-v="right" role="radio">Right</button></span></div><div class="sw-row"><span class="sw-l">Drop Shelf size</span><span class="seg" data-set="dsSize" role="radiogroup"><button data-v="compact" role="radio">Compact</button><button data-v="normal" role="radio">Normal</button><button data-v="large" role="radio">Large</button></span></div><div class="sw-row"><span class="sw-l">Names under items</span><button class="tg" role="switch" data-set="dsNames" aria-label="Names under items"></button></div></div></section>
+    <section class="sw-sec" data-sec="look"><h2>Look &amp; feel</h2><p class="sw-sub">How Sylver looks, and the character in the notch.</p><div class="ui-pick" id="uiPick" role="radiogroup" aria-label="Look"><button data-ui="ultron" role="radio"><span class="ui-pv pv-u"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-glint"></i></span><span class="ui-nm"><b>Sylver</b><small>Liquid glass</small></span></button><button data-ui="vision" role="radio"><span class="ui-pv pv-v"><i class="pv-bar"></i><i class="pv-dot"></i><i class="pv-card"></i><i class="pv-fab"></i></span><span class="ui-nm"><b>LYGHT</b><small>Solid and quick, for lighter PCs</small></span></button></div><div class="sw-rows"><div class="sw-row"><span class="sw-l">Follow cursor<small>Eyes track your pointer</small></span><button class="tg" role="switch" data-set="follow" aria-label="Follow cursor"></button></div><div class="sw-row"><span class="sw-l">Blinking</span><button class="tg" role="switch" data-set="blink" aria-label="Blinking"></button></div><div class="sw-row"><span class="sw-l">Eye size</span><input class="rng" type="range" min="0.7" max="1.4" step="0.01" data-set="eye" aria-label="Eye size"></div><div class="sw-row"><span class="sw-l">Eye speed</span><input class="rng" type="range" min="0.4" max="1.6" step="0.01" data-set="speed" aria-label="Eye speed"></div><div class="sw-row"><span class="sw-l">Show name when minimized</span><button class="tg" role="switch" data-set="label" aria-label="Show name when minimized"></button></div><div class="sw-row"><span class="sw-l">Body</span><span class="sws" role="radiogroup" aria-label="Body color"><button class="sw" role="radio" data-tint="#ffffff" style="background:#ffffff" aria-label="Snow"></button><button class="sw" role="radio" data-tint="#ecd2b4" style="background:#ecd2b4" aria-label="Rice"></button><button class="sw" role="radio" data-tint="#c9d8ee" style="background:#c9d8ee" aria-label="Frost"></button><button class="sw" role="radio" data-tint="#f0c4cf" style="background:#f0c4cf" aria-label="Sakura"></button></span></div><div class="sw-row"><span class="sw-l">Menu bar<small>Hidden, it slides away and comes back when you rest the pointer on the top edge of the screen</small></span><span class="seg" data-set="bar" role="radiogroup"><button data-v="show" role="radio">Always there</button><button data-v="hide" role="radio">Hides away</button></span></div><div class="sw-row"><span class="sw-l">Settings style<small>How this window looks: Sylver’s own glass, or macOS’s System Settings</small></span><span class="seg" data-set="setSkin" role="radiogroup"><button data-v="ultron" role="radio">Sylver</button><button data-v="mac" role="radio">macOS</button></span></div><div class="sw-row"><span class="sw-l">Rounded windows<small>Every window gets rounded corners, maximised ones too: their top corners curve into the menu bar and their bottom corners round off, like a Mac’s screen</small></span><span class="dw-demo" aria-hidden="true"><i></i></span><button class="tg" role="switch" data-set="dynWin" aria-label="Dynamic windows"></button></div><div class="sw-row"><span class="sw-l">Glass dialogs<small>Windows’ message boxes (“Save changes?”) appear as Sylver’s own glass ones</small></span><button class="tg" role="switch" data-set="glassDlg" aria-label="Glass dialogs"></button></div><div class="sw-row"><span class="sw-l">Sylver’s volume and brightness<small>Shown under the notch instead of Windows’ own box when you press the volume keys</small></span><button class="tg" role="switch" data-set="osd" aria-label="Sylver’s volume and brightness"></button></div><div class="sw-row"><span class="sw-l">Four-finger swipe<small>Swipe four fingers left or right to slide between windows: in Windows’ touchpad settings, under Four-finger gestures, choose Custom shortcut and press Ctrl+Alt+→ (right) and Ctrl+Alt+← (left). Needs Sylver’s Alt+Tab on.</small></span><button class="chipb" id="fourSet">Open touchpad settings</button></div><div class="sw-row"><span class="sw-l">Sylver’s Alt+Tab<small>Your open windows as glass cards. Alt+Tab, or hold Alt and scroll (mouse or two fingers on the touchpad); Ctrl+Alt+← / → hops to the next window. Full-screen games keep Windows’ own.</small></span><button class="tg" role="switch" data-set="altTab" aria-label="Sylver’s Alt+Tab"></button></div><div class="sw-row"><span class="sw-l">Desktop switch<small>Moving to another of Windows’ desktops, or making a new one, shows which one you’re on</small></span><button class="tg" role="switch" data-set="deskHud" aria-label="Desktop switch"></button></div><div class="sw-row"><span class="sw-l">Sylver's cursor<small>While Sylver does a task, its own pointer goes where each click lands. Esc sends it away</small></span><button class="tg" role="switch" data-set="ghost" aria-label="Sylver's cursor"></button></div><div class="sw-row"><span class="sw-l">Spatial wallpaper<small>Your wallpaper as a scene with depth, leaning as you move the pointer, on the desktop and the lock screen (the nearest part comes in front of the clock). Worked out on this PC, once per wallpaper</small></span><button class="tg" role="switch" data-set="spatial" aria-label="Spatial wallpaper"></button></div><div class="sw-row"><span class="sw-l">Glass edges bend light<small>Like real glass, and Apple's: what passes under a panel's rim curves into it. Costs next to nothing</small></span><button class="tg" role="switch" data-set="glassLens" aria-label="Glass edges bend light"></button></div><div class="sw-row"><span class="sw-l">Glass<small>Hazelnut is deep and vivid, the colours behind glowing through, and white words read over anything; Clear shows more of what's behind, and its words turn dark over bright pages</small></span><span class="seg" data-set="glassStyle" role="radiogroup"><button data-v="hazel" role="radio">Hazelnut</button><button data-v="clear" role="radio">Clear</button></span></div><div class="sw-row"><span class="sw-l">Creamy keys<small>Everything you type and every click sounds like a keyboard with creamy switches (real recordings of NovelKeys Creams)</small></span><button class="tg" role="switch" data-set="keySounds" aria-label="Creamy keys"></button></div><div class="sw-row"><span class="sw-l">Sound volume</span><input class="rng" type="range" min="0.1" max="1" step="0.01" data-set="keyVol" aria-label="Key sound volume"></div><div class="sw-row"><span class="sw-l">Pointer motion blur<small>A soft streak trails the pointer when it moves fast</small></span><button class="tg" role="switch" data-set="cursorBlur" aria-label="Pointer motion blur"></button></div><div class="sw-row"><span class="sw-l">Lock screen<small>Sylver’s is your wallpaper and the time, under glass. It comes up from Lock Screen in the Sylver menu; Win L stays Windows’ own.</small></span><span class="seg" data-set="lock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row lk-only lkp-row"><div class="lkp" id="lkPrev"><div class="lkp-in"><div class="lk-date" id="lkpDate"></div><div class="lk-time" id="lkpTime"></div></div></div></div><div class="sw-row lk-only"><span class="sw-l">Clock<small>Glass shows your wallpaper through the figures</small></span><span class="seg" data-set="lkClock" role="radiogroup"><button data-v="glass" role="radio">Glass</button><button data-v="solid" role="radio">Solid</button></span></div><div class="sw-row lk-only"><span class="sw-l">Glass<small>How frosted the clock, the date and the widgets are</small></span><input class="rng" type="range" min="0.04" max="0.4" step="0.01" data-set="lkGlassA" aria-label="Lock screen glass"></div><div class="sw-row lk-only"><span class="sw-l">Clock weight</span><span class="seg" data-set="lkWeight" role="radiogroup"><button data-v="thin" role="radio">Thin</button><button data-v="regular" role="radio">Regular</button><button data-v="bold" role="radio">Bold</button></span></div><div class="sw-row lk-only"><span class="sw-l">Clock colour</span><span class="seg" data-set="lkTint" role="radiogroup"><button data-v="white" role="radio">White</button><button data-v="warm" role="radio">Warm</button><button data-v="ice" role="radio">Ice</button><button data-v="rose" role="radio">Rose</button></span></div><div class="sw-row lk-only"><span class="sw-l">Battery and weather<small>Under the clock, in small pieces of glass</small></span><button class="tg" role="switch" data-set="lkWid" aria-label="Battery and weather on the lock screen"></button></div><div class="sw-row lk-only"><span class="sw-l">Only Sylver’s lock screen<small id="lkWinSay">When the PC wakes, Windows won’t ask for its own sign-in first: Sylver’s comes up instead. Restarts and Win L still use Windows’ sign-in.</small></span><button class="tg" role="switch" data-set="lkWin" aria-label="Only Sylver’s lock screen"></button></div><div class="sw-row lk-only lk-pass"><span class="sw-l">Passcode<small id="lkSetSay">Asked for on Sylver’s lock screen, in its own glass. It keeps a passer-by out; forget it, and Windows’ sign-in lets you back in.</small></span><div class="lk-box" id="lkSetBox"></div></div><div class="sw-row lk-only"><span class="sw-l">Then Windows’ own sign-in too<small>Windows’ screen follows Sylver’s. That one can’t be restyled: it belongs to Windows, and only it can check your Windows PIN.</small></span><button class="tg" role="switch" data-set="lockPass" aria-label="lockPass"></button></div><div class="sw-row lk-only"><span class="sw-l">See it now</span><button class="chipb" data-sx="lockshow">Show</button></div><div class="sw-row"><span class="sw-l">Reduce motion<small>Calmer, shorter animations everywhere</small></span><button class="tg" role="switch" data-set="reduceMotion" aria-label="Reduce motion"></button></div><div class="sw-row"><span class="sw-l">Live glass<small>Glass shows the windows behind it, not just the wallpaper</small></span><button class="tg" role="switch" data-set="liveGlass" aria-label="Live glass"></button></div></div></section>
+    <section class="sw-sec" data-sec="taskbar"><h2>Taskbar</h2><p class="sw-sub">Sylver’s own is a wheel that rolls down from under the notch. Nothing sits along the bottom: your windows get the whole screen.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Taskbar<small>Windows’ own comes back, as it was, the moment you switch or Sylver closes</small></span><span class="seg" data-set="dock" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row dk-only"><span class="sw-l">Start menu<small>Sylver’s opens on the Windows key, and on Ctrl Space: your wallpaper on one side, a search on the other. Windows-key shortcuts all still work.</small></span><span class="seg" data-set="dkStart" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row"><span class="sw-l">Ctrl Space opens Sylver’s Start<small>From anywhere, whichever Start the Windows key opens. While it’s on, other apps don’t get Ctrl Space (VS Code’s suggestions, Excel’s column select).<b class="sw-warn" id="spkTaken" hidden> Another app has it right now.</b></small></span><button class="tg" role="switch" data-set="spotKey" aria-label="spotKey"></button></div><div class="sw-row dk-only"><span class="sw-l">The wheel comes down<small>Its sliver sits under the notch</small></span><span class="seg" data-set="dkOpen" role="radiogroup"><button data-v="hover" role="radio">At a touch</button><button data-v="click" role="radio">On a click</button></span></div><div class="sw-row dk-only"><span class="sw-l">Shortcut for the wheel<small>Brings it down from anywhere, and back up again. Click, then press the keys</small></span><span class="hk-wrap"><button class="hk" id="whKeyBtn" type="button"></button><button class="hk-x" id="whKeyX" type="button" aria-label="Remove the shortcut" hidden><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span></div><div class="sw-row dk-only"><span class="sw-l">Size</span><span class="seg" data-set="dkSize" role="radiogroup"><button data-v="s" role="radio">Small</button><button data-v="m" role="radio">Medium</button><button data-v="l" role="radio">Large</button></span></div><div class="sw-row dk-only"><span class="sw-l">Glass<small>Smoked is darker, and easier to read over a bright window</small></span><span class="seg" data-set="dkTint" role="radiogroup"><button data-v="clear" role="radio">Clear</button><button data-v="smoked" role="radio">Smoked</button></span></div><div class="sw-row"><span class="sw-l">Font<small>For the bar along the top and the wheel</small></span><span class="seg" data-set="tbFont" role="radiogroup"><button data-v="inter" role="radio">Inter</button><button data-v="segoe" role="radio">Segoe</button><button data-v="serif" role="radio">Serif</button><button data-v="mono" role="radio">Mono</button></span></div><div class="sw-row"><span class="sw-l">Weight</span><span class="seg" data-set="tbWeight" role="radiogroup"><button data-v="light" role="radio">Light</button><button data-v="regular" role="radio">Regular</button><button data-v="bold" role="radio">Bold</button></span></div><div class="sw-row"><span class="sw-l">Colour</span><span class="seg" data-set="tbTint" role="radiogroup"><button data-v="white" role="radio">White</button><button data-v="warm" role="radio">Warm</button><button data-v="ice" role="radio">Ice</button><button data-v="rose" role="radio">Rose</button></span></div><div class="sw-row dk-only"><span class="sw-l">Pinned apps on the rim<small>The first eight apps pinned in Start ride with what’s open</small></span><button class="tg" role="switch" data-set="dkPins" aria-label="Pinned apps on the rim"></button></div><div class="sw-row dk-only"><span class="sw-l">Space between tiled windows</span><input class="rng" type="range" min="0" max="28" step="1" data-set="dkGap" aria-label="Space between tiled windows"></div><div class="sw-row lp-need"><span class="sw-l">Launchpad<small id="lpNeedSay">Your apps and files in one place, from the bottom edge or its shortcut</small></span><button class="tg" role="switch" data-set="lpOn" aria-label="Launchpad"></button></div><div class="sw-row lp-need"><span class="sw-l">Launchpad shortcut<small>Opens and closes it from anywhere</small></span><span class="hk-wrap"><button class="hk lp-key" id="lpKeyBtn" type="button"></button><button class="hk-x lp-key-x" type="button" aria-label="Remove the shortcut" hidden></button></span></div></div></section>
     <section class="sw-sec" data-sec="notes"><h2>Notifications</h2><p class="sw-sub">What your apps tell you, and how it reaches you.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Show them<small>Sylver’s hang down from the menu bar in glass and gather under the bell by the clock, with the same buttons and replies Windows’ have. While they’re on, Windows’ own pop-ups are switched off app by app, and switched back when you choose Windows again or Sylver closes.</small></span><span class="seg" data-set="notes" role="radiogroup"><button data-v="win" role="radio">Windows</button><button data-v="ultron" role="radio">Sylver</button></span></div><div class="sw-row nf-only"><span class="sw-l">Do not disturb<small>They still gather under the bell, without coming down</small></span><button class="tg" role="switch" data-set="nfQuiet" aria-label="Show notifications"></button></div><div class="sw-row nf-only"><span class="sw-l">Sound<small>A soft chime as one comes down (not for apps that ask for quiet)</small></span><button class="tg" role="switch" data-set="nfSound" aria-label="Notification sound"></button></div><div class="sw-row nf-only"><span class="sw-l">Stay down for</span><span class="seg" data-set="nfTime" role="radiogroup"><button data-v="s" role="radio">5 s</button><button data-v="m" role="radio">8 s</button><button data-v="l" role="radio">15 s</button></span></div><div class="sw-row nf-apps-h"><span class="sw-l">Apps<small>Windows’ own switch for each app that has sent notifications lately</small></span></div><div class="nf-apps" id="nfApps"></div></div></section>
     <section class="sw-sec" data-sec="system"><h2>System</h2><p class="sw-sub">Sylver and Windows.</p><div class="sw-rows"><div class="sw-row"><span class="sw-l">Start with Windows<small id="loginSay">Opens Sylver as soon as you sign in</small></span><button class="tg" role="switch" data-set="autostart" aria-label="Start with Windows"></button></div><div class="sw-row"><span class="sw-l">Task Manager</span><button class="chipb" data-sx="taskmgr">Open</button></div><div class="sw-row"><span class="sw-l">Quit Sylver<small>You can start it again from the Start menu</small></span><button class="chipb" data-sx="quit">Quit</button></div></div></section>
     <section class="sw-sec" data-sec="cleaner"><h2>Cleaner</h2><p class="sw-sub">Clears the junk Windows and your apps leave behind. Your files, sign-ins, passwords and settings aren’t touched.</p><div class="cl-stage" id="clStage"><div class="cl-head"><b id="clNum">…</b><span id="clCap">Looking for junk…</span></div><div class="cl-fall" id="clFall"></div><div class="cl-mach"><i class="cl-slot"></i><div class="cl-teeth"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i></div><i class="cl-light"></i></div><div class="cl-out" id="clOut"></div><div class="cl-ok"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></div></div><div class="cl-rows" id="clRows"></div><div class="cl-acts"><button class="cl-go" id="clGo" type="button" data-clx="go" disabled><span>Clear</span></button><button class="chipb" type="button" data-clx="scan">Look again</button></div><div class="pr" id="prBox"><div class="pr-hd"><span class="sw-l">Running in the background<small>Apps of yours with no window open, still holding memory. Choose the ones you don’t need and end them. Windows’ own parts aren’t listed.</small></span><button class="chipb" type="button" data-prx="scan">Look again</button></div><div class="pr-list" id="prList"></div><div class="pr-acts"><button class="cl-go" id="prEnd" type="button" data-prx="end" disabled><span>End</span></button><span class="pr-sum" id="prSum"></span></div></div></section>
@@ -4641,7 +4801,7 @@ const $ = id => document.getElementById(id);
 
 /* ---------- settings (persisted per viewer) ---------- */
 const DEFAULTS = {setSkin:'ultron', follow:true, blink:true, eye:1, speed:1, sens:1, label:true, tint:'#ffffff', liveGlass:true, wake:true, speak:true, muted:false,
-  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, dictFill:true, dictFix:true, dictSmart:true, dictAI:false, dictWords:[], dsSide:'bottom', dsSize:'normal', dsNames:true, altTab:false, fixBar:true, deskHud:true, lkClock:'glass', lkWeight:'thin', lkTint:'white', lkWid:true, glassDlg:false, osd:false, lang:'en', keySounds:false, clickSounds:false, keyPack:'creamy', keyVol:.6, wear:null, agentWatch:false, agentNotes:false, agentAll:false};
+  hearSongs:true, voiceStyle:'natural', voiceName:'lessac', voiceRate:1, voiceVol:.9, brain:'smart', gpu:'auto', keepAI:true, web:true, length:'normal', ghost:true, typeSpeed:'natural', reduceMotion:false, autostart:false, ui:'ultron', gemini:false, dictCard:true, dictFill:true, dictFix:true, dictSmart:true, dictAI:false, dictWords:[], dsSide:'bottom', dsSize:'normal', dsNames:true, lpOn:true, lpApps:true, lpFiles:true, altTab:false, fixBar:true, deskHud:true, lkClock:'glass', lkWeight:'thin', lkTint:'white', lkWid:true, glassDlg:false, osd:false, lang:'en', keySounds:false, clickSounds:false, keyPack:'creamy', keyVol:.6, wear:null, agentWatch:false, agentNotes:false, agentAll:false};
 let S = {...DEFAULTS};
 const TALL = Math.round(screen.height || 864) - 2;     // (ULTRON's window's height: see winH)
 try { Object.assign(S, JSON.parse(localStorage.getItem('ultron-notch') || '{}')); } catch(e){}
@@ -5092,7 +5252,7 @@ setInterval(() => {
   const off = !glassOn() || (fullscreen && !spotOn) || document.body.classList.contains('leaving');
   const answering = aiStream && !aiStream.agent;   // the glass keeps its last picture for those few seconds
   // (the Drop Shelf too: it wasn't on this list, so its glass got a picture only every 8 seconds and never caught up)
-  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), $('qs'), notch].some(el => el && el.classList.contains('open')) || $('gdlg').classList.contains('on') || $('atb').classList.contains('on') || !!(window.DS && DS.on) || !!(window.BAT && BAT.open);
+  const boxOpen = [dd, $('wifi'), $('start'), $('cal'), $('setw'), $('aiw'), $('mailw'), $('nfw'), $('cp'), $('whMenu'), $('recw'), $('filew'), $('spot'), $('wheel'), $('qs'), notch].some(el => el && el.classList.contains('open')) || $('gdlg').classList.contains('on') || $('atb').classList.contains('on') || !!(window.DS && DS.on) || !!(window.BAT && BAT.open) || !!(window.LPX && LPX.on);
   // 33: live, each picture of the screen as it is drawn (30 a second at most), while a panel is open. 100: under the
   // floating lyrics, which show for as long as music plays. Only the bar: every 8 s (it has just the wallpaper behind it),
   // or, set to hide away, a few times a second while it's down over your windows and not at all while it's away.
@@ -5479,6 +5639,7 @@ function applySetting(k){
   if (k === 'tbFont' || k === 'tbWeight' || k === 'tbTint') tbStyle();
   if (k === 'osd'){ invoke('osd_set', {on:!!S.osd}); if (S.osd) invoke('qs_state').then(q => q && osdShow('vol', q.vol, !!q.mute)); }
   if (k === 'keySounds'){ ksSync(); if (S[k]) ksPlay(0); }
+  if (k === 'lpOn' && window.DS){ lpKeySync(); lpNeedPaint(); if (DS.on) dsHide(); if (window.LPX && LPX.on) lpxClose(); }
   if ((k === 'dsSide' || k === 'dsSize' || k === 'dsNames') && window.DS){ dsLay(); if (DS.on) syncHit(); else { dsShow('open', true); setTimeout(() => { if (DS.sticky) dsHide(); }, 1600); } }
 
   if (k === 'lkWin' || (k === 'lock' && S.lock !== 'ultron' && S.lkWin)){ if (k === 'lock') S.lkWin = false; save(); lkWinApply(); }
@@ -8695,13 +8856,13 @@ notch.addEventListener('click', e => { e.stopPropagation(); if (notch.classList.
 notch.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === notch){ e.preventDefault(); setOpen(!notch.classList.contains('open')); } });
 $('close').addEventListener('click', e => { e.stopPropagation(); openedAt = 0; setOpen(false); });
 addEventListener('click', () => { if (activeTab !== 'browser') setOpen(false); });
-addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.qsEl && qsEl.classList.contains('open')){ closeQS(); return; } if (window.CP && CP.on){ cpClose(); return; } if (window.DS && DS.on){ dsHide(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
+addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (window.LPX && LPX.on){ LPX.ctx ? lpxCtxClose() : LPX.menu ? lpxMenu(false) : LPX.pick ? lpxPick(false) : lpxClose(); return; } if (window.qsEl && qsEl.classList.contains('open')){ closeQS(); return; } if (window.CP && CP.on){ cpClose(); return; } if (window.DS && DS.on){ dsHide(); return; } { const wa = wifiEl.querySelector('.wf-ask:not(.out) [data-wa="cancel"]'); if (wa){ wa.click(); return; } }   /* (the Wi-Fi password box goes, not the Wi-Fi panel) */ if (Voice.busy || aiStream){ stopAll(); return; } if (spot.classList.contains('open')){ closeSpot(); return; } if ([startEl, wifiEl, calEl, setEl, mailw, $('aiw'), $('nfw'), $('filew'), $('recw'), $('wheel')].some(el => el.classList.contains('open'))){ closePanels(); return; } if (ddFor){ closeDD(); return; } if (menu.classList.contains('open')){ closeMenu(); srcBtn.focus(); } else setOpen(false); });
 
 /* ---------- menu bar ---------- */
 const dd = $('dd'), mbar = $('mbar');
 let fullscreen = false, ddFor = null, appName = 'Sylver';
 const MENUS = {
-  ultron:[['About Sylver','about'],['What can Sylver do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],['Drop Shelf','shelf'],'-',['Start with Windows','autostart'],['Lock Screen','lock','Win L'],'-',['Quit Sylver','quit']],
+  ultron:[['About Sylver','about'],['What can Sylver do?','help'],'-',['System Settings…','settings'],['Task Manager','task-manager'],['App Library','apps'],['Launchpad','shelf'],'-',['Start with Windows','autostart'],['Lock Screen','lock','Win L'],'-',['Quit Sylver','quit']],
   app:[['Show Desktop','desktop','Win D'],['Task View','task-view','Win Tab'],'-',['Quit {app}','quit-app','Alt F4']],
   music:'rich', clip:'rich', wall:'rich', notes:'rich', focus:'rich', system:'rich', calc:'rich', convert:'rich', world:'rich', lang:'rich', news:'rich',
 };
@@ -10626,7 +10787,7 @@ function syncHit(){
   const pad = notch.classList.contains('open') ? 0 : 6;
   const rects = fullscreen && !notch.classList.contains('call') ? [] : [{x:Math.floor(r.left - pad - 10), y:0, w:Math.ceil(r.width + pad * 2 + 20), h:Math.ceil(r.bottom + pad)}];
   if (!fullscreen && !barHid) rects.push({x:0, y:0, w:innerWidth, h:32});
-  if (tourOn || (window.LK && LK.on) || (window.CTS && CTS.on)) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
+  if (tourOn || (window.LK && LK.on) || (window.CTS && CTS.on) || (window.LPX && LPX.on)) rects.push({x:0, y:0, w:innerWidth, h:innerHeight});
   if (bwWide.classList.contains('on')){ const w = bwWide.getBoundingClientRect(); rects.push({x:Math.floor(w.left - 4), y:Math.floor(w.top - 14), w:Math.ceil(w.width + 8), h:Math.ceil(w.height + 18)}); }
   const fl = $('flyr');
   // (where it is: it's moved by translate, so its offsetLeft/Top are 0. Those put its hit area in the screen's corner, and
@@ -11361,7 +11522,7 @@ async function dockOn(quiet){
     pinnedApps();
     await invoke('dock_set', {on:true});                    // (Windows' taskbar slides away, and its strip of the screen goes to your windows)
     invoke('dock_keep', {on:false});                       // (no pictures of windows are kept)
-    DK.on = true; whGeom();
+    DK.on = true; whGeom(); if (window.lpKeySync){ lpKeySync(); lpNeedPaint(); }
     WH.open = false; wheel.classList.remove('open');
     dockWins((await invoke('dock_list')) || []);
     document.body.classList.add('docked'); syncHit(); startKey();
@@ -11376,7 +11537,7 @@ async function dockOff(){
   try {
     whClose();
     if (DK.tiled){ DK.tiled = false; $('whTile').classList.remove('on'); }
-    document.body.classList.remove('docked'); DK.on = false; syncHit(); startKey();
+    document.body.classList.remove('docked'); DK.on = false; syncHit(); startKey(); if (window.lpKeySync){ lpKeySync(); lpNeedPaint(); if (DS.on && DS.lp) dsHide(); if (LPX.on) lpxClose(); }
     await dkWait(320);
     await invoke('dock_set', {on:false});                    // (Windows' taskbar is back, as it was)
   } finally { DK.busy = false; }
@@ -12771,8 +12932,9 @@ function dsWatch(x, y, down, drag){
   // the moment the pointer touched the last row, or a button was held there: passing by on the way to a corner, a
   // scroll or a selection down a page, pulling a window's edge. It seemed to come out of nowhere.)
   const W = screen.width || innerWidth;
-  const sd = S.dsSide, atEdge = m => sd === 'left' ? x <= m - 1 && y > 80 && y < H - 80 : sd === 'right' ? x >= W - m && y > 80 && y < H - 80 : y >= H - m && x > 40 && x < W - 40;
-  const kind = !DK.on || !dsCan() ? '' : down ? (drag && atEdge(6) ? 'drop' : '') : (atEdge(1) ? 'open' : '');
+  const sd = '', edgeOpens = lpMode(), atEdge = m => sd === 'left' ? x <= m - 1 && y > 80 && y < H - 80 : sd === 'right' ? x >= W - m && y > 80 && y < H - 80 : y >= H - m && x > 40 && x < W - 40;
+  // (the Launchpad only: a file dragged to the edge brings nothing up)
+  const kind = !DK.on || !dsCan() || down ? '' : (edgeOpens && atEdge(1) ? 'open' : '');
   if (kind === DS.arm) return;
   clearTimeout(DS.armT); DS.arm = kind;
   // (the window is made tall while the pointer rests, so it's ready by the time the shelf comes: made tall as it came,
@@ -12787,10 +12949,12 @@ const dsTall = () => new Promise(res => {
   addEventListener('resize', f); setTimeout(() => { removeEventListener('resize', f); res(); }, 400);
 });
 async function dsShow(kind, force){
+  if (!lpMode() || kind === 'drop') return;                  // (the Launchpad is all that comes up now)
+  if (window.lpxOpen){ lpxOpen(); return; }
   if (DS.on){ if (kind === 'drop'){ DS.mode = 'drop'; dsEl.classList.add('dragging'); } return; }
   if (!force && !dsCan()) return;
   DS.on = true; DS.mode = kind; clearTimeout(DS.leftT); dsEl.classList.remove('leaving');
-  DS.sticky = !!force; DS.stay = false; DS.wasDown = false;
+  DS.sticky = !!force || lpMode(); DS.stay = false; DS.wasDown = false; DS.lp = lpMode();
   $('wcard').classList.add('up');                                    // (the dictation card makes room above it)            // (asked for from ULTRON's menu or the wheel: it stays put)
   clearTimeout(DS.shrinkT);
   // (2 px short of the screen: a screen-sized window in front would be taken by Windows for a full-screen app)
@@ -12809,7 +12973,13 @@ async function dsShow(kind, force){
     void dsRow.offsetWidth;
     for (const el of dsRow.children) el.classList.add('in');
   }
-  dsLay(); if (dsEl.classList.contains('dock')){ DKM.cur = []; dkStep(); }
+  if (DS.lp){
+    if (!startApps) startApps = (await invoke('start_apps')) || [];
+    if (!DS.on) return;
+    $('dsQ').value = ''; dsGridPaint();
+    invoke('focus_main'); setTimeout(() => { if (DS.on && DS.lp) $('dsQ').focus({preventScroll:true}); }, 180);
+  }
+  dsLay();
   dsEl.classList.toggle('dragging', kind === 'drop');
   void dsTray.offsetWidth; dsEl.classList.add('on');
   syncHit(); glassAim(); wake();
@@ -12828,6 +12998,7 @@ function dsHide(){
   $('wcard').classList.remove('up');
   DS.on = false; DS.mode = ''; DS.over = false; DS.sticky = DS.stay = false; clearTimeout(DS.leaveT); DS.leaveT = 0; clearTimeout(DS.hideT); clearTimeout(DS.appsT);
   if (DS.apps){ DS.apps = false; dsEl.querySelector('[data-ds="apps"] span').textContent = 'Apps'; invoke('focus_back'); setTimeout(() => { if (!DS.apps) dsGridRest(); }, 700); }
+  if (DS.lp){ DS.lp = false; $('dsQ').blur(); invoke('focus_back'); setTimeout(() => { if (!DS.on) dsGridRest(); }, 700); }
   dsEl.classList.add('leaving'); dsEl.classList.remove('on', 'over', 'dragging', 'apps');
   clearTimeout(DS.leftT); DS.leftT = setTimeout(() => { if (!DS.on) dsEl.classList.remove('leaving'); }, 480);
   syncHit();
@@ -12835,7 +13006,27 @@ function dsHide(){
   DS.shrinkT = setTimeout(() => { if (DS.on || (window.LK && LK.on) || (window.CTS && CTS.on) || winH === TALL) return; winH = TALL; invoke('set_window_height', {h:TALL}); syncHit(); }, 1200);
 }
 // the tray's width follows what's on it; its glass lines up with the screen behind it
+function lpMode(){ return S.lpOn !== false; }
 function dsLay(){
+  if (lpMode()){
+    dsEl.classList.add('lp'); dsEl.classList.remove('dock', 'side', 'right', 'apps');
+    const w = Math.min(Math.round(innerWidth * .9), 780), files = DS.items.filter(i => !i.app).length;
+    const appsH = Math.max(220, Math.min(Math.round(innerHeight * .56), 420)), filesH = 112;
+    const aOn = S.lpApps !== false, fOn = S.lpFiles !== false;
+    dsEl.classList.toggle('lp-a0', !aOn); dsEl.classList.toggle('lp-f0', !fOn); dsEl.classList.toggle('lp-nof', !files);
+    for (const s of dsTray.querySelectorAll('.lp-sec')) s.setAttribute('aria-expanded', s.dataset.lp === 'apps' ? aOn : fOn);
+    const h = 18 + 44 + 46 + (aOn ? appsH + 6 : 0) + 14; void fOn;
+    $('lpAppsN').textContent = startApps && startApps.length ? Math.min(160, startApps.length) : '';
+    $('lpFilesN').textContent = files || '';
+    dsTray.style.setProperty('--lpA', appsH + 'px'); dsTray.style.setProperty('--lpF', filesH + 'px');
+    dsTray.style.setProperty('--dsW', w + 'px'); dsTray.style.setProperty('--dsH', h + 'px'); dsTray.style.setProperty('--dsWa', w + 'px');
+    const left = Math.round(innerWidth / 2 - w / 2), top = innerHeight - 16 - h, gw = dsTray.querySelector('.gw');
+    if (gw){ gw.style.width = (screen.width || innerWidth) + 'px'; gw.style.height = (screen.height || innerHeight) + 'px'; glassDraw(gw); }
+    DS.box = {x:left, y:top, w, h};
+    dsGlass();
+    return;
+  }
+  dsEl.classList.remove('lp', 'lp-a0', 'lp-f0', 'lp-nof');
   const side = S.dsSide === 'left' || S.dsSide === 'right' ? S.dsSide : '', k = {compact:.82, large:1.18}[S.dsSize] || 1;
   dsEl.classList.toggle('side', !!side); dsEl.classList.toggle('right', side === 'right');
   dsEl.classList.toggle('sm', S.dsSize === 'compact'); dsEl.classList.toggle('lg', S.dsSize === 'large'); dsEl.classList.toggle('nonames', !S.dsNames);
@@ -12848,7 +13039,7 @@ function dsLay(){
     return;
   }
   // (along the bottom it's a Dock: one row of icons, the add, apps and clear at its end)
-  const dock = !DS.apps; dsEl.classList.toggle('dock', dock);
+  const dock = false; dsEl.classList.remove('dock');
   const tile = Math.round(64 * k);
   const fit = dock ? Math.min(Math.round(innerWidth * .9), Math.max(1, DS.items.length) * 62 + 330) : Math.min(Math.round(innerWidth * .62), 28 + Math.max(1, DS.items.length) * Math.round(88 * k));
   const w = dock ? fit : Math.max(DS.apps ? 560 : 360, fit), h = dock ? 150 : DS.apps ? 366 : Math.round(152 * (k > 1 ? 1.12 : k < 1 ? .9 : 1));
@@ -12971,10 +13162,12 @@ dsRow.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.delta
 dsEl.addEventListener('click', e => {
   e.stopPropagation();
   const a = e.target.closest('[data-ds]')?.dataset.ds, i = e.target.closest('.ds-i'), ap = e.target.closest('.ds-ap');
+  if (ap && DS.lp){ const a = DS.appList && DS.appList[+ap.dataset.k]; if (a){ ap.classList.add('go'); invoke('launch', {target:a.launch}); setTimeout(dsHide, 160); } return; }
   if (ap) return dsPin(ap);
+  const sec = !a && e.target.closest('.lp-sec'); if (sec) return lpToggle(sec.dataset.lp);
   if (a === 'add') return dsPick(e.target.closest('[data-ds]'));
   if (a === 'apps') return dsApps(!DS.apps);
-  if (!a && !i && !DS.items.length && e.target.closest('.ds-drop')) return dsPick(e.target.closest('.ds-drop'));
+  if (!a && !i && (DS.lp ? !DS.items.some(x => !x.app) : !DS.items.length) && e.target.closest('.ds-drop')) return dsPick(e.target.closest('.ds-drop'));
   if (!a && i && i.dataset.app){ invoke('launch', {target:i.dataset.p}); dsHide(); return; }
   if (a === 'show' && i) invoke('shelf_reveal', {path:i.dataset.p});
   else if (a === 'rm' && i){ const path = i.dataset.p; DS.items = DS.items.filter(x => x.path !== path); invoke('shelf_remove', {path}); dsGo(i, () => dsRemoved(path)); }
@@ -13109,9 +13302,189 @@ async function dsPin(t){
 $('dsQ').addEventListener('input', e => dsFilter(e.target.value));
 $('dsQ').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.key === 'Enter'){ const t = $('dsGrid').querySelector('.ds-ap:not(.off)'); if (t) dsPin(t); }
-  else if (e.key === 'Escape') dsApps(false);
+  if (e.key === 'Enter'){ const t = DS.lp ? [...$('dsGrid').querySelectorAll('.ds-ap:not(.off)')].sort((x, y) => y.classList.contains('on') - x.classList.contains('on'))[0] : $('dsGrid').querySelector('.ds-ap:not(.off)'); if (t) DS.lp ? t.click() : dsPin(t); }
+  else if (e.key === 'Escape') DS.lp ? dsHide() : dsApps(false);
 });
+$('dsGrid').addEventListener('contextmenu', e => { const ap = e.target.closest('.ds-ap'); if (!ap || !DS.lp) return; e.preventDefault(); dsPin(ap); });
+dsTray.addEventListener('keydown', e => { const s = e.target.closest && e.target.closest('.lp-sec'); if (s && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); lpToggle(s.dataset.lp); } });
+// a dropdown opens or folds: its contents slide and fade as the panel's height follows
+function lpToggle(which){
+  if (which === 'apps') S.lpApps = S.lpApps === false; else S.lpFiles = S.lpFiles === false;
+  save(); dsLay(); syncHit(); setTimeout(syncHit, 520);
+  if (which === 'apps' && S.lpApps !== false) dsGridPaint();
+}
+// The Launchpad's own shortcut, set in Settings > Taskbar; it only works with Sylver's taskbar, and is given back to
+// other apps while that's off.
+var LPK = {rec:false};
+function lpKeySync(){ if (!TAURI) return; const k = S.lpKey, on = !!(k && window.DK && DK.on && S.lpOn !== false); invoke('launch_key', {mods:on ? k.mods : 0, vk:on ? k.vk : 0}); }
+function lpNeedPaint(){
+  const on = !!(window.DK && DK.on);
+  document.querySelectorAll('.sw-row.lp-need').forEach(r => r.classList.toggle('dis', !on));
+  const s = $('lpNeedSay'); if (s) s.textContent = on ? 'Your apps and files in one place, from the bottom edge or its shortcut' : 'Comes with Sylver’s taskbar: turn that on first';
+  const b = $('lpKeyBtn'); if (b && !LPK.rec) b.innerHTML = S.lpKey ? hkCaps(S.lpKey.names) : '<span class="hk-say">Set a shortcut</span>';
+  document.querySelectorAll('.lp-key-x').forEach(x => x.hidden = !S.lpKey);
+}
+$('lpKeyBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (LPK.rec){ LPK.rec = false; lpNeedPaint(); return; }
+  LPK.rec = true; const b = e.currentTarget; b.classList.add('rec'); b.innerHTML = '<span class="hk-say">Press the keys…</span>'; invoke('focus_main'); b.focus({preventScroll:true});
+});
+document.querySelector('.lp-key-x').addEventListener('click', e => { e.stopPropagation(); delete S.lpKey; save(); LPK.rec = false; lpKeySync(); lpNeedPaint(); });
+addEventListener('keydown', e => {
+  if (!LPK.rec) return;
+  e.preventDefault(); e.stopPropagation();
+  const b = $('lpKeyBtn');
+  if (e.key === 'Escape'){ LPK.rec = false; b.classList.remove('rec'); lpNeedPaint(); return; }
+  const vk = e.keyCode, names = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
+  const mods = (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0);
+  if ([16, 17, 18, 91, 92].includes(vk)){ b.innerHTML = hkCaps(names) + '<span class="hk-plus">+ …</span>'; return; }
+  if (!mods){ b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); b.innerHTML = '<span class="hk-say">Hold Ctrl, Alt or Shift with it</span>'; return; }
+  S.lpKey = {mods, vk, names:[...names, hkName(vk)]}; save();
+  LPK.rec = false; b.classList.remove('rec'); lpNeedPaint(); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1000);
+  lpKeySync();
+}, true);
+addEventListener('pointerdown', e => { if (LPK.rec && !e.target.closest('.lp-key')){ LPK.rec = false; $('lpKeyBtn').classList.remove('rec'); lpNeedPaint(); } }, true);
+listen('hotkey-state', s => { if (s && s.id === 0x5353 && !s.ok){ delete S.lpKey; save(); lpNeedPaint(); nbShow('<div class="nb-say">Another app uses that shortcut. Pick another for the Launchpad.</div>', 3500); } });
+listen('launch-key', () => { if (!DK.on || !lpMode()) return; LPX.on ? lpxClose() : lpxOpen(); });
+setTimeout(() => { lpKeySync(); lpNeedPaint(); }, 2500);
+/* ---------- the Launchpad ----------
+   The whole screen blurs (its own picture, through the glass) and draws back a little, and your apps rise into it one
+   after another. Pinned apps and files sit on a row at the top: the + there pins apps or adds files; a right click on
+   anything gives what a taskbar's would. The grid is made once and kept, so opening it only switches a class, and
+   everything that moves is only moved or faded (the compositor's work). */
+var LPX = {on:false, built:'', list:[], pick:false, menu:false, ctx:false, ctxFor:null, offT:0};
+const lpxEl = $('lpx'), lpxGrid = $('lpxGrid'), lpxPins = $('lpxPins');
+const LPX_I = {
+  open:'<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>',
+  admin:'<svg viewBox="0 0 24 24"><path d="M12 3.5l7 2.8v5.2c0 4.3-3 7.6-7 9-4-1.4-7-4.7-7-9V6.3z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>',
+  pin:'<svg viewBox="0 0 24 24"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3zM12 14v6"/></svg>',
+  unpin:'<svg viewBox="0 0 24 24"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3zM12 14v6M4 4l16 16"/></svg>',
+  where:'<svg viewBox="0 0 24 24"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>'
+};
+function lpxBuild(){
+  const list = (startApps || []).slice(0, 220), key = list.map(a => a.launch).join('|');
+  if (key === LPX.built) return;
+  LPX.built = key; LPX.list = list;
+  lpxGrid.innerHTML = list.map((a, k) => `<button class="lpx-t" type="button" data-k="${k}" style="--d:${Math.min(k, 40)}" title="${esc(a.name)}">${iconHtml(a, 'ds-ic')}<b>${esc(a.name)}</b><i class="lpx-pk"></i></button>`).join('');
+  loadIcons(lpxGrid);
+}
+function lpxPinHtml(it, k, cls){
+  const ic = it.app ? iconHtml({name:it.name, launch:it.path}, 'ds-ic')
+    : `<span class="lpx-file${!it.dir && dsPhoto(it.path) ? ' photo' : ''}" data-th="${esc(it.path)}">${it.dir ? DS_FOLDER : DS_DOC}</span>`;
+  return `<button class="lpx-t pin${cls}" type="button" data-p="${esc(it.path)}"${it.app ? ' data-app="1"' : ''} style="--d:${k}" title="${esc(it.name)}">${ic}<b>${esc(it.name)}</b></button>`;
+}
+async function lpxPinsPaint(fresh){
+  DS.items = (await invoke('shelf_list')) || [];
+  const pinned = new Set(DS.items.filter(i => i.app).map(i => i.path.toLowerCase()));
+  for (const t of lpxGrid.children){ const a = LPX.list[+t.dataset.k]; t.classList.toggle('on', !!a && pinned.has(a.launch.toLowerCase())); }
+  lpxPins.innerHTML = DS.items.map((it, k) => lpxPinHtml(it, k, fresh && it.path.toLowerCase() === fresh.toLowerCase() ? ' pop' : '')).join('');
+  lpxEl.classList.toggle('nopins', !DS.items.length);
+  loadIcons(lpxPins);
+  for (const el of lpxPins.querySelectorAll('.lpx-file.photo')){
+    const path = el.dataset.th, put = u => { if (u){ el.style.backgroundImage = `url("${u}")`; el.classList.add('has'); } };
+    if (DS.thumbs.get(path)) put(DS.thumbs.get(path));
+    else invoke('shelf_thumb', {path}).then(u => { if (u){ DS.thumbs.set(path, u); put(u); } });
+  }
+}
+async function lpxOpen(){
+  if (LPX.on || !dsCan()) return;
+  LPX.on = true; clearTimeout(LPX.offT);
+  if (!startApps) startApps = (await invoke('start_apps')) || [];
+  if (!LPX.on) return;
+  lpxBuild(); lpxPinsPaint();
+  $('lpxQ').value = ''; lpxFilter(''); lpxGrid.scrollTop = 0;
+  lpxEl.classList.remove('off', 'pick'); LPX.pick = false; lpxEl.inert = false;
+  placeGlass($('lpxBg'));
+  void lpxEl.offsetWidth; lpxEl.classList.add('on');
+  syncHit(); glassAim(); glassLook(); wake();
+  invoke('focus_main'); setTimeout(() => { if (LPX.on) $('lpxQ').focus({preventScroll:true}); }, 140);
+}
+function lpxClose(){
+  if (!LPX.on) return;
+  LPX.on = false; lpxCtxClose(); lpxMenu(false);
+  lpxEl.classList.remove('on'); lpxEl.classList.add('off'); lpxEl.inert = true;
+  $('lpxQ').blur(); invoke('focus_back'); syncHit();
+  LPX.offT = setTimeout(() => { if (!LPX.on){ lpxEl.classList.remove('off', 'pick'); glassAim(); } }, 380);
+}
+function lpxFilter(q){
+  const s = q.trim().toLowerCase(); let n = 0;
+  for (const t of lpxGrid.children){ const a = LPX.list[+t.dataset.k], on = !s || a.name.toLowerCase().includes(s); t.hidden = !on; if (on) n++; }
+  lpxEl.classList.toggle('q', !!s);
+  $('lpxNone').textContent = n ? '' : `No app called “${q.trim()}”`;
+}
+function lpxItem(t){
+  if (!t) return null;
+  if (t.classList.contains('pin')) return {path:t.dataset.p, app:!!t.dataset.app, name:t.title};
+  const a = LPX.list[+t.dataset.k]; return a ? {path:a.launch, app:true, name:a.name} : null;
+}
+function lpxGo(t){ const it = lpxItem(t); if (!it) return; t.classList.add('go'); invoke('launch', {target:it.path}); setTimeout(lpxClose, 150); }
+function lpxMenu(on){ LPX.menu = on; $('lpxMenu').classList.toggle('on', on); $('lpxPlus').classList.toggle('on', on); }
+function lpxPick(on){ LPX.pick = on; lpxEl.classList.toggle('pick', on); if (on){ $('lpxQ').value = ''; lpxFilter(''); } }
+async function lpxToggle(t){
+  const it = lpxItem(t); if (!it || !it.app) return;
+  const on = DS.items.some(x => x.path.toLowerCase() === it.path.toLowerCase());
+  t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump');
+  if (on) await invoke('shelf_remove', {path:it.path}); else await invoke('shelf_add_app', {name:it.name, launch:it.path});
+  lpxPinsPaint(on ? null : it.path);
+}
+function lpxCtxOpen(t, x, y){
+  const it = lpxItem(t); if (!it) return;
+  LPX.ctxFor = t; lpxMenu(false);
+  const pinned = DS.items.some(i => i.path.toLowerCase() === it.path.toLowerCase()), file = !it.app, local = /^[a-z]:\\/i.test(it.path);
+  const rows = [['open', 'Open', LPX_I.open], !file && ['admin', 'Run as administrator', LPX_I.admin], '-',
+    pinned ? ['unpin', file ? 'Remove from Launchpad' : 'Unpin from Launchpad', LPX_I.unpin] : ['pin', 'Pin to Launchpad', LPX_I.pin],
+    local && ['where', file ? 'Show in folder' : 'Open file location', LPX_I.where], !file && '-', !file && ['uninstall', 'Uninstall', LPX_I.trash]].filter(Boolean);
+  const m = $('lpxCtx'), ic = t.querySelector('.ds-ic, .lpx-file');
+  m.innerHTML = `<div class="lpx-cx-h">${ic ? ic.outerHTML : ''}<b>${esc(it.name)}</b></div>` +
+    rows.map((r, i) => r === '-' ? '<hr>' : `<button type="button" data-lx="${r[0]}" role="menuitem" style="--i:${i}">${r[2]}<span>${r[1]}</span></button>`).join('');
+  m.classList.remove('on'); m.style.left = '0px'; m.style.top = '0px';
+  const w = m.offsetWidth, h = m.offsetHeight, L = Math.max(10, Math.min(x, innerWidth - w - 10)), T = y + h > innerHeight - 10 ? Math.max(10, y - h) : y;
+  m.style.left = L + 'px'; m.style.top = T + 'px'; m.style.transformOrigin = `${x - L}px ${y - T}px`;
+  void m.offsetWidth; m.classList.add('on'); LPX.ctx = true;
+}
+function lpxCtxClose(){ LPX.ctx = false; $('lpxCtx').classList.remove('on'); }
+async function lpxAct(a){
+  const t = LPX.ctxFor, it = lpxItem(t);
+  lpxMenu(false); lpxCtxClose();
+  if (a === 'pinapps') return lpxPick(true);
+  if (a === 'files'){
+    const was = new Set(DS.items.map(i => i.path.toLowerCase()));
+    const items = await invoke('shelf_pick').catch(() => null);
+    invoke('focus_main');
+    if (items) lpxPinsPaint((items.find(i => !was.has(i.path.toLowerCase())) || {}).path);
+    return;
+  }
+  if (!it) return;
+  if (a === 'open') return lpxGo(t);
+  if (a === 'admin'){ invoke('launch_admin', {target:it.path}); setTimeout(lpxClose, 150); return; }
+  if (a === 'where') return invoke('shelf_reveal', {path:it.path});
+  if (a === 'pin'){ await invoke('shelf_add_app', {name:it.name, launch:it.path}); return lpxPinsPaint(it.path); }
+  if (a === 'unpin'){ await invoke('shelf_remove', {path:it.path}); return lpxPinsPaint(); }
+  if (a === 'uninstall'){ invoke('launch', {target:'ms-settings:appsfeatures'}); lpxClose(); }
+}
+lpxEl.addEventListener('click', e => {
+  e.stopPropagation();
+  const m = e.target.closest('[data-lx]'); if (m) return lpxAct(m.dataset.lx);
+  if (e.target.closest('#lpxPlus')) return lpxMenu(!LPX.menu);
+  if (e.target.closest('#lpxDone')) return lpxPick(false);
+  if (LPX.menu && !e.target.closest('#lpxMenu')){ lpxMenu(false); return; }
+  if (LPX.ctx && !e.target.closest('#lpxCtx')){ lpxCtxClose(); return; }
+  const t = e.target.closest('.lpx-t');
+  if (!t){ if (!e.target.closest('.lpx-q, .lpx-ph, .lpx-ctx')) lpxClose(); return; }   // (empty space: it goes)
+  if (LPX.pick && !t.classList.contains('pin')) return lpxToggle(t);
+  lpxGo(t);
+});
+lpxEl.addEventListener('contextmenu', e => { e.preventDefault(); const t = e.target.closest('.lpx-t'); if (t) lpxCtxOpen(t, e.clientX, e.clientY); else lpxCtxClose(); });
+lpxEl.addEventListener('pointerdown', e => e.stopPropagation());
+$('lpxQ').addEventListener('input', e => lpxFilter(e.target.value));
+$('lpxQ').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter'){ const t = [...lpxGrid.children].find(x => !x.hidden); if (t) lpxGo(t); }
+  else if (e.key === 'Escape'){ LPX.ctx ? lpxCtxClose() : LPX.menu ? lpxMenu(false) : LPX.pick ? lpxPick(false) : lpxClose(); }
+});
+// (the grid is made while nothing is happening, a little after start, so the first opening is as quick as any)
+if (TAURI) setTimeout(() => (window.requestIdleCallback || setTimeout)(async () => { if (!startApps) startApps = (await invoke('start_apps')) || []; if (!LPX.on) lpxBuild(); }, {timeout:15000}), 25000);
 $('whShelf').addEventListener('click', e => { e.stopPropagation(); whClose(); setTimeout(() => dsShow('open', true), 240); });
 
 // (body.sheet while the sheet is open: the bar takes its colour, see the styles)
@@ -13159,7 +13532,7 @@ $('prBox').addEventListener('click', e => {
    one, the new look spreads out in a circle from where you clicked; the bar's name changes with it. */
 function uiApply(v){
   document.documentElement.classList.toggle('vision', v === 'vision');
-  $('label').textContent = v === 'vision' ? 'VISION' : 'SYLVER';
+  $('label').textContent = v === 'vision' ? 'LYGHT' : 'SYLVER';
   document.querySelectorAll('#uiPick [data-ui]').forEach(b => b.setAttribute('aria-checked', b.dataset.ui === v));
 }
 function uiSwitch(v, x, y){

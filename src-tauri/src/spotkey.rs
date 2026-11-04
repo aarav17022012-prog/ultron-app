@@ -17,13 +17,15 @@ pub const SPOT: i32 = 0x5350;
 pub const WHEEL: i32 = 0x5351;
 /// voice typing's shortcut
 pub const DICTATE: i32 = 0x5352;
+/// the Launchpad's shortcut
+pub const LAUNCH: i32 = 0x5353;
 const SWITCH: u32 = WM_APP + 0x53;
 static THREAD: AtomicU32 = AtomicU32::new(0);
 /// what each shortcut should be: (id, modifiers, key); a key of 0 is "none"
 static WANT: Mutex<Vec<(i32, u32, u32)>> = Mutex::new(Vec::new());
 
 fn event(id: i32) -> &'static str {
-    if id == WHEEL { "wheel-key" } else if id == DICTATE { "dictate-key" } else { "spot-key" }
+    if id == WHEEL { "wheel-key" } else if id == DICTATE { "dictate-key" } else if id == LAUNCH { "launch-key" } else { "spot-key" }
 }
 
 pub fn start(app: AppHandle) {
